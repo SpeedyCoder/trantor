@@ -45,7 +45,9 @@ export function SettingsEnvironmentsSection({
   onSaveEnvironmentSetup,
 }: SettingsEnvironmentsSectionProps) {
   const hasAnyChanges =
-    environmentDirty || globalWorktreesFolderDirty || worktreesFolderDirty;
+    environmentDirty ||
+    globalWorktreesFolderDirty ||
+    worktreesFolderDirty;
   const hasProjects = mainWorkspaces.length > 0;
 
   return (

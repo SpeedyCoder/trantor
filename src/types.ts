@@ -1,4 +1,5 @@
 export type WorkspaceSettings = {
+  agentRuntime?: "codex" | "claude";
   sidebarCollapsed: boolean;
   sortOrder?: number | null;
   groupId?: string | null;
@@ -238,6 +239,8 @@ export type OpenAppTarget = {
 export type AppSettings = {
   codexBin: string | null;
   codexArgs: string | null;
+  claudeCliPath: string | null;
+  claudeAdapterPath: string | null;
   backendMode: BackendMode;
   remoteBackendProvider: RemoteBackendProvider;
   remoteBackendHost: string;
@@ -381,6 +384,15 @@ export type CodexUpdateResult = {
   afterVersion: string | null;
   upgraded: boolean;
   output: string | null;
+  details: string | null;
+};
+
+export type ClaudeAuthStatus = {
+  cliPath: string | null;
+  installed: boolean;
+  loggedIn: boolean;
+  authMethod: string | null;
+  accountEmail: string | null;
   details: string | null;
 };
 
@@ -625,6 +637,8 @@ export type AppMention = {
 export type ModelOption = {
   id: string;
   model: string;
+  runtime?: "codex" | "claude";
+  providerModelId?: string | null;
   displayName: string;
   description: string;
   supportedReasoningEfforts: { reasoningEffort: string; description: string }[];

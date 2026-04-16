@@ -1,5 +1,6 @@
 import type { CSSProperties, MouseEvent } from "react";
 
+import { providerModelIdForModelId } from "@/features/models/utils/modelRuntime";
 import type { ThreadSummary } from "../../../types";
 import { getThreadStatusClass, type ThreadStatusById } from "../../../utils/threadStatus";
 
@@ -88,11 +89,12 @@ export function ThreadRow({
 }: ThreadRowProps) {
   const relativeTime = getThreadTime(thread);
   const badge = getThreadArgsBadge?.(workspaceId, thread.id) ?? null;
+  const threadModelLabel = providerModelIdForModelId(thread.modelId) ?? thread.modelId;
   const modelBadge =
-    thread.modelId && thread.modelId.trim().length > 0
+    threadModelLabel && threadModelLabel.trim().length > 0
       ? thread.effort && thread.effort.trim().length > 0
-        ? `${thread.modelId} · ${thread.effort}`
-        : thread.modelId
+        ? `${threadModelLabel} · ${thread.effort}`
+        : threadModelLabel
       : null;
   const indentStyle =
     depth > 0

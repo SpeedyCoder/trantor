@@ -652,19 +652,25 @@ export function useThreads({
   );
 
   const startThreadForWorkspace = useCallback(
-    async (workspaceId: string, options?: { activate?: boolean }) => {
+    async (
+      workspaceId: string,
+      options?: { activate?: boolean; modelId?: string | null },
+    ) => {
       await ensureWorkspaceRuntimeCodexArgsBestEffort(workspaceId, null, "start");
-      return startThreadForWorkspaceInternal(workspaceId, options);
+      return startThreadForWorkspaceInternal(workspaceId, {
+        ...options,
+        modelId: options?.modelId ?? model ?? null,
+      });
     },
-    [ensureWorkspaceRuntimeCodexArgsBestEffort, startThreadForWorkspaceInternal],
+    [ensureWorkspaceRuntimeCodexArgsBestEffort, model, startThreadForWorkspaceInternal],
   );
 
   const startThread = useCallback(async () => {
     if (!activeWorkspaceId) {
       return null;
     }
-    return startThreadForWorkspace(activeWorkspaceId);
-  }, [activeWorkspaceId, startThreadForWorkspace]);
+    return startThreadForWorkspace(activeWorkspaceId, { modelId: model ?? null });
+  }, [activeWorkspaceId, model, startThreadForWorkspace]);
 
   const ensureThreadForActiveWorkspace = useCallback(async () => {
     if (!activeWorkspace) {
@@ -672,7 +678,9 @@ export function useThreads({
     }
     let threadId = activeThreadId;
     if (!threadId) {
-      threadId = await startThreadForWorkspace(activeWorkspace.id);
+      threadId = await startThreadForWorkspace(activeWorkspace.id, {
+        modelId: model ?? null,
+      });
       if (!threadId) {
         return null;
       }
@@ -689,6 +697,7 @@ export function useThreads({
     activeWorkspace,
     activeThreadId,
     ensureWorkspaceRuntimeCodexArgsBestEffort,
+    model,
     resumeThreadForWorkspace,
     startThreadForWorkspace,
   ]);
@@ -701,6 +710,7 @@ export function useThreads({
       if (!threadId) {
         threadId = await startThreadForWorkspace(workspaceId, {
           activate: shouldActivate,
+          modelId: model ?? null,
         });
         if (!threadId) {
           return null;
@@ -719,6 +729,7 @@ export function useThreads({
       dispatch,
       ensureWorkspaceRuntimeCodexArgsBestEffort,
       loadedThreadsRef,
+      model,
       resumeThreadForWorkspace,
       startThreadForWorkspace,
       state.activeThreadIdByWorkspace,

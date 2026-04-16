@@ -15,7 +15,7 @@ use tokio::time::timeout;
 use crate::backend::events::{AppServerEvent, EventSink};
 use crate::codex::args::parse_codex_args;
 use crate::shared::process_core::{kill_child_process_tree, tokio_command};
-use crate::types::WorkspaceEntry;
+use crate::types::{AgentRuntime, WorkspaceEntry};
 
 #[cfg(target_os = "windows")]
 use crate::shared::process_core::{build_cmd_c_command, resolve_windows_executable};
@@ -432,6 +432,7 @@ fn build_initialize_params(client_version: &str) -> Value {
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub(crate) struct WorkspaceSession {
+    pub(crate) runtime: AgentRuntime,
     pub(crate) codex_args: Option<String>,
     pub(crate) child: Mutex<Child>,
     pub(crate) stdin: Mutex<ChildStdin>,
@@ -448,6 +449,10 @@ pub(crate) struct WorkspaceSession {
 }
 
 impl WorkspaceSession {
+    pub(crate) fn supports_workspace_sharing(&self) -> bool {
+        matches!(self.runtime, AgentRuntime::Codex)
+    }
+
     pub(crate) async fn register_workspace(&self, workspace_id: &str) {
         self.register_workspace_with_path(workspace_id, None).await;
     }
@@ -746,26 +751,15 @@ pub(crate) async fn check_codex_installation(
     })
 }
 
-pub(crate) async fn spawn_workspace_session<E: EventSink>(
+pub(crate) async fn spawn_workspace_session_process<E: EventSink>(
     entry: WorkspaceEntry,
-    default_codex_bin: Option<String>,
+    runtime: AgentRuntime,
     codex_args: Option<String>,
-    codex_home: Option<PathBuf>,
     client_version: String,
     event_sink: E,
+    mut command: Command,
 ) -> Result<Arc<WorkspaceSession>, String> {
-    let codex_bin = default_codex_bin;
-    let _ = check_codex_installation(codex_bin.clone()).await?;
-
-    let mut command = build_codex_command_with_bin(
-        codex_bin,
-        codex_args.as_deref(),
-        vec!["app-server".to_string()],
-    )?;
     command.current_dir(&entry.path);
-    if let Some(path) = codex_home.as_ref() {
-        command.env("CODEX_HOME", path);
-    }
     command.stdin(std::process::Stdio::piped());
     command.stdout(std::process::Stdio::piped());
     command.stderr(std::process::Stdio::piped());
@@ -776,6 +770,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
     let stderr = child.stderr.take().ok_or("missing stderr")?;
 
     let session = Arc::new(WorkspaceSession {
+        runtime,
         codex_args,
         child: Mutex::new(child),
         stdin: Mutex::new(stdin),
@@ -821,11 +816,10 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             let has_method = value.get("method").is_some();
             let has_result_or_error = value.get("result").is_some() || value.get("error").is_some();
             let method_name = value.get("method").and_then(|method| method.as_str());
-
-            // Check if this event is for a background thread
             let thread_id = extract_thread_id(&value);
             let mut request_workspace: Option<String> = None;
             let mut request_method: Option<String> = None;
+
             if let Some(id) = maybe_id {
                 if has_result_or_error {
                     if let Some(context) = session_clone.request_context.lock().await.remove(&id) {
@@ -959,7 +953,6 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
                         let _ = tx.send(value);
                     }
                 } else if has_method {
-                    // Check for background thread callback
                     let mut sent_to_background = false;
                     if let Some(ref tid) = thread_id {
                         let callbacks = session_clone.background_thread_callbacks.lock().await;
@@ -968,7 +961,6 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
                             sent_to_background = true;
                         }
                     }
-                    // Don't emit to frontend if this is a background thread event
                     if !sent_to_background {
                         if should_broadcast_global_workspace_notification(
                             method_name,
@@ -1003,7 +995,6 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
                     let _ = tx.send(value);
                 }
             } else if has_method {
-                // Check for background thread callback
                 let mut sent_to_background = false;
                 if let Some(ref tid) = thread_id {
                     let callbacks = session_clone.background_thread_callbacks.lock().await;
@@ -1012,7 +1003,6 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
                         sent_to_background = true;
                     }
                 }
-                // Don't emit to frontend if this is a background thread event
                 if !sent_to_background {
                     if should_broadcast_global_workspace_notification(
                         method_name,
@@ -1046,7 +1036,6 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             }
         }
 
-        // Ensure pending foreground requests cannot accumulate after process output ends.
         session_clone.pending.lock().await.clear();
         session_clone.request_context.lock().await.clear();
     });
@@ -1082,7 +1071,7 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
             let mut child = session.child.lock().await;
             kill_child_process_tree(&mut child).await;
             return Err(
-                "Codex app-server did not respond to initialize. Check that `codex app-server` works in Terminal."
+                "App-server process did not respond to initialize. Check the configured runtime and adapter in Terminal."
                     .to_string(),
             );
         }
@@ -1100,6 +1089,37 @@ pub(crate) async fn spawn_workspace_session<E: EventSink>(
     event_sink.emit_app_server_event(payload);
 
     Ok(session)
+}
+
+pub(crate) async fn spawn_workspace_session<E: EventSink>(
+    entry: WorkspaceEntry,
+    default_codex_bin: Option<String>,
+    codex_args: Option<String>,
+    codex_home: Option<PathBuf>,
+    client_version: String,
+    event_sink: E,
+) -> Result<Arc<WorkspaceSession>, String> {
+    let codex_bin = default_codex_bin;
+    let _ = check_codex_installation(codex_bin.clone()).await?;
+
+    let mut command = build_codex_command_with_bin(
+        codex_bin,
+        codex_args.as_deref(),
+        vec!["app-server".to_string()],
+    )?;
+    if let Some(path) = codex_home.as_ref() {
+        command.env("CODEX_HOME", path);
+    }
+
+    spawn_workspace_session_process(
+        entry,
+        AgentRuntime::Codex,
+        codex_args,
+        client_version,
+        event_sink,
+        command,
+    )
+    .await
 }
 
 #[cfg(test)]

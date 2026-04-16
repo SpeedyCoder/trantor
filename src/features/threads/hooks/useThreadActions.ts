@@ -145,17 +145,24 @@ export function useThreadActions({
   );
 
   const startThreadForWorkspace = useCallback(
-    async (workspaceId: string, options?: { activate?: boolean }) => {
+    async (
+      workspaceId: string,
+      options?: { activate?: boolean; modelId?: string | null },
+    ) => {
       const shouldActivate = options?.activate !== false;
+      const modelId = options?.modelId ?? null;
       onDebug?.({
         id: `${Date.now()}-client-thread-start`,
         timestamp: Date.now(),
         source: "client",
         label: "thread/start",
-        payload: { workspaceId },
+        payload: { workspaceId, modelId },
       });
       try {
-        const response = await startThreadService(workspaceId);
+        const response =
+          modelId && modelId.trim().length > 0
+            ? await startThreadService(workspaceId, modelId)
+            : await startThreadService(workspaceId);
         onDebug?.({
           id: `${Date.now()}-server-thread-start`,
           timestamp: Date.now(),
@@ -165,10 +172,10 @@ export function useThreadActions({
         });
         const threadId = extractThreadId(response);
         if (threadId) {
-          dispatch({ type: "ensureThread", workspaceId, threadId });
           if (shouldActivate) {
             dispatch({ type: "setActiveThreadId", workspaceId, threadId });
           }
+          dispatch({ type: "ensureThread", workspaceId, threadId });
           loadedThreadsRef.current[threadId] = true;
           return threadId;
         }

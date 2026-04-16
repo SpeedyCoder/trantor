@@ -48,8 +48,9 @@ describe("useModels", () => {
 
     expect(getConfigModel).toHaveBeenCalledWith("workspace-1");
     expect(result.current.models[0]).toMatchObject({
-      id: "custom-model",
+      id: "codex:custom-model",
       model: "custom-model",
+      runtime: "codex",
     });
     expect(result.current.selectedModel?.model).toBe("custom-model");
     expect(result.current.reasoningSupported).toBe(false);
@@ -114,11 +115,11 @@ describe("useModels", () => {
 
     act(() => {
       result.current.setSelectedEffort("high");
-      result.current.setSelectedModelId("custom-model");
+      result.current.setSelectedModelId("codex:custom-model");
     });
 
     await waitFor(() => {
-      expect(result.current.selectedModelId).toBe("custom-model");
+      expect(result.current.selectedModelId).toBe("codex:custom-model");
       expect(result.current.selectedEffort).toBe("high");
     });
   });

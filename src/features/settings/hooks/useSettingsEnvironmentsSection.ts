@@ -170,10 +170,11 @@ export const useSettingsEnvironmentsSection = ({
         setGlobalWorktreesFolderDraft(nextGlobalFolder ?? "");
       }
       if (environmentWorkspace && workspaceSettingsDirty) {
-        await onUpdateWorkspaceSettings(environmentWorkspace.id, {
+        const nextWorkspaceSettings: Partial<WorkspaceInfo["settings"]> = {
           worktreeSetupScript: nextScript,
           worktreesFolder: nextFolder,
-        });
+        };
+        await onUpdateWorkspaceSettings(environmentWorkspace.id, nextWorkspaceSettings);
         setEnvironmentSavedScript(nextScript);
         setEnvironmentDraftScript(nextScript ?? "");
         setWorktreesFolderSaved(nextFolder);

@@ -7,6 +7,7 @@ use tauri::RunEvent;
 use tauri::WindowEvent;
 
 mod backend;
+mod claude;
 mod codex;
 mod daemon_binary;
 mod dictation;
@@ -193,6 +194,9 @@ pub fn run() {
             tray::set_tray_session_usage,
             codex::codex_doctor,
             codex::codex_update,
+            claude::claude_auth_status,
+            claude::claude_auth_login,
+            claude::claude_auth_logout,
             workspaces::list_workspaces,
             workspaces::is_workspace_path_dir,
             workspaces::add_workspace,

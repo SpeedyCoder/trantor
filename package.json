@@ -36,6 +36,7 @@
     "tauri:build:win": "npm run doctor:win && tauri build --config src-tauri/tauri.windows.conf.json"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.112",
     "@pierre/diffs": "^1.0.6",
     "@sentry/react": "^10.36.0",
     "@tanstack/react-virtual": "^3.13.18",

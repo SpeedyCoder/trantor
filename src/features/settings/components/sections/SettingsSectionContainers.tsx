@@ -1,4 +1,5 @@
 import { SettingsCodexSection } from "./SettingsCodexSection";
+import { SettingsClaudeSection } from "./SettingsClaudeSection";
 import { SettingsComposerSection } from "./SettingsComposerSection";
 import { SettingsDictationSection } from "./SettingsDictationSection";
 import { SettingsDisplaySection } from "./SettingsDisplaySection";
@@ -58,6 +59,9 @@ export function SettingsSectionContainers({
   }
   if (activeSection === "codex") {
     return <SettingsCodexSection {...orchestration.codexSectionProps} />;
+  }
+  if (activeSection === "claude") {
+    return <SettingsClaudeSection {...orchestration.claudeSectionProps} />;
   }
   if (activeSection === "features") {
     return <SettingsFeaturesSection {...orchestration.featuresSectionProps} />;

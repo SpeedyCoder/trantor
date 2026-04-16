@@ -7,6 +7,7 @@ import { usePullRequestComposer } from "@/features/git/hooks/usePullRequestCompo
 import { useAutoExitEmptyDiff } from "@/features/git/hooks/useAutoExitEmptyDiff";
 import { isMissingRepo } from "@/features/git/utils/repoErrors";
 import { useModels } from "@/features/models/hooks/useModels";
+import { runtimeForModelId } from "@/features/models/utils/modelRuntime";
 import { useCollaborationModes } from "@/features/collaboration/hooks/useCollaborationModes";
 import { useCollaborationModeSelection } from "@/features/collaboration/hooks/useCollaborationModeSelection";
 import { useSkills } from "@/features/skills/hooks/useSkills";
@@ -275,7 +276,7 @@ export default function MainApp() {
     queueGitStatusRefreshRef.current();
   }, []);
 
-  // Access mode is thread-scoped (best-effort persisted) and falls back to the app default.
+  const activeThreadRuntime = runtimeForModelId(preferredModelId);
 
   const {
     models,
@@ -292,7 +293,10 @@ export default function MainApp() {
     preferredModelId,
     preferredEffort,
     selectionKey: threadCodexSelectionKey,
+    allowedRuntime: activeThreadRuntime,
   });
+  const activeModelRuntime = runtimeForModelId(selectedModelId ?? preferredModelId);
+  const isClaudeRuntime = activeModelRuntime === "claude";
 
   const {
     collaborationModes,
@@ -301,7 +305,7 @@ export default function MainApp() {
     setSelectedCollaborationModeId,
   } = useCollaborationModes({
     activeWorkspace,
-    enabled: appSettings.collaborationModesEnabled,
+    enabled: appSettings.collaborationModesEnabled && !isClaudeRuntime,
     preferredModeId: preferredCollabModeId,
     selectionKey: threadCodexSelectionKey,
     onDebug: addDebugEntry,
@@ -392,7 +396,10 @@ export default function MainApp() {
     reasoningSupported,
     onFocusComposer: () => composerInputRef.current?.focus(),
   });
-  const { skills } = useSkills({ activeWorkspace, onDebug: addDebugEntry });
+  const { skills } = useSkills({
+    activeWorkspace: isClaudeRuntime ? null : activeWorkspace,
+    onDebug: addDebugEntry,
+  });
   const {
     prompts,
     createPrompt,
@@ -411,6 +418,7 @@ export default function MainApp() {
     ensureWorkspaceRuntimeCodexArgs,
     getThreadArgsBadge,
   } = useMainAppThreadCodexState({
+    enabled: !isClaudeRuntime,
     appCodexArgs: appSettings.codexArgs,
     selectedCodexArgsOverride,
     getThreadCodexParams,
@@ -659,7 +667,7 @@ export default function MainApp() {
   const { apps } = useApps({
     activeWorkspace,
     activeThreadId,
-    enabled: appSettings.experimentalAppsEnabled,
+    enabled: appSettings.experimentalAppsEnabled && !isClaudeRuntime,
     onDebug: addDebugEntry,
   });
 
@@ -1120,7 +1128,7 @@ export default function MainApp() {
     settings: {
       steerEnabled: appSettings.steerEnabled,
       followUpMessageBehavior: appSettings.followUpMessageBehavior,
-      experimentalAppsEnabled: appSettings.experimentalAppsEnabled,
+      experimentalAppsEnabled: appSettings.experimentalAppsEnabled && !isClaudeRuntime,
       pauseQueuedMessagesWhenResponseRequired:
         appSettings.pauseQueuedMessagesWhenResponseRequired,
     },
@@ -1538,7 +1546,7 @@ export default function MainApp() {
           threadStatusById,
           onSelectInstance: handleSelectWorkspaceInstance,
           skills,
-          appsEnabled: appSettings.experimentalAppsEnabled,
+          appsEnabled: appSettings.experimentalAppsEnabled && !isClaudeRuntime,
           apps,
           prompts,
           files,
@@ -1582,7 +1590,7 @@ export default function MainApp() {
       showMessageFilePath: appSettings.showMessageFilePath,
       openAppTargets: appSettings.openAppTargets,
       selectedOpenAppId: appSettings.selectedOpenAppId,
-      experimentalAppsEnabled: appSettings.experimentalAppsEnabled,
+      experimentalAppsEnabled: appSettings.experimentalAppsEnabled && !isClaudeRuntime,
       followUpMessageBehavior: appSettings.followUpMessageBehavior,
       composerFollowUpHintEnabled: appSettings.composerFollowUpHintEnabled,
       dictationEnabled: appSettings.dictationEnabled,

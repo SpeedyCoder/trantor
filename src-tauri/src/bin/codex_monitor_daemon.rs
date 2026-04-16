@@ -1569,7 +1569,7 @@ mod tests {
     use super::*;
     use crate::shared::process_core::kill_child_process_tree;
     use crate::storage::write_workspaces;
-    use crate::types::WorkspaceKind;
+    use crate::types::{AgentRuntime, WorkspaceKind};
     use serde_json::json;
     use std::future::Future;
     use std::path::PathBuf;
@@ -1669,6 +1669,7 @@ mod tests {
         let stdin = child.stdin.take().expect("dummy child stdin");
 
         Arc::new(WorkspaceSession {
+            runtime: AgentRuntime::Codex,
             codex_args: None,
             child: Mutex::new(child),
             stdin: Mutex::new(stdin),

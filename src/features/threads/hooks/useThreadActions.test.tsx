@@ -127,16 +127,22 @@ describe("useThreadActions", () => {
 
     expect(threadId).toBe("thread-1");
     expect(startThread).toHaveBeenCalledWith("ws-1");
-    expect(dispatch).toHaveBeenCalledWith({
-      type: "ensureThread",
-      workspaceId: "ws-1",
-      threadId: "thread-1",
-    });
-    expect(dispatch).toHaveBeenCalledWith({
-      type: "setActiveThreadId",
-      workspaceId: "ws-1",
-      threadId: "thread-1",
-    });
+    expect(dispatch.mock.calls.slice(0, 2)).toEqual([
+      [
+        {
+          type: "setActiveThreadId",
+          workspaceId: "ws-1",
+          threadId: "thread-1",
+        },
+      ],
+      [
+        {
+          type: "ensureThread",
+          workspaceId: "ws-1",
+          threadId: "thread-1",
+        },
+      ],
+    ]);
     expect(loadedThreadsRef.current["thread-1"]).toBe(true);
   });
 

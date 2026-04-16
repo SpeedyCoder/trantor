@@ -11,8 +11,8 @@ use crate::codex::args::resolve_workspace_codex_args;
 use crate::codex::home::resolve_workspace_codex_home;
 use crate::storage::write_workspaces;
 use crate::types::{
-    AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings, WorktreeInfo,
-    WorktreeSetupStatus,
+    AgentRuntime, AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings,
+    WorktreeInfo, WorktreeSetupStatus,
 };
 
 use super::connect::{kill_session_by_id, take_live_shared_session, workspace_session_spawn_lock};
@@ -221,7 +221,7 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
+    let existing_session = take_live_shared_session(sessions, &AgentRuntime::Codex).await;
     let session = if let Some(existing_session) = existing_session {
         existing_session
     } else {
