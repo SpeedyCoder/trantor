@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DebugEntry, ModelOption, WorkspaceInfo } from "../../../types";
 import { getConfigModel, getModelList } from "../../../services/tauri";
 import {
+  MODEL_RUNTIME_PREFIX,
+  runtimeForModelId,
+} from "../utils/modelRuntime";
+import {
   normalizeEffortValue,
   parseModelListResponse,
 } from "../utils/modelListResponse";
@@ -12,6 +16,7 @@ type UseModelsOptions = {
   preferredModelId?: string | null;
   preferredEffort?: string | null;
   selectionKey?: string | null;
+  allowedRuntime?: "codex" | "claude" | null;
 };
 
 const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
@@ -42,6 +47,7 @@ export function useModels({
   preferredModelId = null,
   preferredEffort = null,
   selectionKey = null,
+  allowedRuntime = null,
 }: UseModelsOptions) {
   const [models, setModels] = useState<ModelOption[]>([]);
   const [configModel, setConfigModel] = useState<string | null>(null);
@@ -53,6 +59,7 @@ export function useModels({
   const hasUserSelectedEffort = useRef(false);
   const lastWorkspaceId = useRef<string | null>(null);
   const lastSelectionKey = useRef<string | null>(null);
+  const lastAllowedRuntime = useRef<"codex" | "claude" | null>(null);
 
   const workspaceId = activeWorkspace?.id ?? null;
   const isConnected = Boolean(activeWorkspace?.connected);
@@ -75,6 +82,14 @@ export function useModels({
     lastWorkspaceId.current = workspaceId;
     setConfigModel(null);
   }, [workspaceId]);
+
+  useEffect(() => {
+    if (allowedRuntime === lastAllowedRuntime.current) {
+      return;
+    }
+    lastAllowedRuntime.current = allowedRuntime;
+    lastFetchedWorkspaceId.current = null;
+  }, [allowedRuntime]);
 
   useEffect(() => {
     if (selectedEffort === null) {
@@ -208,14 +223,18 @@ export function useModels({
           return dataFromServer;
         }
         const hasConfigModel = dataFromServer.some(
-          (model) => model.model === configModelFromConfig,
+          (model) =>
+            model.model === configModelFromConfig ||
+            model.providerModelId === configModelFromConfig,
         );
         if (hasConfigModel) {
           return dataFromServer;
         }
         const configOption: ModelOption = {
-          id: configModelFromConfig,
+          id: `${MODEL_RUNTIME_PREFIX.codex}${configModelFromConfig}`,
           model: configModelFromConfig,
+          runtime: "codex",
+          providerModelId: configModelFromConfig,
           displayName: `${configModelFromConfig} (config)`,
           description: CONFIG_MODEL_DESCRIPTION,
           supportedReasoningEfforts: [],
@@ -224,14 +243,18 @@ export function useModels({
         };
         return [configOption, ...dataFromServer];
       })();
-      setModels(data);
+      const filteredData =
+        allowedRuntime === null
+          ? data
+          : data.filter((model) => runtimeForModelId(model.id) === allowedRuntime);
+      setModels(filteredData);
       lastFetchedWorkspaceId.current = workspaceId;
-      const defaultModel = pickDefaultModel(data, configModelFromConfig);
-      const existingSelection = findModelByIdOrModel(data, selectedModelId);
+      const defaultModel = pickDefaultModel(filteredData, configModelFromConfig);
+      const existingSelection = findModelByIdOrModel(filteredData, selectedModelId);
       if (selectedModelId && !existingSelection) {
         hasUserSelectedModel.current = false;
       }
-      const preferredSelection = findModelByIdOrModel(data, preferredModelId);
+      const preferredSelection = findModelByIdOrModel(filteredData, preferredModelId);
       const shouldKeepExisting =
         hasUserSelectedModel.current && existingSelection !== null;
       const nextSelection =
@@ -258,6 +281,7 @@ export function useModels({
     isConnected,
     onDebug,
     preferredModelId,
+    allowedRuntime,
     selectedEffort,
     selectedModelId,
     resolveEffort,

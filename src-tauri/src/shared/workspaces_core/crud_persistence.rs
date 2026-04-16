@@ -12,7 +12,9 @@ use crate::codex::home::resolve_workspace_codex_home;
 use crate::shared::process_core::kill_child_process_tree;
 use crate::shared::{git_core, worktree_core};
 use crate::storage::write_workspaces;
-use crate::types::{AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings};
+use crate::types::{
+    AgentRuntime, AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings,
+};
 use crate::utils::normalize_windows_namespace_path;
 
 use super::connect::{kill_session_by_id, take_live_shared_session, workspace_session_spawn_lock};
@@ -54,7 +56,7 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
+    let existing_session = take_live_shared_session(sessions, &AgentRuntime::Codex).await;
     let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
         (existing_session, false)
     } else {
@@ -205,7 +207,7 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
+    let existing_session = take_live_shared_session(sessions, &AgentRuntime::Codex).await;
     let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
         (existing_session, false)
     } else {
@@ -370,7 +372,7 @@ where
     };
 
     let _spawn_guard = workspace_session_spawn_lock().lock().await;
-    let existing_session = take_live_shared_session(sessions).await;
+    let existing_session = take_live_shared_session(sessions, &AgentRuntime::Codex).await;
     let (session, spawned_new_session) = if let Some(existing_session) = existing_session {
         (existing_session, false)
     } else {

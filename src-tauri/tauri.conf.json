@@ -43,6 +43,9 @@
     "active": true,
     "targets": "all",
     "createUpdaterArtifacts": true,
+    "resources": [
+      "../packages/claude-app-server-adapter/src/index.mjs"
+    ],
     "iOS": {
       "frameworks": [
         "libz.tbd",

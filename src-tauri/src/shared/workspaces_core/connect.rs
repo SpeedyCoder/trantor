@@ -10,7 +10,7 @@ use crate::backend::app_server::WorkspaceSession;
 use crate::codex::args::resolve_workspace_codex_args;
 use crate::codex::home::resolve_workspace_codex_home;
 use crate::shared::process_core::kill_child_process_tree;
-use crate::types::{AppSettings, WorkspaceEntry};
+use crate::types::{AgentRuntime, AppSettings, WorkspaceEntry};
 
 use super::helpers::resolve_entry_and_parent;
 
@@ -35,11 +35,17 @@ async fn remove_session_references(
 
 pub(super) async fn take_live_shared_session(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
+    runtime: &AgentRuntime,
 ) -> Option<Arc<WorkspaceSession>> {
     loop {
         let existing_session = {
             let sessions = sessions.lock().await;
-            sessions.values().next().cloned()
+            sessions
+                .values()
+                .find(|session| {
+                    session.supports_workspace_sharing() && &session.runtime == runtime
+                })
+                .cloned()
         };
         let Some(existing_session) = existing_session else {
             return None;
@@ -73,7 +79,7 @@ where
         }
         remove_session_references(sessions, &existing_for_entry).await;
     }
-    if let Some(existing_session) = take_live_shared_session(sessions).await {
+    if let Some(existing_session) = take_live_shared_session(sessions, &AgentRuntime::Codex).await {
         existing_session
             .register_workspace_with_path(&entry.id, Some(&entry.path))
             .await;
@@ -135,7 +141,7 @@ mod tests {
     use tokio::process::Command;
     use tokio::sync::Mutex;
 
-    use crate::types::{WorkspaceKind, WorkspaceSettings};
+    use crate::types::{AgentRuntime, WorkspaceKind, WorkspaceSettings};
 
     fn make_workspace_entry(id: &str) -> WorkspaceEntry {
         WorkspaceEntry {
@@ -168,6 +174,7 @@ mod tests {
         let stdin = child.stdin.take().expect("dummy child stdin");
 
         Arc::new(WorkspaceSession {
+            runtime: AgentRuntime::Codex,
             codex_args: None,
             child: Mutex::new(child),
             stdin: Mutex::new(stdin),

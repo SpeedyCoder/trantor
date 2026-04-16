@@ -58,7 +58,7 @@ where
         let sessions = sessions.lock().await;
         (
             sessions.contains_key(&entry.id),
-            sessions.values().next().cloned(),
+            sessions.get(&entry.id).cloned(),
         )
     };
     if !workspace_connected {
@@ -168,6 +168,7 @@ mod tests {
         let stdin = child.stdin.take().expect("dummy child stdin");
 
         WorkspaceSession {
+            runtime: AgentRuntime::Codex,
             codex_args,
             child: Mutex::new(child),
             stdin: Mutex::new(stdin),

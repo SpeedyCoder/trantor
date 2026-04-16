@@ -2,7 +2,7 @@ use serde_json::{json, Map, Value};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 pub(crate) mod args;
 pub(crate) mod config;
@@ -11,12 +11,17 @@ pub(crate) mod home;
 use crate::backend::app_server::spawn_workspace_session as spawn_workspace_session_inner;
 pub(crate) use crate::backend::app_server::WorkspaceSession;
 use crate::backend::events::AppServerEvent;
+use crate::codex::args::resolve_workspace_codex_args;
+use crate::codex::home::resolve_workspace_codex_home;
 use crate::event_sink::TauriEventSink;
 use crate::remote_backend;
 use crate::shared::agents_config_core;
-use crate::shared::codex_core::{self, insert_optional_nullable_string};
+use crate::shared::codex_core::{
+    self, claude_session_key, insert_optional_nullable_string, normalize_model_id,
+    runtime_for_model_id,
+};
 use crate::state::AppState;
-use crate::types::WorkspaceEntry;
+use crate::types::{AgentRuntime, WorkspaceEntry};
 
 fn emit_thread_live_event(app: &AppHandle, workspace_id: &str, method: &str, params: Value) {
     let _ = app.emit(
@@ -38,6 +43,10 @@ pub(crate) async fn spawn_workspace_session(
     app_handle: AppHandle,
     codex_home: Option<PathBuf>,
 ) -> Result<Arc<WorkspaceSession>, String> {
+    if matches!(entry.settings.agent_runtime, AgentRuntime::Claude) {
+        let app_settings = app_handle.state::<AppState>().app_settings.lock().await.clone();
+        return crate::claude::spawn_workspace_session(entry, &app_settings, app_handle).await;
+    }
     let client_version = app_handle.package_info().version.to_string();
     let event_sink = TauriEventSink::new(app_handle);
     spawn_workspace_session_inner(
@@ -49,6 +58,125 @@ pub(crate) async fn spawn_workspace_session(
         event_sink,
     )
     .await
+}
+
+async fn ensure_runtime_session(
+    state: &AppState,
+    app: &AppHandle,
+    workspace_id: &str,
+    runtime: AgentRuntime,
+) -> Result<Arc<WorkspaceSession>, String> {
+    if matches!(runtime, AgentRuntime::Claude) && remote_backend::is_remote_mode(state).await {
+        return Err("Claude runtime is supported only in local desktop mode.".to_string());
+    }
+
+    let session_key = if matches!(runtime, AgentRuntime::Claude) {
+        claude_session_key(workspace_id)
+    } else {
+        workspace_id.to_string()
+    };
+    if let Some(existing) = state.sessions.lock().await.get(&session_key).cloned() {
+        return Ok(existing);
+    }
+
+    let (entry, parent_entry) = {
+        let workspaces = state.workspaces.lock().await;
+        let entry = workspaces
+            .get(workspace_id)
+            .cloned()
+            .ok_or_else(|| "workspace not found".to_string())?;
+        let parent_entry = entry
+            .parent_id
+            .as_ref()
+            .and_then(|parent_id| workspaces.get(parent_id))
+            .cloned();
+        (entry, parent_entry)
+    };
+    let mut runtime_entry = entry.clone();
+    runtime_entry.settings.agent_runtime = runtime.clone();
+
+    let (default_bin, codex_args) = {
+        let settings = state.app_settings.lock().await;
+        (
+            settings.codex_bin.clone(),
+            resolve_workspace_codex_args(&entry, parent_entry.as_ref(), Some(&settings)),
+        )
+    };
+    let codex_home = resolve_workspace_codex_home(&entry, parent_entry.as_ref());
+    let session = spawn_workspace_session(
+        runtime_entry,
+        default_bin,
+        codex_args,
+        app.clone(),
+        codex_home,
+    )
+    .await?;
+    session
+        .register_workspace_with_path(workspace_id, Some(&entry.path))
+        .await;
+    state.sessions.lock().await.insert(session_key, Arc::clone(&session));
+    Ok(session)
+}
+
+fn merge_model_lists(responses: Vec<(AgentRuntime, Value)>) -> Value {
+    let mut data = Vec::new();
+    for (runtime, response) in responses {
+        let items = response
+            .get("result")
+            .and_then(|result| result.get("data"))
+            .or_else(|| response.get("data"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for item in items {
+            let Some(mut record) = item.as_object().cloned() else {
+                continue;
+            };
+            let raw_model = record
+                .get("model")
+                .or_else(|| record.get("id"))
+                .and_then(Value::as_str)
+                .unwrap_or_default()
+                .trim()
+                .to_string();
+            if raw_model.is_empty() {
+                continue;
+            }
+            record.insert("runtime".to_string(), json!(runtime));
+            record.insert("providerModelId".to_string(), json!(raw_model.clone()));
+            record.insert("id".to_string(), json!(normalize_model_id(&runtime, &raw_model)));
+            if matches!(runtime, AgentRuntime::Claude) {
+                let display_name = record
+                    .get("displayName")
+                    .or_else(|| record.get("display_name"))
+                    .and_then(Value::as_str)
+                    .unwrap_or(&raw_model)
+                    .trim()
+                    .to_string();
+                record.insert(
+                    "displayName".to_string(),
+                    json!(format!("{display_name} · Claude")),
+                );
+            }
+            data.push(Value::Object(record));
+        }
+    }
+    json!({ "result": { "data": data } })
+}
+
+fn merge_thread_list_responses(responses: Vec<Value>) -> Value {
+    let mut data = Vec::new();
+    for response in responses {
+        let items = response
+            .get("result")
+            .and_then(|result| result.get("data"))
+            .or_else(|| response.get("data"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        data.extend(items);
+    }
+    json!({ "result": { "data": data } })
 }
 
 #[tauri::command]
@@ -74,20 +202,40 @@ pub(crate) async fn codex_update(
 #[tauri::command]
 pub(crate) async fn start_thread(
     workspace_id: String,
+    model_id: Option<String>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<Value, String> {
     if remote_backend::is_remote_mode(&*state).await {
+        if matches!(runtime_for_model_id(model_id.as_deref()), AgentRuntime::Claude) {
+            return Err("Claude runtime is supported only in local desktop mode.".to_string());
+        }
         return remote_backend::call_remote(
             &*state,
             app,
             "start_thread",
-            json!({ "workspaceId": workspace_id }),
+            json!({ "workspaceId": workspace_id, "modelId": model_id }),
         )
         .await;
     }
-
-    codex_core::start_thread_core(&state.sessions, &state.workspaces, workspace_id).await
+    let runtime = runtime_for_model_id(model_id.as_deref());
+    let session = ensure_runtime_session(&state, &app, &workspace_id, runtime.clone()).await?;
+    let workspace_path = {
+        let workspaces = state.workspaces.lock().await;
+        workspaces
+            .get(&workspace_id)
+            .map(|entry| entry.path.clone())
+            .ok_or_else(|| "workspace not found".to_string())?
+    };
+    let native_model = model_id.as_deref().map(codex_core::native_model_id);
+    let params = json!({
+        "cwd": workspace_path,
+        "approvalPolicy": "on-request",
+        "model": native_model,
+    });
+    session
+        .send_request_for_workspace(&workspace_id, "thread/start", params)
+        .await
 }
 
 #[tauri::command]
@@ -250,7 +398,27 @@ pub(crate) async fn list_threads(
         .await;
     }
 
-    codex_core::list_threads_core(&state.sessions, workspace_id, cursor, limit, sort_key).await
+    let mut responses = Vec::new();
+    let codex_response =
+        codex_core::list_threads_core(&state.sessions, workspace_id.clone(), cursor.clone(), limit, sort_key.clone())
+            .await?;
+    responses.push(codex_response);
+    if let Ok(claude_session) =
+        ensure_runtime_session(&state, &app, &workspace_id, AgentRuntime::Claude).await
+    {
+        let params = json!({
+            "cursor": cursor,
+            "limit": limit,
+            "sortKey": sort_key,
+        });
+        if let Ok(response) = claude_session
+            .send_request_for_workspace(&workspace_id, "thread/list", params)
+            .await
+        {
+            responses.push(response);
+        }
+    }
+    Ok(merge_thread_list_responses(responses))
 }
 
 #[tauri::command]
@@ -534,7 +702,20 @@ pub(crate) async fn model_list(
         .await;
     }
 
-    codex_core::model_list_core(&state.sessions, workspace_id).await
+    let mut responses = Vec::new();
+    let codex_response = codex_core::model_list_core(&state.sessions, workspace_id.clone()).await?;
+    responses.push((AgentRuntime::Codex, codex_response));
+    if let Ok(claude_session) =
+        ensure_runtime_session(&state, &app, &workspace_id, AgentRuntime::Claude).await
+    {
+        if let Ok(response) = claude_session
+            .send_request_for_workspace(&workspace_id, "model/list", json!({}))
+            .await
+        {
+            responses.push((AgentRuntime::Claude, response));
+        }
+    }
+    Ok(merge_model_lists(responses))
 }
 
 #[tauri::command]

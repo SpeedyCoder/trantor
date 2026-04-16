@@ -277,6 +277,14 @@ pub(crate) struct WorkspaceInfo {
     pub(crate) settings: WorkspaceSettings,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum AgentRuntime {
+    #[default]
+    Codex,
+    Claude,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "lowercase")]
 pub(crate) enum WorkspaceKind {
@@ -313,6 +321,8 @@ pub(crate) struct WorkspaceGroup {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub(crate) struct WorkspaceSettings {
+    #[serde(default, rename = "agentRuntime")]
+    pub(crate) agent_runtime: AgentRuntime,
     #[serde(default, rename = "sidebarCollapsed")]
     pub(crate) sidebar_collapsed: bool,
     #[serde(default, rename = "sortOrder")]
@@ -350,6 +360,29 @@ pub(crate) struct WorktreeSetupStatus {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ClaudeAuthStatus {
+    #[serde(default)]
+    pub(crate) cli_path: Option<String>,
+    pub(crate) installed: bool,
+    pub(crate) logged_in: bool,
+    #[serde(default)]
+    pub(crate) auth_method: Option<String>,
+    #[serde(default)]
+    pub(crate) account_email: Option<String>,
+    #[serde(default)]
+    pub(crate) details: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ClaudeAuthLoginResult {
+    pub(crate) started: bool,
+    #[serde(default)]
+    pub(crate) details: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct OpenAppTarget {
     pub(crate) id: String,
     pub(crate) label: String,
@@ -381,6 +414,10 @@ pub(crate) struct AppSettings {
     pub(crate) codex_bin: Option<String>,
     #[serde(default, rename = "codexArgs")]
     pub(crate) codex_args: Option<String>,
+    #[serde(default, rename = "claudeCliPath")]
+    pub(crate) claude_cli_path: Option<String>,
+    #[serde(default, rename = "claudeAdapterPath")]
+    pub(crate) claude_adapter_path: Option<String>,
     #[serde(default, rename = "backendMode")]
     pub(crate) backend_mode: BackendMode,
     #[serde(default, rename = "remoteBackendProvider")]
@@ -1125,6 +1162,8 @@ impl Default for AppSettings {
         Self {
             codex_bin: None,
             codex_args: None,
+            claude_cli_path: None,
+            claude_adapter_path: None,
             backend_mode: default_backend_mode(),
             remote_backend_provider: RemoteBackendProvider::Tcp,
             remote_backend_host: default_remote_backend_host(),

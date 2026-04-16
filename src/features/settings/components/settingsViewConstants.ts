@@ -86,6 +86,7 @@ export const SETTINGS_SECTION_LABELS: Record<CodexSection, string> = {
   server: "Server",
   agents: "Agents",
   codex: "Codex",
+  claude: "Claude",
   features: "Features",
 };
 

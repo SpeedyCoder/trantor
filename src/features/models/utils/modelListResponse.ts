@@ -76,7 +76,7 @@ export function parseModelListResponse(response: unknown): ModelOption[] {
   const items = extractModelItems(response);
 
   return items
-    .map((item) => {
+    .map<ModelOption | null>((item) => {
       if (!item || typeof item !== "object") {
         return null;
       }
@@ -87,6 +87,18 @@ export function parseModelListResponse(response: unknown): ModelOption[] {
       return {
         id: String(record.id ?? record.model ?? ""),
         model: modelSlug,
+        runtime:
+          record.runtime === "claude"
+            ? "claude"
+            : record.runtime === "codex"
+              ? "codex"
+              : undefined,
+        providerModelId:
+          typeof record.providerModelId === "string"
+            ? record.providerModelId
+            : typeof record.provider_model_id === "string"
+              ? record.provider_model_id
+              : null,
         displayName,
         description: String(record.description ?? ""),
         supportedReasoningEfforts: parseReasoningEfforts(record),
@@ -94,7 +106,7 @@ export function parseModelListResponse(response: unknown): ModelOption[] {
           record.defaultReasoningEffort ?? record.default_reasoning_effort,
         ),
         isDefault: Boolean(record.isDefault ?? record.is_default ?? false),
-      } satisfies ModelOption;
+      };
     })
     .filter((model): model is ModelOption => model !== null);
 }

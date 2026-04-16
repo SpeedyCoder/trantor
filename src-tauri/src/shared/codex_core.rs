@@ -16,7 +16,7 @@ use crate::codex::config as codex_config;
 use crate::codex::home::{resolve_default_codex_home, resolve_workspace_codex_home};
 use crate::rules;
 use crate::shared::account::{build_account_response, read_auth_account};
-use crate::types::WorkspaceEntry;
+use crate::types::{AgentRuntime, WorkspaceEntry};
 
 const LOGIN_START_TIMEOUT: Duration = Duration::from_secs(30);
 #[allow(dead_code)]
@@ -30,6 +30,51 @@ const THREAD_LIST_SOURCE_KINDS: &[&str] = &[
     "subAgentThreadSpawn",
     "unknown",
 ];
+
+pub(crate) const CODEX_MODEL_PREFIX: &str = "codex:";
+pub(crate) const CLAUDE_MODEL_PREFIX: &str = "claude:";
+
+pub(crate) fn model_runtime_prefix(runtime: &AgentRuntime) -> &'static str {
+    match runtime {
+        AgentRuntime::Codex => CODEX_MODEL_PREFIX,
+        AgentRuntime::Claude => CLAUDE_MODEL_PREFIX,
+    }
+}
+
+pub(crate) fn normalize_model_id(runtime: &AgentRuntime, model_id: &str) -> String {
+    format!("{}{}", model_runtime_prefix(runtime), model_id.trim())
+}
+
+pub(crate) fn native_model_id(model_id: &str) -> String {
+    model_id
+        .strip_prefix(CODEX_MODEL_PREFIX)
+        .or_else(|| model_id.strip_prefix(CLAUDE_MODEL_PREFIX))
+        .unwrap_or(model_id)
+        .trim()
+        .to_string()
+}
+
+pub(crate) fn runtime_for_model_id(model_id: Option<&str>) -> AgentRuntime {
+    let trimmed = model_id.unwrap_or_default().trim();
+    if trimmed.starts_with(CLAUDE_MODEL_PREFIX)
+        || trimmed.to_ascii_lowercase().starts_with("claude-")
+    {
+        AgentRuntime::Claude
+    } else {
+        AgentRuntime::Codex
+    }
+}
+
+pub(crate) fn claude_session_key(workspace_id: &str) -> String {
+    format!("{workspace_id}::claude")
+}
+
+fn workspace_session_key(workspace_id: &str, runtime: &AgentRuntime) -> String {
+    match runtime {
+        AgentRuntime::Codex => workspace_id.to_string(),
+        AgentRuntime::Claude => claude_session_key(workspace_id),
+    }
+}
 
 #[allow(dead_code)]
 fn image_extension_for_path(path: &str) -> Option<String> {
@@ -202,12 +247,31 @@ pub(crate) enum CodexLoginCancelState {
 async fn get_session_clone(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: &str,
+    runtime: AgentRuntime,
 ) -> Result<Arc<WorkspaceSession>, String> {
     let sessions = sessions.lock().await;
     sessions
-        .get(workspace_id)
+        .get(&workspace_session_key(workspace_id, &runtime))
         .cloned()
         .ok_or_else(|| "workspace not connected".to_string())
+}
+
+pub(crate) async fn find_thread_session(
+    sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
+    workspace_id: &str,
+    thread_id: &str,
+) -> Result<Arc<WorkspaceSession>, String> {
+    let all_sessions = {
+        let sessions_guard = sessions.lock().await;
+        sessions_guard.values().cloned().collect::<Vec<_>>()
+    };
+    for session in all_sessions {
+        let mapped_workspace = session.thread_workspace.lock().await.get(thread_id).cloned();
+        if mapped_workspace.as_deref() == Some(workspace_id) {
+            return Ok(session);
+        }
+    }
+    get_session_clone(sessions, workspace_id, AgentRuntime::Codex).await
 }
 
 async fn resolve_workspace_and_parent(
@@ -253,7 +317,7 @@ pub(crate) async fn start_thread_core(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
     let params = json!({
         "cwd": workspace_path,
@@ -269,7 +333,7 @@ pub(crate) async fn resume_thread_core(
     workspace_id: String,
     thread_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/resume", params)
@@ -281,7 +345,7 @@ pub(crate) async fn read_thread_core(
     workspace_id: String,
     thread_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/read", params)
@@ -296,7 +360,7 @@ pub(crate) async fn thread_live_subscribe_core(
     if thread_id.trim().is_empty() {
         return Err("threadId is required".to_string());
     }
-    let _ = get_session_clone(sessions, &workspace_id).await?;
+    let _ = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     Ok(())
 }
 
@@ -308,7 +372,7 @@ pub(crate) async fn thread_live_unsubscribe_core(
     if thread_id.trim().is_empty() {
         return Err("threadId is required".to_string());
     }
-    let _ = get_session_clone(sessions, &workspace_id).await?;
+    let _ = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     Ok(())
 }
 
@@ -317,7 +381,7 @@ pub(crate) async fn fork_thread_core(
     workspace_id: String,
     thread_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/fork", params)
@@ -331,7 +395,7 @@ pub(crate) async fn list_threads_core(
     limit: Option<u32>,
     sort_key: Option<String>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({
         "cursor": cursor,
         "limit": limit,
@@ -353,7 +417,7 @@ pub(crate) async fn list_mcp_server_status_core(
     cursor: Option<String>,
     limit: Option<u32>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "cursor": cursor, "limit": limit });
     session
         .send_request_for_workspace(&workspace_id, "mcpServerStatus/list", params)
@@ -365,7 +429,7 @@ pub(crate) async fn archive_thread_core(
     workspace_id: String,
     thread_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/archive", params)
@@ -377,7 +441,7 @@ pub(crate) async fn compact_thread_core(
     workspace_id: String,
     thread_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let params = json!({ "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "thread/compact/start", params)
@@ -390,7 +454,7 @@ pub(crate) async fn set_thread_name_core(
     thread_id: String,
     name: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let params = json!({ "threadId": thread_id, "name": name });
     session
         .send_request_for_workspace(&workspace_id, "thread/name/set", params)
@@ -485,7 +549,7 @@ pub(crate) async fn send_user_message_core(
     app_mentions: Option<Vec<Value>>,
     collaboration_mode: Option<Value>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
     let access_mode = access_mode.unwrap_or_else(|| "current".to_string());
     let sandbox_policy = match access_mode.as_str() {
@@ -512,7 +576,10 @@ pub(crate) async fn send_user_message_core(
     params.insert("cwd".to_string(), json!(workspace_path));
     params.insert("approvalPolicy".to_string(), json!(approval_policy));
     params.insert("sandboxPolicy".to_string(), json!(sandbox_policy));
-    params.insert("model".to_string(), json!(model));
+    params.insert(
+        "model".to_string(),
+        json!(model.as_deref().map(native_model_id)),
+    );
     params.insert("effort".to_string(), json!(effort));
     insert_optional_nullable_string(&mut params, "serviceTier", service_tier);
     if let Some(mode) = collaboration_mode {
@@ -537,7 +604,7 @@ pub(crate) async fn turn_steer_core(
     if turn_id.trim().is_empty() {
         return Err("missing active turn id".to_string());
     }
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let input = build_turn_input_items(text, images, app_mentions)?;
     let params = json!({
         "threadId": thread_id,
@@ -553,7 +620,7 @@ pub(crate) async fn collaboration_mode_list_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     session
         .send_request_for_workspace(&workspace_id, "collaborationMode/list", json!({}))
         .await
@@ -565,7 +632,7 @@ pub(crate) async fn turn_interrupt_core(
     thread_id: String,
     turn_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let params = json!({ "threadId": thread_id, "turnId": turn_id });
     session
         .send_request_for_workspace(&workspace_id, "turn/interrupt", params)
@@ -579,7 +646,7 @@ pub(crate) async fn start_review_core(
     target: Value,
     delivery: Option<String>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let mut params = Map::new();
     params.insert("threadId".to_string(), json!(thread_id));
     params.insert("target".to_string(), target);
@@ -595,7 +662,7 @@ pub(crate) async fn model_list_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     session
         .send_request_for_workspace(&workspace_id, "model/list", json!({}))
         .await
@@ -607,7 +674,7 @@ pub(crate) async fn experimental_feature_list_core(
     cursor: Option<String>,
     limit: Option<u32>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "cursor": cursor, "limit": limit });
     session
         .send_request_for_workspace(&workspace_id, "experimentalFeature/list", params)
@@ -618,7 +685,7 @@ pub(crate) async fn account_rate_limits_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     session
         .send_request_for_workspace(&workspace_id, "account/rateLimits/read", Value::Null)
         .await
@@ -631,7 +698,9 @@ pub(crate) async fn account_read_core(
 ) -> Result<Value, String> {
     let session = {
         let sessions = sessions.lock().await;
-        sessions.get(&workspace_id).cloned()
+        sessions
+            .get(&workspace_session_key(&workspace_id, &AgentRuntime::Codex))
+            .cloned()
     };
     let response = if let Some(session) = session {
         session
@@ -655,7 +724,7 @@ pub(crate) async fn codex_login_core(
     codex_login_cancels: &Mutex<HashMap<String, CodexLoginCancelState>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
     {
         let mut cancels = codex_login_cancels.lock().await;
@@ -766,7 +835,7 @@ pub(crate) async fn codex_login_cancel_core(
             }));
         }
         CodexLoginCancelState::LoginId(login_id) => {
-            let session = get_session_clone(sessions, &workspace_id).await?;
+            let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
             let response = session
                 .send_request_for_workspace(
                     &workspace_id,
@@ -798,7 +867,7 @@ pub(crate) async fn skills_list_core(
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: String,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
 
     // Codex can discover project-scoped skills from `<workspace>/.agents/skills`.
@@ -838,7 +907,7 @@ pub(crate) async fn apps_list_core(
     limit: Option<u32>,
     thread_id: Option<String>,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let params = json!({ "cursor": cursor, "limit": limit, "threadId": thread_id });
     session
         .send_request_for_workspace(&workspace_id, "app/list", params)
@@ -851,7 +920,7 @@ pub(crate) async fn respond_to_server_request_core(
     request_id: Value,
     result: Value,
 ) -> Result<(), String> {
-    let session = get_session_clone(sessions, &workspace_id).await?;
+    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     session.send_response(request_id, result).await
 }
 

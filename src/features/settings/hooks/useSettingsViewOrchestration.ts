@@ -11,6 +11,7 @@ import { isMacPlatform, isWindowsPlatform } from "@utils/platformPaths";
 import { useSettingsOpenAppDrafts } from "./useSettingsOpenAppDrafts";
 import { useSettingsShortcutDrafts } from "./useSettingsShortcutDrafts";
 import { useSettingsCodexSection } from "./useSettingsCodexSection";
+import { useSettingsClaudeSection } from "./useSettingsClaudeSection";
 import { useSettingsDisplaySection } from "./useSettingsDisplaySection";
 import { useSettingsEnvironmentsSection } from "./useSettingsEnvironmentsSection";
 import { useSettingsFeaturesSection } from "./useSettingsFeaturesSection";
@@ -200,6 +201,11 @@ export function useSettingsViewOrchestration({
     onRunCodexUpdate,
   });
 
+  const claudeSectionProps = useSettingsClaudeSection({
+    appSettings,
+    onUpdateAppSettings,
+  });
+
   const gitSectionProps = useSettingsGitSection({
     appSettings,
     onUpdateAppSettings,
@@ -273,6 +279,7 @@ export function useSettingsViewOrchestration({
     serverSectionProps,
     agentsSectionProps,
     codexSectionProps,
+    claudeSectionProps,
     featuresSectionProps,
   };
 }

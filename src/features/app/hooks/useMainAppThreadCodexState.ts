@@ -25,6 +25,7 @@ type ThreadCodexMetadata = {
 };
 
 type UseMainAppThreadCodexStateArgs = {
+  enabled?: boolean;
   appCodexArgs: string | null | undefined;
   selectedCodexArgsOverride: string | null;
   getThreadCodexParams: (
@@ -39,6 +40,7 @@ type UseMainAppThreadCodexStateArgs = {
 };
 
 export function useMainAppThreadCodexState({
+  enabled = true,
   appCodexArgs,
   selectedCodexArgsOverride,
   getThreadCodexParams,
@@ -80,15 +82,20 @@ export function useMainAppThreadCodexState({
 
   const codexArgsOptions = useMemo(
     () =>
-      buildCodexArgsOptions({
-        appCodexArgs: appCodexArgs ?? null,
-        additionalCodexArgs: [selectedCodexArgsOverride],
-      }),
-    [appCodexArgs, selectedCodexArgsOverride],
+      enabled
+        ? buildCodexArgsOptions({
+            appCodexArgs: appCodexArgs ?? null,
+            additionalCodexArgs: [selectedCodexArgsOverride],
+          })
+        : [],
+    [appCodexArgs, enabled, selectedCodexArgsOverride],
   );
 
   const ensureWorkspaceRuntimeCodexArgs = useCallback(
     async (workspaceId: string, threadId: string | null) => {
+      if (!enabled) {
+        return;
+      }
       const sanitizedCodexArgsOverride = resolveWorkspaceRuntimeCodexArgsOverride({
         workspaceId,
         threadId,
@@ -96,17 +103,19 @@ export function useMainAppThreadCodexState({
       });
       await setWorkspaceRuntimeCodexArgs(workspaceId, sanitizedCodexArgsOverride);
     },
-    [getThreadCodexParams],
+    [enabled, getThreadCodexParams],
   );
 
   const getThreadArgsBadge = useCallback(
     (workspaceId: string, threadId: string) =>
-      resolveWorkspaceRuntimeCodexArgsBadgeLabel({
-        workspaceId,
-        threadId,
-        getThreadCodexParams,
-      }),
-    [getThreadCodexParams],
+      enabled
+        ? resolveWorkspaceRuntimeCodexArgsBadgeLabel({
+            workspaceId,
+            threadId,
+            getThreadCodexParams,
+          })
+        : null,
+    [enabled, getThreadCodexParams],
   );
 
   return {

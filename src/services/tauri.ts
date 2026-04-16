@@ -15,6 +15,7 @@ import type {
   TraySessionUsage,
   WorkspaceInfo,
   AppMention,
+  ClaudeAuthStatus,
   WorkspaceSettings,
 } from "../types";
 import type {
@@ -387,8 +388,8 @@ export async function setWorkspaceRuntimeCodexArgs(
   });
 }
 
-export async function startThread(workspaceId: string) {
-  return invoke<any>("start_thread", { workspaceId });
+export async function startThread(workspaceId: string, modelId?: string | null) {
+  return invoke<any>("start_thread", { workspaceId, modelId: modelId ?? null });
 }
 
 export async function forkThread(workspaceId: string, threadId: string) {
@@ -779,6 +780,18 @@ export async function cancelCodexLogin(workspaceId: string) {
     "codex_login_cancel",
     { workspaceId },
   );
+}
+
+export async function getClaudeAuthStatus() {
+  return invoke<ClaudeAuthStatus>("claude_auth_status");
+}
+
+export async function startClaudeAuthLogin() {
+  return invoke<{ started: boolean; details: string | null }>("claude_auth_login");
+}
+
+export async function runClaudeAuthLogout() {
+  return invoke<ClaudeAuthStatus>("claude_auth_logout");
 }
 
 export async function getSkillsList(workspaceId: string) {

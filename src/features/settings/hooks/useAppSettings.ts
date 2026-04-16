@@ -136,6 +136,8 @@ function buildDefaultSettings(): AppSettings {
   return {
     codexBin: null,
     codexArgs: null,
+    claudeCliPath: null,
+    claudeAdapterPath: null,
     backendMode: isMobile ? "remote" : "local",
     remoteBackendProvider: defaultRemote.provider,
     remoteBackendHost: defaultRemote.host,
@@ -245,6 +247,10 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     ...remoteBackendSettings,
     codexBin: settings.codexBin?.trim() ? settings.codexBin.trim() : null,
     codexArgs: settings.codexArgs?.trim() ? settings.codexArgs.trim() : null,
+    claudeCliPath: settings.claudeCliPath?.trim() ? settings.claudeCliPath.trim() : null,
+    claudeAdapterPath: settings.claudeAdapterPath?.trim()
+      ? settings.claudeAdapterPath.trim()
+      : null,
     uiScale: clampUiScale(settings.uiScale),
     theme: allowedThemes.has(settings.theme) ? settings.theme : "system",
     uiFontFamily: normalizeFontFamily(
