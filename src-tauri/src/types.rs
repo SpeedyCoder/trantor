@@ -321,8 +321,6 @@ pub(crate) struct WorkspaceGroup {
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub(crate) struct WorkspaceSettings {
-    #[serde(default, rename = "agentRuntime")]
-    pub(crate) agent_runtime: AgentRuntime,
     #[serde(default, rename = "sidebarCollapsed")]
     pub(crate) sidebar_collapsed: bool,
     #[serde(default, rename = "sortOrder")]

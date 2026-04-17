@@ -261,6 +261,70 @@ describe("threadCodexParamsSeed", () => {
     expect(resolved.preferredServiceTier).toBeNull();
   });
 
+  it("inherits model and effort from no-thread scope before global defaults", () => {
+    const resolved = resolveThreadCodexState({
+      workspaceId: "ws-1",
+      threadId: "thread-1",
+      defaultAccessMode: "current",
+      lastComposerModelId: "gpt-5",
+      lastComposerReasoningEffort: "medium",
+      stored: {
+        modelId: null,
+        effort: null,
+        serviceTier: undefined,
+        accessMode: null,
+        collaborationModeId: null,
+        codexArgsOverride: undefined,
+        updatedAt: 100,
+      },
+      noThreadStored: {
+        modelId: "gpt-4.1",
+        effort: "low",
+        serviceTier: undefined,
+        accessMode: null,
+        collaborationModeId: null,
+        codexArgsOverride: undefined,
+        updatedAt: 200,
+      },
+      pendingSeed: null,
+    });
+
+    expect(resolved.preferredModelId).toBe("gpt-4.1");
+    expect(resolved.preferredEffort).toBe("low");
+  });
+
+  it("keeps explicit thread model and effort over no-thread scope", () => {
+    const resolved = resolveThreadCodexState({
+      workspaceId: "ws-1",
+      threadId: "thread-1",
+      defaultAccessMode: "current",
+      lastComposerModelId: "gpt-5",
+      lastComposerReasoningEffort: "medium",
+      stored: {
+        modelId: "gpt-5.4",
+        effort: "high",
+        serviceTier: undefined,
+        accessMode: null,
+        collaborationModeId: null,
+        codexArgsOverride: undefined,
+        updatedAt: 100,
+      },
+      noThreadStored: {
+        modelId: "gpt-4.1",
+        effort: "low",
+        serviceTier: undefined,
+        accessMode: null,
+        collaborationModeId: null,
+        codexArgsOverride: undefined,
+        updatedAt: 200,
+      },
+      pendingSeed: null,
+    });
+
+    expect(resolved.preferredModelId).toBe("gpt-5.4");
+    expect(resolved.preferredEffort).toBe("high");
+  });
+
   it("falls back to no-thread runtime args until thread-scoped params are seeded", () => {
     const entry = (
       codexArgsOverride: string | null | undefined,
