@@ -44,7 +44,7 @@
     "targets": "all",
     "createUpdaterArtifacts": true,
     "resources": [
-      "../packages/claude-app-server-adapter/src/index.mjs"
+      "../packages/claude-app-server-adapter/dist/index.mjs"
     ],
     "iOS": {
       "frameworks": [
