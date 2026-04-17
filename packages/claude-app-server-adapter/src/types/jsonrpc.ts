@@ -5,7 +5,7 @@ import type {
   ServerRequest,
 } from "../generated/index.js";
 
-export type JsonRpcId = RequestId | null;
+export type JsonRpcId = RequestId;
 
 export type JsonRpcRequest = ClientRequest;
 

@@ -18,7 +18,7 @@ import type {
   JsonRpcNotification,
   JsonRpcRequest,
 } from "../types/jsonrpc.js";
-import type { ClaudeSdkLoader, ThreadRecord } from "../types/runtime.js";
+import type { ThreadRecord } from "../types/runtime.js";
 import {
   accountRateLimitsResult,
   accountReadResult,
@@ -38,10 +38,7 @@ type AppServerArgs = {
       | AppServerNotification
       | { id: unknown; result?: unknown; error?: unknown },
   ) => void;
-  sdkLoader?: ClaudeSdkLoader;
 };
-
-type MethodHandler = (params: Record<string, unknown>) => Promise<unknown>;
 
 function asParams(value: unknown): Record<string, unknown> {
   return value && typeof value === "object"
@@ -59,7 +56,6 @@ export async function createAppServer({
   dataDir,
   workspacePath = process.env.CODEXMONITOR_WORKSPACE_PATH || process.cwd(),
   send,
-  sdkLoader,
 }: AppServerArgs) {
   const stateDir = path.join(dataDir, workspaceId);
   const repository = new ThreadRepository(stateDir);
@@ -132,7 +128,6 @@ export async function createAppServer({
         thread,
         prompt,
         abortController,
-        loader: sdkLoader,
         onSessionReady: async (sessionId) => {
           thread.sdkSessionId = sessionId;
           await repository.save(thread);
@@ -195,152 +190,123 @@ export async function createAppServer({
     }
   }
 
-  const handlers: Record<string, MethodHandler> = {
-    async initialize() {
-      return { ok: true, protocolVersion: "2" };
-    },
-    async "thread/start"(params) {
-      const requestedModel =
-        typeof params.model === "string" && params.model.trim().length > 0
-          ? `claude:${params.model.trim()}`
-          : null;
-      const thread = createThread(
-        typeof params.cwd === "string" && params.cwd.trim().length > 0
-          ? params.cwd
-          : workspacePath,
-        requestedModel,
-      );
-      await repository.save(thread);
-      send(
-        notify("thread/started", {
-          threadId: thread.id,
-          thread: summarizeThread(thread),
-        }),
-      );
-      return { threadId: thread.id, thread: summarizeThread(thread) };
-    },
-    async "thread/resume"(params) {
-      const thread = await getThreadOrThrow(threadIdFromParams(params));
-      return { threadId: thread.id, thread: buildThreadRecord(thread) };
-    },
-    async "thread/read"(params) {
-      const thread = await getThreadOrThrow(threadIdFromParams(params));
-      return { thread: buildThreadRecord(thread), data: thread.messages };
-    },
-    async "thread/fork"(params) {
-      const source = await getThreadOrThrow(threadIdFromParams(params));
-      const clone = forkThread(source);
-      await repository.save(clone);
-      send(
-        notify("thread/started", {
-          threadId: clone.id,
-          thread: summarizeThread(clone),
-        }),
-      );
-      return { threadId: clone.id, thread: summarizeThread(clone) };
-    },
-    async "thread/list"() {
-      const threads = await repository.list();
-      return {
-        data: threads.filter((thread) => !thread.archived).map(summarizeThread),
-      };
-    },
-    async "thread/archive"(params) {
-      const thread = await getThreadOrThrow(threadIdFromParams(params));
-      thread.archived = true;
-      thread.updatedAt = now();
-      await repository.save(thread);
-      send(notify("thread/archived", { threadId: thread.id }));
-      return { ok: true };
-    },
-    async "thread/name/set"(params) {
-      const thread = await getThreadOrThrow(threadIdFromParams(params));
-      thread.name =
-        typeof params.name === "string" && params.name.trim().length > 0
-          ? params.name
-          : typeof params.title === "string" && params.title.trim().length > 0
-            ? params.title
-            : thread.name;
-      thread.updatedAt = now();
-      await repository.save(thread);
-      send(
-        notify("thread/name/updated", {
-          threadId: thread.id,
-          name: thread.name,
-        }),
-      );
-      return { ok: true };
-    },
-    async "thread/compact/start"() {
-      return { ok: true, compacted: false };
-    },
-    async "model/list"() {
-      return listClaudeModels({
-        cwd: workspacePath,
-        loader: sdkLoader,
-      });
-    },
-    async "turn/start"(params) {
-      return runTurn(params);
-    },
-    async "turn/steer"(params) {
-      return runTurn(params);
-    },
-    async "turn/interrupt"(params) {
-      const threadId = threadIdFromParams(params);
-      activeRuns.get(threadId)?.abort();
-      activeRuns.delete(threadId);
-      send(notify("thread/status/changed", { threadId, status: "idle" }));
-      return { ok: true };
-    },
-    async "experimentalFeature/list"() {
-      return emptyListResult();
-    },
-    async "collaborationMode/list"() {
-      return collaborationModesResult();
-    },
-    async "account/rateLimits/read"() {
-      return accountRateLimitsResult();
-    },
-    async "account/read"() {
-      return accountReadResult();
-    },
-    async "skills/list"() {
-      return emptyListResult();
-    },
-    async "app/list"() {
-      return emptyListResult();
-    },
-    async "review/start"() {
-      return { ok: true, started: false };
-    },
-  };
+  async function handleMethod(request: JsonRpcRequest): Promise<unknown> {
+    const params = asParams(request.params);
+
+    switch (request.method as string) {
+      case "initialize":
+        return { ok: true, protocolVersion: "2" };
+      case "thread/start": {
+        const requestedModel =
+          typeof params.model === "string" && params.model.trim().length > 0
+            ? `claude:${params.model.trim()}`
+            : null;
+        const thread = createThread(
+          typeof params.cwd === "string" && params.cwd.trim().length > 0
+            ? params.cwd
+            : workspacePath,
+          requestedModel,
+        );
+        await repository.save(thread);
+        send(
+          notify("thread/started", {
+            threadId: thread.id,
+            thread: summarizeThread(thread),
+          }),
+        );
+        return { threadId: thread.id, thread: summarizeThread(thread) };
+      }
+      case "thread/resume": {
+        const thread = await getThreadOrThrow(threadIdFromParams(params));
+        return { threadId: thread.id, thread: buildThreadRecord(thread) };
+      }
+      case "thread/read": {
+        const thread = await getThreadOrThrow(threadIdFromParams(params));
+        return { thread: buildThreadRecord(thread), data: thread.messages };
+      }
+      case "thread/fork": {
+        const source = await getThreadOrThrow(threadIdFromParams(params));
+        const clone = forkThread(source);
+        await repository.save(clone);
+        send(
+          notify("thread/started", {
+            threadId: clone.id,
+            thread: summarizeThread(clone),
+          }),
+        );
+        return { threadId: clone.id, thread: summarizeThread(clone) };
+      }
+      case "thread/list": {
+        const threads = await repository.list();
+        return {
+          data: threads
+            .filter((thread) => !thread.archived)
+            .map(summarizeThread),
+        };
+      }
+      case "thread/archive": {
+        const thread = await getThreadOrThrow(threadIdFromParams(params));
+        thread.archived = true;
+        thread.updatedAt = now();
+        await repository.save(thread);
+        send(notify("thread/archived", { threadId: thread.id }));
+        return { ok: true };
+      }
+      case "thread/name/set": {
+        const thread = await getThreadOrThrow(threadIdFromParams(params));
+        thread.name =
+          typeof params.name === "string" && params.name.trim().length > 0
+            ? params.name
+            : typeof params.title === "string" && params.title.trim().length > 0
+              ? params.title
+              : thread.name;
+        thread.updatedAt = now();
+        await repository.save(thread);
+        send(
+          notify("thread/name/updated", {
+            threadId: thread.id,
+            name: thread.name,
+          }),
+        );
+        return { ok: true };
+      }
+      case "thread/compact/start":
+        return { ok: true, compacted: false };
+      case "model/list":
+        return listClaudeModels({ cwd: workspacePath });
+      case "turn/start":
+      case "turn/steer":
+        return runTurn(params);
+      case "turn/interrupt": {
+        const threadId = threadIdFromParams(params);
+        activeRuns.get(threadId)?.abort();
+        activeRuns.delete(threadId);
+        send(notify("thread/status/changed", { threadId, status: "idle" }));
+        return { ok: true };
+      }
+      case "experimentalFeature/list":
+      case "skills/list":
+      case "app/list":
+        return emptyListResult();
+      case "collaborationMode/list":
+        return collaborationModesResult();
+      case "account/rateLimits/read":
+        return accountRateLimitsResult();
+      case "account/read":
+        return accountReadResult();
+      case "review/start":
+        return { ok: true, started: false };
+      default:
+        throw new Error(`Unsupported method: ${request.method}`);
+    }
+  }
 
   const server = createJsonRpcServer({
     async handleRequest(request: JsonRpcRequest) {
-      const handler = handlers[request.method];
-      if (!handler) {
-        if (Object.prototype.hasOwnProperty.call(request, "id")) {
-          send(
-            sendError(
-              request.id ?? null,
-              `Unsupported method: ${request.method}`,
-            ),
-          );
-        } else {
-          send(
-            notify("error", {
-              message: `Unsupported method: ${request.method}`,
-            }),
-          );
-        }
-        return;
-      }
-
       try {
-        const result = await handler(asParams(request.params));
+        const result = await handleMethod(request);
         if (Object.prototype.hasOwnProperty.call(request, "id")) {
-          send(sendResult(request.id ?? null, result));
+          send(sendResult(request.id, result));
         }
         if (request.method === "initialize") {
           send(notify("initialized", {}));
@@ -348,7 +314,7 @@ export async function createAppServer({
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         if (Object.prototype.hasOwnProperty.call(request, "id")) {
-          send(sendError(request.id ?? null, message));
+          send(sendError(request.id, message));
         } else {
           send(notify("error", { message }));
         }

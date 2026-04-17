@@ -1,14 +1,9 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
 
 import { extractTextBlocks } from "./input.js";
-import type {
-  ClaudeModelInfo,
-  ClaudeSdkLoader,
-  ClaudeSdkMessage,
-  ThreadRecord,
-} from "../types/runtime.js";
+import type { ThreadRecord } from "../types/runtime.js";
 
-export function extractAssistantDelta(message: ClaudeSdkMessage): string {
+export function extractAssistantDelta(message: unknown): string {
   const record = message as Record<string, any> | null;
   if (!record || record.type !== "stream_event") {
     return "";
@@ -30,7 +25,7 @@ export function extractAssistantDelta(message: ClaudeSdkMessage): string {
     : "";
 }
 
-export function extractAssistantMessageText(message: ClaudeSdkMessage): string {
+export function extractAssistantMessageText(message: unknown): string {
   const record = message as Record<string, any> | null;
   if (!record || record.type !== "assistant") {
     return "";
@@ -43,7 +38,6 @@ type RunClaudeTurnArgs = {
   thread: ThreadRecord;
   prompt: string;
   abortController: AbortController;
-  loader?: ClaudeSdkLoader;
   onSessionReady: (sessionId: string) => Promise<void> | void;
   onDelta: (delta: string) => void;
 };
@@ -52,16 +46,14 @@ export async function runClaudeTurn({
   thread,
   prompt,
   abortController,
-  loader,
   onSessionReady,
   onDelta,
 }: RunClaudeTurnArgs): Promise<{ text: string; aborted: boolean }> {
   let accumulated = "";
   let finalText = "";
-  const sdk = loader ? await loader() : { query };
 
   try {
-    const stream = sdk.query({
+    const stream = query({
       prompt,
       options: {
         cwd: thread.cwd,
@@ -126,7 +118,6 @@ export async function runClaudeTurn({
 
 type ListClaudeModelsArgs = {
   cwd: string;
-  loader?: ClaudeSdkLoader;
 };
 
 type ModelListResult = {
@@ -143,7 +134,9 @@ type ModelListResult = {
   }>;
 };
 
-function toReasoningEfforts(model: ClaudeModelInfo): ModelListResult["data"][number]["supportedReasoningEfforts"] {
+function toReasoningEfforts(model: {
+  supportedEffortLevels?: ReadonlyArray<string>;
+}): ModelListResult["data"][number]["supportedReasoningEfforts"] {
   return (model.supportedEffortLevels ?? []).map((reasoningEffort) => ({
     reasoningEffort,
     description: "",
@@ -152,10 +145,8 @@ function toReasoningEfforts(model: ClaudeModelInfo): ModelListResult["data"][num
 
 export async function listClaudeModels({
   cwd,
-  loader,
 }: ListClaudeModelsArgs): Promise<ModelListResult> {
-  const sdk = loader ? await loader() : { query };
-  const control = sdk.query({
+  const control = query({
     prompt: "",
     options: {
       cwd,
