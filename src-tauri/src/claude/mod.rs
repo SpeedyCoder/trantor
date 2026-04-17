@@ -124,14 +124,10 @@ async fn run_auth_status(cli_path: Option<&str>) -> ClaudeAuthStatus {
 
 fn dev_adapter_candidates() -> Vec<PathBuf> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let mut candidates = vec![
-        cwd.join("packages/claude-app-server-adapter/dist/index.mjs"),
-        cwd.join("packages/claude-app-server-adapter/src/index.mjs"),
-    ];
+    let mut candidates = vec![cwd.join("packages/claude-app-server-adapter/dist/index.mjs")];
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     if let Some(repo_root) = manifest_dir.parent() {
         candidates.push(repo_root.join("packages/claude-app-server-adapter/dist/index.mjs"));
-        candidates.push(repo_root.join("packages/claude-app-server-adapter/src/index.mjs"));
     }
     candidates
 }
@@ -189,16 +185,10 @@ fn resolve_bundled_adapter_path(app: &AppHandle) -> Option<PathBuf> {
             resource_dir
                 .join("packages")
                 .join("claude-app-server-adapter")
-                .join("src")
-                .join("index.mjs"),
-            resource_dir
-                .join("packages")
-                .join("claude-app-server-adapter")
                 .join("dist")
                 .join("index.mjs"),
             resource_dir.join("claude-app-server-adapter").join("index.mjs"),
             resource_dir.join("index.mjs"),
-            resource_dir.join("src").join("index.mjs"),
         ] {
             if candidate.is_file() {
                 return Some(candidate);
