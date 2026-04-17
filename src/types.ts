@@ -1,5 +1,4 @@
 export type WorkspaceSettings = {
-  agentRuntime?: "codex" | "claude";
   sidebarCollapsed: boolean;
   sortOrder?: number | null;
   groupId?: string | null;

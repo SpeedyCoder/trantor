@@ -2,7 +2,7 @@ use serde_json::{json, Map, Value};
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 
 pub(crate) mod args;
 pub(crate) mod config;
@@ -43,10 +43,6 @@ pub(crate) async fn spawn_workspace_session(
     app_handle: AppHandle,
     codex_home: Option<PathBuf>,
 ) -> Result<Arc<WorkspaceSession>, String> {
-    if matches!(entry.settings.agent_runtime, AgentRuntime::Claude) {
-        let app_settings = app_handle.state::<AppState>().app_settings.lock().await.clone();
-        return crate::claude::spawn_workspace_session(entry, &app_settings, app_handle).await;
-    }
     let client_version = app_handle.package_info().version.to_string();
     let event_sink = TauriEventSink::new(app_handle);
     spawn_workspace_session_inner(
@@ -92,8 +88,6 @@ async fn ensure_runtime_session(
             .cloned();
         (entry, parent_entry)
     };
-    let mut runtime_entry = entry.clone();
-    runtime_entry.settings.agent_runtime = runtime.clone();
 
     let (default_bin, codex_args) = {
         let settings = state.app_settings.lock().await;
@@ -103,14 +97,13 @@ async fn ensure_runtime_session(
         )
     };
     let codex_home = resolve_workspace_codex_home(&entry, parent_entry.as_ref());
-    let session = spawn_workspace_session(
-        runtime_entry,
-        default_bin,
-        codex_args,
-        app.clone(),
-        codex_home,
-    )
-    .await?;
+    let session = if matches!(runtime, AgentRuntime::Claude) {
+        let app_settings = state.app_settings.lock().await.clone();
+        crate::claude::spawn_workspace_session(entry.clone(), &app_settings, app.clone()).await?
+    } else {
+        spawn_workspace_session(entry.clone(), default_bin, codex_args, app.clone(), codex_home)
+            .await?
+    };
     session
         .register_workspace_with_path(workspace_id, Some(&entry.path))
         .await;

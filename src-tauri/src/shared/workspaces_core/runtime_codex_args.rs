@@ -135,7 +135,7 @@ mod tests {
 
     use tokio::process::Command;
 
-    use crate::types::{WorkspaceKind, WorkspaceSettings};
+    use crate::types::{AgentRuntime, WorkspaceKind, WorkspaceSettings};
 
     fn make_workspace_entry(id: &str) -> WorkspaceEntry {
         WorkspaceEntry {
