@@ -1,4 +1,5 @@
 import type { ModelOption } from "../../../types";
+import { formatModelDisplayLabel } from "../../models/utils/modelPresentation";
 import type { WorkspaceHomeRunInstance } from "../hooks/useWorkspaceHome";
 
 export const INSTANCE_OPTIONS = [1, 2, 3, 4];
@@ -11,7 +12,7 @@ export const buildIconPath = (workspacePath: string) => {
 };
 
 export const resolveModelLabel = (model: ModelOption | null) =>
-  model?.displayName?.trim() || model?.model?.trim() || "Default model";
+  formatModelDisplayLabel(model);
 
 export const buildLabelCounts = (instances: WorkspaceHomeRunInstance[]) => {
   const counts = new Map<string, number>();

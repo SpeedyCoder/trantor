@@ -123,4 +123,98 @@ describe("useModels", () => {
       expect(result.current.selectedEffort).toBe("high");
     });
   });
+
+  it("keeps Claude options visible when preferred model is Codex", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.1",
+            model: "gpt-5.1",
+            runtime: "codex",
+            displayName: "GPT-5.1",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+          {
+            id: "claude:sonnet-4",
+            model: "sonnet-4",
+            runtime: "claude",
+            displayName: "Claude Sonnet 4",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useModels({
+        activeWorkspace: workspace,
+        preferredModelId: "codex:gpt-5.1",
+      }),
+    );
+
+    await waitFor(() => expect(result.current.models.length).toBe(2));
+
+    expect(result.current.models.map((model) => model.id)).toEqual([
+      "codex:gpt-5.1",
+      "claude:sonnet-4",
+    ]);
+  });
+
+  it("filters to the active thread provider when allowedRuntime is set", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.1",
+            model: "gpt-5.1",
+            runtime: "codex",
+            displayName: "GPT-5.1",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+          {
+            id: "claude:sonnet-4.5",
+            model: "sonnet-4.5",
+            runtime: "claude",
+            displayName: "Sonnet 4.5 · Claude",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+          {
+            id: "claude:sonnet-4.6",
+            model: "sonnet-4.6",
+            runtime: "claude",
+            displayName: "Sonnet 4.6 · Claude",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useModels({
+        activeWorkspace: workspace,
+        preferredModelId: "claude:sonnet-4.5",
+        allowedRuntime: "claude",
+      }),
+    );
+
+    await waitFor(() => expect(result.current.models.length).toBe(2));
+
+    expect(result.current.models.map((model) => model.id)).toEqual([
+      "claude:sonnet-4.5",
+      "claude:sonnet-4.6",
+    ]);
+  });
 });

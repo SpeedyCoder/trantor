@@ -245,6 +245,26 @@
   width: max-content !important;
 }
 
+.workspace-home-model-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 4px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-home-model-divider::before,
+.workspace-home-model-divider::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--border-muted);
+}
+
 .workspace-home-model-option {
   position: relative;
   display: flex;
