@@ -4,6 +4,12 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const mockQuery = vi.hoisted(() => vi.fn());
+
+vi.mock("@anthropic-ai/claude-agent-sdk", () => ({
+  query: mockQuery,
+}));
+
 import { parseCliArgs } from "../cli/parseCliArgs.js";
 import { ThreadRepository } from "../thread/repository.js";
 import { createAppServer } from "./createAppServer.js";
@@ -17,6 +23,7 @@ async function makeTempDir() {
 }
 
 afterEach(async () => {
+  mockQuery.mockReset();
   vi.restoreAllMocks();
   await Promise.all(
     tempDirs.splice(0).map(async (dir) => {
@@ -82,14 +89,22 @@ describe("createAppServer", () => {
     });
 
     await app.processLine(JSON.stringify({ id: 1, method: "initialize" }));
-    await app.processLine(JSON.stringify({ id: 2, method: "thread/start", params: {} }));
+    await app.processLine(
+      JSON.stringify({ id: 2, method: "thread/start", params: {} }),
+    );
 
     const threadStart = payloads.find(
-      (payload) => typeof payload === "object" && payload !== null && "id" in (payload as object) && (payload as { id?: number }).id === 2,
+      (payload) =>
+        typeof payload === "object" &&
+        payload !== null &&
+        "id" in (payload as object) &&
+        (payload as { id?: number }).id === 2,
     ) as { result: { threadId: string } };
     const threadId = threadStart.result.threadId;
 
-    await app.processLine(JSON.stringify({ id: 3, method: "thread/list", params: {} }));
+    await app.processLine(
+      JSON.stringify({ id: 3, method: "thread/list", params: {} }),
+    );
     await app.processLine(
       JSON.stringify({
         id: 4,
@@ -97,10 +112,16 @@ describe("createAppServer", () => {
         params: { threadId, name: "Renamed" },
       }),
     );
-    await app.processLine(JSON.stringify({ id: 5, method: "thread/read", params: { threadId } }));
+    await app.processLine(
+      JSON.stringify({ id: 5, method: "thread/read", params: { threadId } }),
+    );
 
     const result = payloads.find(
-      (payload) => typeof payload === "object" && payload !== null && "id" in (payload as object) && (payload as { id?: number }).id === 5,
+      (payload) =>
+        typeof payload === "object" &&
+        payload !== null &&
+        "id" in (payload as object) &&
+        (payload as { id?: number }).id === 5,
     ) as { result: { thread: { name: string } } };
 
     expect(result.result.thread.name).toBe("Renamed");
@@ -112,7 +133,7 @@ describe("createAppServer", () => {
   it("translates Claude streaming output into app-server events", async () => {
     const root = await makeTempDir();
     const payloads: unknown[] = [];
-    const query = vi.fn(() => {
+    mockQuery.mockImplementation(() => {
       const stream = (async function* () {
         yield {
           type: "system",
@@ -143,22 +164,30 @@ describe("createAppServer", () => {
       workspaceId: "ws-1",
       dataDir: root,
       send: (payload) => payloads.push(payload),
-      sdkLoader: async () => ({ query }),
     });
 
-    await app.processLine(JSON.stringify({ id: 1, method: "thread/start", params: {} }));
+    await app.processLine(
+      JSON.stringify({ id: 1, method: "thread/start", params: {} }),
+    );
     const startPayload = payloads.find(
-      (payload) => typeof payload === "object" && payload !== null && "id" in (payload as object) && (payload as { id?: number }).id === 1,
+      (payload) =>
+        typeof payload === "object" &&
+        payload !== null &&
+        "id" in (payload as object) &&
+        (payload as { id?: number }).id === 1,
     ) as { result: { threadId: string } };
     await app.processLine(
       JSON.stringify({
         id: 2,
         method: "turn/start",
-        params: { threadId: startPayload.result.threadId, input: [{ type: "text", text: "Hi" }] },
+        params: {
+          threadId: startPayload.result.threadId,
+          input: [{ type: "text", text: "Hi" }],
+        },
       }),
     );
 
-    expect(query).toHaveBeenCalledTimes(1);
+    expect(mockQuery).toHaveBeenCalledTimes(1);
     expect(
       payloads.some(
         (payload) =>
@@ -172,12 +201,17 @@ describe("createAppServer", () => {
     const repository = new ThreadRepository(path.join(root, "ws-1"));
     const saved = await repository.get(startPayload.result.threadId);
     expect(saved?.sdkSessionId).toBe("session-1");
-    expect(saved?.messages.at(-1)).toMatchObject({ type: "agentMessage", text: "Hello world" });
+    expect(saved?.messages.at(-1)).toMatchObject({
+      type: "agentMessage",
+      text: "Hello world",
+    });
   });
 
   it("returns model/list from sdk supportedModels", async () => {
     const root = await makeTempDir();
     const payloads: unknown[] = [];
+
+    // Patch the claude sdk query to use our mocked supportedModels and interrupt
     const supportedModels = vi.fn(async () => [
       {
         value: "claude-sonnet-4-20250514",
@@ -192,21 +226,21 @@ describe("createAppServer", () => {
       },
     ]);
     const interrupt = vi.fn(async () => {});
+    mockQuery.mockReturnValue({
+      supportedModels,
+      interrupt,
+      [Symbol.asyncIterator]: async function* () {},
+    });
 
     const app = await createAppServer({
       workspaceId: "ws-1",
       dataDir: root,
       send: (payload) => payloads.push(payload),
-      sdkLoader: async () => ({
-        query: vi.fn(() => ({
-          [Symbol.asyncIterator]: async function* () {},
-          supportedModels,
-          interrupt,
-        })),
-      }),
     });
 
-    await app.processLine(JSON.stringify({ id: 1, method: "model/list", params: {} }));
+    await app.processLine(
+      JSON.stringify({ id: 1, method: "model/list", params: {} }),
+    );
 
     expect(supportedModels).toHaveBeenCalledTimes(1);
     expect(interrupt).toHaveBeenCalledTimes(1);

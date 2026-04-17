@@ -58,67 +58,15 @@ export type ThreadRecordResponse = ThreadSummary & {
   turns: ThreadTurn[];
 };
 
-export type ClaudeInitMessage = {
-  type: "system";
-  subtype?: string;
-  data?: {
-    session_id?: string;
-    sessionId?: string;
-  };
-};
-
-export type ClaudeStreamDelta = {
-  type: "stream_event";
-  event?: {
-    type?: string;
-    delta?: {
-      type?: string;
-      text?: string;
-    };
-  };
-};
-
-export type ClaudeAssistantMessage = {
-  type: "assistant";
-  message?: {
-    content?: Array<{
-      text?: string;
-    }>;
-  };
-};
-
-export type ClaudeSdkMessage =
-  | ClaudeInitMessage
-  | ClaudeStreamDelta
-  | ClaudeAssistantMessage
-  | Record<string, unknown>;
-
-export type ClaudeQueryOptions = {
-  cwd: string;
-  resume?: string;
-  maxTurns: number;
-  includePartialMessages: boolean;
-  permissionMode: string;
-  allowDangerouslySkipPermissions: boolean;
-  settingSources: string[];
-};
-
-export type ClaudeQueryArgs = {
-  prompt: string;
-  options: ClaudeQueryOptions;
-};
+export type ClaudeSdkMessage = Record<string, unknown>;
 
 export type ClaudeModelInfo = {
   value: string;
   displayName: string;
   description: string;
-  supportsEffort?: boolean;
   supportedEffortLevels?: ReadonlyArray<
     "low" | "medium" | "high" | "xhigh" | "max"
   >;
-  supportsAdaptiveThinking?: boolean;
-  supportsFastMode?: boolean;
-  supportsAutoMode?: boolean;
 };
 
 export type ClaudeQueryHandle = AsyncIterable<ClaudeSdkMessage> & {
@@ -127,7 +75,8 @@ export type ClaudeQueryHandle = AsyncIterable<ClaudeSdkMessage> & {
 };
 
 export type ClaudeSdkModule = {
-  query(args: ClaudeQueryArgs): ClaudeQueryHandle;
+  query(args: {
+    prompt: string;
+    options: Record<string, unknown>;
+  }): ClaudeQueryHandle;
 };
-
-export type ClaudeSdkLoader = () => Promise<ClaudeSdkModule>;
