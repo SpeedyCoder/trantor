@@ -6,6 +6,7 @@ import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import Cpu from "lucide-react/dist/esm/icons/cpu";
+import Feather from "lucide-react/dist/esm/icons/feather";
 import {
   PopoverMenuItem,
   SplitActionMenu,
@@ -16,6 +17,7 @@ import {
   INSTANCE_OPTIONS,
   resolveModelLabel,
 } from "./workspaceHomeHelpers";
+import { runtimeForModelId } from "../../models/utils/modelRuntime";
 
 type WorkspaceHomeRunControlsProps = {
   workspaceKind: WorkspaceInfo["kind"];
@@ -76,9 +78,15 @@ export function WorkspaceHomeRunControls({
     : null;
   const selectedModelLabel = resolveModelLabel(selectedModel);
   const modelSummary = buildModelSummary(models, modelSelections);
+  const codexModels = models.filter((model) => runtimeForModelId(model.id) !== "claude");
+  const claudeModels = models.filter((model) => runtimeForModelId(model.id) === "claude");
+  const hasMixedProviders = codexModels.length > 0 && claudeModels.length > 0;
   const showRunMode = (workspaceKind ?? "main") !== "worktree";
   const runModeLabel = runMode === "local" ? "Local" : "Worktree";
   const RunModeIcon = runMode === "local" ? Laptop : GitBranch;
+  const SelectedModelIcon = selectedModel && runtimeForModelId(selectedModel.id) === "claude"
+    ? Feather
+    : Cpu;
   const toggleRunModeMenu = useCallback(() => {
     toggleRunModeOpen();
     closeModels();
@@ -157,6 +165,7 @@ export function WorkspaceHomeRunControls({
             data-tauri-drag-region="false"
           >
             <span className="open-app-label">
+              <SelectedModelIcon className="workspace-home-mode-icon" aria-hidden />
               {runMode === "local" ? selectedModelLabel : modelSummary}
             </span>
           </button>
@@ -174,7 +183,7 @@ export function WorkspaceHomeRunControls({
             Connect this workspace to load available models.
           </div>
         )}
-        {models.map((model) => {
+        {codexModels.map((model) => {
           const isSelected =
             runMode === "local"
               ? model.id === selectedModelId
@@ -196,6 +205,65 @@ export function WorkspaceHomeRunControls({
                   onToggleModel(model.id);
                 }}
                 icon={<Cpu className="workspace-home-mode-icon" aria-hidden />}
+                active={isSelected}
+              >
+                {resolveModelLabel(model)}
+              </PopoverMenuItem>
+              {runMode === "worktree" && (
+                <>
+                  <div className="workspace-home-model-meta" aria-hidden>
+                    <span>{count}x</span>
+                    <ChevronRight size={14} />
+                  </div>
+                  <div className="workspace-home-model-submenu ds-popover">
+                    {INSTANCE_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`workspace-home-model-submenu-item${
+                          option === count ? " is-active" : ""
+                        }`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onModelCountChange(model.id, option);
+                        }}
+                      >
+                        {option}x
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+        {hasMixedProviders && (
+          <div className="workspace-home-model-divider" role="separator" aria-label="Claude models">
+            <span>Claude</span>
+          </div>
+        )}
+        {claudeModels.map((model) => {
+          const isSelected =
+            runMode === "local"
+              ? model.id === selectedModelId
+              : Boolean(modelSelections[model.id]);
+          const count = modelSelections[model.id] ?? 1;
+          return (
+            <div
+              key={model.id}
+              className={`workspace-home-model-option${isSelected ? " is-active" : ""}`}
+            >
+              <PopoverMenuItem
+                className="open-app-option workspace-home-model-toggle"
+                onClick={() => {
+                  if (runMode === "local") {
+                    onSelectModel(model.id);
+                    closeModels();
+                    return;
+                  }
+                  onToggleModel(model.id);
+                }}
+                icon={<Feather className="workspace-home-mode-icon" aria-hidden />}
                 active={isSelected}
               >
                 {resolveModelLabel(model)}

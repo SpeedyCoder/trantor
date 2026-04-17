@@ -57,4 +57,34 @@ describe("parseModelListResponse", () => {
     expect(models[0].displayName).toBe("GPT-5.3-Codex-Spark");
     expect(models[1].displayName).toBe("gpt-5.2-codex");
   });
+
+  it("preserves distinct Claude variants without collapsing version numbers", () => {
+    const response = {
+      result: {
+        data: [
+          {
+            id: "claude:sonnet-4.5",
+            model: "sonnet-4.5",
+            runtime: "claude",
+            displayName: "Sonnet 4.5 · Claude",
+          },
+          {
+            id: "claude:sonnet-4.6",
+            model: "sonnet-4.6",
+            runtime: "claude",
+            displayName: "Sonnet 4.6 · Claude",
+          },
+        ],
+      },
+    };
+    const models = parseModelListResponse(response);
+    expect(models.map((model) => model.displayName)).toEqual([
+      "Sonnet 4.5 · Claude",
+      "Sonnet 4.6 · Claude",
+    ]);
+    expect(models.map((model) => model.id)).toEqual([
+      "claude:sonnet-4.5",
+      "claude:sonnet-4.6",
+    ]);
+  });
 });

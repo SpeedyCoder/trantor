@@ -8,6 +8,7 @@ import { useAutoExitEmptyDiff } from "@/features/git/hooks/useAutoExitEmptyDiff"
 import { isMissingRepo } from "@/features/git/utils/repoErrors";
 import { useModels } from "@/features/models/hooks/useModels";
 import { runtimeForModelId } from "@/features/models/utils/modelRuntime";
+import { NO_THREAD_SCOPE_SUFFIX } from "@/features/threads/utils/threadCodexParamsSeed";
 import { useCollaborationModes } from "@/features/collaboration/hooks/useCollaborationModes";
 import { useCollaborationModeSelection } from "@/features/collaboration/hooks/useCollaborationModeSelection";
 import { useSkills } from "@/features/skills/hooks/useSkills";
@@ -275,8 +276,11 @@ export default function MainApp() {
   const handleThreadMessageActivity = useCallback(() => {
     queueGitStatusRefreshRef.current();
   }, []);
-
-  const activeThreadRuntime = runtimeForModelId(preferredModelId);
+  const activeThreadRuntime =
+    threadCodexSelectionKey &&
+    !threadCodexSelectionKey.endsWith(`:${NO_THREAD_SCOPE_SUFFIX}`)
+      ? runtimeForModelId(preferredModelId)
+      : null;
 
   const {
     models,
