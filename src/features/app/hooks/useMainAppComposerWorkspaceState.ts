@@ -1,4 +1,5 @@
 import { useMemo, type RefObject } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type {
   AppSettings,
   ConversationItem,
@@ -57,6 +58,7 @@ type UseMainAppComposerWorkspaceStateArgs = {
   >;
   models: {
     models: ModelOption[];
+    selectedHarness: AgentHarness;
     selectedModelId: string | null;
     resolvedEffort: string | null;
     selectedServiceTier: ServiceTier | null | undefined;
@@ -125,6 +127,7 @@ export function useMainAppComposerWorkspaceState({
   } = thread;
   const {
     models: modelOptions,
+    selectedHarness,
     selectedModelId,
     resolvedEffort,
     selectedServiceTier,
@@ -250,6 +253,7 @@ export function useMainAppComposerWorkspaceState({
   const workspaceHomeState = useWorkspaceHome({
     activeWorkspace,
     models: modelOptions,
+    selectedHarness,
     selectedModelId,
     effort: resolvedEffort,
     serviceTier: selectedServiceTier,

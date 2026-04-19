@@ -1,11 +1,11 @@
-export type AgentRuntime = "codex" | "claude";
+export type AgentHarness = "codex" | "claude";
 
 export const MODEL_RUNTIME_PREFIX = {
   codex: "codex:",
   claude: "claude:",
 } as const;
 
-export function runtimeForModelId(modelId: string | null | undefined): AgentRuntime | null {
+export function harnessForModelId(modelId: string | null | undefined): AgentHarness | null {
   if (!modelId) {
     return null;
   }
@@ -17,6 +17,8 @@ export function runtimeForModelId(modelId: string | null | undefined): AgentRunt
   }
   return modelId.toLowerCase().startsWith("claude-") ? "claude" : "codex";
 }
+
+export const runtimeForModelId = harnessForModelId;
 
 export function providerModelIdForModelId(modelId: string | null | undefined): string | null {
   if (!modelId) {

@@ -3,7 +3,7 @@ import type { DebugEntry, ModelOption, WorkspaceInfo } from "../../../types";
 import { getConfigModel, getModelList } from "../../../services/tauri";
 import {
   MODEL_RUNTIME_PREFIX,
-  runtimeForModelId,
+  harnessForModelId,
 } from "../utils/modelRuntime";
 import {
   normalizeEffortValue,
@@ -17,9 +17,34 @@ type UseModelsOptions = {
   preferredEffort?: string | null;
   selectionKey?: string | null;
   allowedRuntime?: "codex" | "claude" | null;
+  allowedHarness?: "codex" | "claude" | null;
 };
 
 const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
+const FALLBACK_CLAUDE_MODELS: ModelOption[] = [
+  {
+    id: "claude:sonnet-4.5",
+    model: "sonnet-4.5",
+    runtime: "claude",
+    providerModelId: "sonnet-4.5",
+    displayName: "Sonnet 4.5 · Claude",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    supportedReasoningEfforts: [],
+    defaultReasoningEffort: null,
+    isDefault: true,
+  },
+  {
+    id: "claude:sonnet-4.6",
+    model: "sonnet-4.6",
+    runtime: "claude",
+    providerModelId: "sonnet-4.6",
+    displayName: "Sonnet 4.6 · Claude",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    supportedReasoningEfforts: [],
+    defaultReasoningEffort: null,
+    isDefault: false,
+  },
+];
 
 const findModelByIdOrModel = (
   models: ModelOption[],
@@ -48,8 +73,10 @@ export function useModels({
   preferredEffort = null,
   selectionKey = null,
   allowedRuntime = null,
+  allowedHarness = null,
 }: UseModelsOptions) {
-  const [models, setModels] = useState<ModelOption[]>([]);
+  const effectiveAllowedHarness = allowedHarness ?? allowedRuntime;
+  const [allModels, setAllModels] = useState<ModelOption[]>([]);
   const [configModel, setConfigModel] = useState<string | null>(null);
   const [selectedModelId, setSelectedModelIdState] = useState<string | null>(null);
   const [selectedEffort, setSelectedEffortState] = useState<string | null>(null);
@@ -59,7 +86,6 @@ export function useModels({
   const hasUserSelectedEffort = useRef(false);
   const lastWorkspaceId = useRef<string | null>(null);
   const lastSelectionKey = useRef<string | null>(null);
-  const lastAllowedRuntime = useRef<"codex" | "claude" | null>(null);
 
   const workspaceId = activeWorkspace?.id ?? null;
   const isConnected = Boolean(activeWorkspace?.connected);
@@ -84,14 +110,6 @@ export function useModels({
   }, [workspaceId]);
 
   useEffect(() => {
-    if (allowedRuntime === lastAllowedRuntime.current) {
-      return;
-    }
-    lastAllowedRuntime.current = allowedRuntime;
-    lastFetchedWorkspaceId.current = null;
-  }, [allowedRuntime]);
-
-  useEffect(() => {
     if (selectedEffort === null) {
       return;
     }
@@ -111,6 +129,20 @@ export function useModels({
     hasUserSelectedEffort.current = true;
     setSelectedEffortState(next);
   }, []);
+
+  const models = useMemo(
+    () => {
+      const filtered =
+        effectiveAllowedHarness === null
+          ? allModels
+          : allModels.filter((model) => harnessForModelId(model.id) === effectiveAllowedHarness);
+      if (effectiveAllowedHarness === "claude" && filtered.length === 0) {
+        return FALLBACK_CLAUDE_MODELS;
+      }
+      return filtered;
+    },
+    [allModels, effectiveAllowedHarness],
+  );
 
   const selectedModel = useMemo(
     () => models.find((model) => model.id === selectedModelId) ?? null,
@@ -243,48 +275,15 @@ export function useModels({
         };
         return [configOption, ...dataFromServer];
       })();
-      const filteredData =
-        allowedRuntime === null
-          ? data
-          : data.filter((model) => runtimeForModelId(model.id) === allowedRuntime);
-      setModels(filteredData);
+      setAllModels(data);
       lastFetchedWorkspaceId.current = workspaceId;
-      const defaultModel = pickDefaultModel(filteredData, configModelFromConfig);
-      const existingSelection = findModelByIdOrModel(filteredData, selectedModelId);
-      if (selectedModelId && !existingSelection) {
-        hasUserSelectedModel.current = false;
-      }
-      const preferredSelection = findModelByIdOrModel(filteredData, preferredModelId);
-      const shouldKeepExisting =
-        hasUserSelectedModel.current && existingSelection !== null;
-      const nextSelection =
-        (shouldKeepExisting ? existingSelection : null) ??
-        preferredSelection ??
-        defaultModel ??
-        existingSelection;
-      if (nextSelection) {
-        if (nextSelection.id !== selectedModelId) {
-          setSelectedModelIdState(nextSelection.id);
-        }
-        const nextEffort = resolveEffort(
-          nextSelection,
-          hasUserSelectedEffort.current,
-        );
-        if (nextEffort !== selectedEffort) {
-          setSelectedEffortState(nextEffort);
-        }
-      }
     } finally {
       inFlight.current = false;
     }
   }, [
     isConnected,
     onDebug,
-    preferredModelId,
-    allowedRuntime,
-    selectedEffort,
-    selectedModelId,
-    resolveEffort,
+    effectiveAllowedHarness,
     workspaceId,
   ]);
 
@@ -292,11 +291,11 @@ export function useModels({
     if (!workspaceId || !isConnected) {
       return;
     }
-    if (lastFetchedWorkspaceId.current === workspaceId && models.length > 0) {
+    if (lastFetchedWorkspaceId.current === workspaceId && allModels.length > 0) {
       return;
     }
     refreshModels();
-  }, [isConnected, models.length, refreshModels, workspaceId]);
+  }, [allModels.length, isConnected, refreshModels, workspaceId]);
 
   useEffect(() => {
     if (!selectedModel) {
@@ -315,7 +314,11 @@ export function useModels({
   }, [selectedEffort, selectedModel]);
 
   useEffect(() => {
-    if (!models.length) {
+    if (models.length === 0) {
+      if (selectedModelId !== null) {
+        hasUserSelectedModel.current = false;
+        setSelectedModelIdState(null);
+      }
       return;
     }
     const preferredSelection = findModelByIdOrModel(models, preferredModelId);

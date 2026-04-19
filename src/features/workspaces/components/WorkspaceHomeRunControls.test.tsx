@@ -43,12 +43,14 @@ const models: ModelOption[] = [
 ];
 
 describe("WorkspaceHomeRunControls", () => {
-  it("shows Claude entries under a separator without the suffix", () => {
+  it("shows the harness selector and trims Claude suffixes in the model menu", () => {
     render(
       <WorkspaceHomeRunControls
         workspaceKind={workspaceKind}
         runMode="local"
         onRunModeChange={vi.fn()}
+        selectedHarness="claude"
+        onSelectHarness={vi.fn()}
         models={models}
         selectedModelId="claude:sonnet-4.5"
         onSelectModel={vi.fn()}
@@ -72,10 +74,11 @@ describe("WorkspaceHomeRunControls", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle models menu" }));
 
-    const separator = screen.getByRole("separator", { name: "Claude models" });
-    expect(separator.textContent ?? "").toContain("Claude");
+    expect(
+      (screen.getByRole("combobox", { name: "Harness" }) as HTMLSelectElement).value,
+    ).toBe("claude");
 
-    const menu = separator.closest(".ds-popover");
+    const menu = screen.getByRole("menu").closest(".ds-popover");
     expect(menu).not.toBeNull();
     if (!menu) {
       throw new Error("Expected model menu popover");
@@ -95,6 +98,8 @@ describe("WorkspaceHomeRunControls", () => {
         workspaceKind={workspaceKind}
         runMode="local"
         onRunModeChange={vi.fn()}
+        selectedHarness="claude"
+        onSelectHarness={vi.fn()}
         models={models}
         selectedModelId="claude:sonnet-4.5"
         onSelectModel={vi.fn()}

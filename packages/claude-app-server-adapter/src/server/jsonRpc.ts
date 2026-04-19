@@ -1,4 +1,4 @@
-import { ClientNotification } from "../generated";
+import { ClientNotification, InitializeResponse } from "../generated";
 import {
   ClientMessage,
   InitializeClientMessage,
@@ -6,6 +6,7 @@ import {
 } from "../types/protocol";
 
 export function createJsonRpcServer({
+  send,
   handleRequest,
   setServerNotificationFilter,
 }: Server) {
@@ -27,6 +28,12 @@ export function createJsonRpcServer({
         if (optOut) {
           setServerNotificationFilter(optOut);
         }
+        const result: InitializeResponse = {
+          userAgent: "Claude",
+          platformFamily: "unix",
+          platformOs: "macos",
+        };
+        send({ id: request.id, result });
         return;
       }
       if (request.method === "initialized") {

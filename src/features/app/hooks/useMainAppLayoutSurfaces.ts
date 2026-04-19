@@ -143,6 +143,9 @@ type UseMainAppLayoutSurfacesArgs = {
     onSaveLaunchScript: () => void;
   };
   launchScriptsState: WorkspaceLaunchScriptsState | undefined;
+  selectedHarness: ComposerProps["selectedHarness"];
+  onSelectHarness: ComposerProps["onSelectHarness"];
+  harnessLocked: NonNullable<ComposerProps["harnessLocked"]>;
   models: ComposerProps["models"];
   selectedModelId: ComposerProps["selectedModelId"];
   onSelectModel: ComposerProps["onSelectModel"];
@@ -305,6 +308,9 @@ function buildPrimarySurface({
   handleToggleTerminalWithFocus,
   launchScriptState,
   launchScriptsState,
+  selectedHarness,
+  onSelectHarness,
+  harnessLocked,
   models,
   selectedModelId,
   onSelectModel,
@@ -504,6 +510,9 @@ function buildPrimarySurface({
           collaborationModes,
           selectedCollaborationModeId,
           onSelectCollaborationMode,
+          selectedHarness,
+          onSelectHarness,
+          harnessLocked,
           models,
           selectedModelId,
           onSelectModel,
@@ -1016,6 +1025,9 @@ export function useMainAppLayoutSurfaces({
   handleToggleTerminalWithFocus,
   launchScriptState,
   launchScriptsState,
+  selectedHarness,
+  onSelectHarness,
+  harnessLocked,
   models,
   selectedModelId,
   onSelectModel,
@@ -1178,6 +1190,9 @@ export function useMainAppLayoutSurfaces({
     handleToggleTerminalWithFocus,
     launchScriptState,
     launchScriptsState,
+    selectedHarness,
+    onSelectHarness,
+    harnessLocked,
     models,
     selectedModelId,
     onSelectModel,

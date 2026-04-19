@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type { AccessMode, ServiceTier } from "@/types";
 import {
   STORAGE_KEY_THREAD_CODEX_PARAMS,
@@ -12,6 +13,7 @@ import {
 type ThreadCodexParamsPatch = Partial<
   Pick<
     ThreadCodexParams,
+    | "harness"
     | "modelId"
     | "effort"
     | "serviceTier"
@@ -33,6 +35,7 @@ type UseThreadCodexParamsResult = {
 };
 
 const DEFAULT_ENTRY: ThreadCodexParams = {
+  harness: null,
   modelId: null,
   effort: null,
   serviceTier: undefined,
@@ -41,6 +44,13 @@ const DEFAULT_ENTRY: ThreadCodexParams = {
   codexArgsOverride: null,
   updatedAt: 0,
 };
+
+function coerceHarness(value: unknown): AgentHarness | null {
+  if (value === "codex" || value === "claude") {
+    return value;
+  }
+  return null;
+}
 
 function coerceAccessMode(value: unknown): AccessMode | null {
   if (value === "read-only" || value === "current" || value === "full-access") {
@@ -81,6 +91,7 @@ function sanitizeEntry(value: unknown): ThreadCodexParams | null {
         : coerceServiceTier(entry.serviceTier)
     : undefined;
   return {
+    harness: coerceHarness(entry.harness),
     modelId: typeof entry.modelId === "string" ? entry.modelId : null,
     effort: typeof entry.effort === "string" ? entry.effort : null,
     serviceTier,

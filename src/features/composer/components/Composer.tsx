@@ -6,6 +6,7 @@ import {
   useState,
   type ClipboardEvent,
 } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type {
   AppMention,
   AppOption,
@@ -63,6 +64,9 @@ type ComposerProps = {
   collaborationModes: { id: string; label: string }[];
   selectedCollaborationModeId: string | null;
   onSelectCollaborationMode: (id: string | null) => void;
+  selectedHarness?: AgentHarness;
+  onSelectHarness?: (harness: AgentHarness) => void;
+  harnessLocked?: boolean;
   models: { id: string; displayName: string; model: string }[];
   selectedModelId: string | null;
   onSelectModel: (id: string) => void;
@@ -172,6 +176,9 @@ export const Composer = memo(function Composer({
   collaborationModes,
   selectedCollaborationModeId,
   onSelectCollaborationMode,
+  selectedHarness = "codex",
+  onSelectHarness,
+  harnessLocked = false,
   models,
   selectedModelId,
   onSelectModel,
@@ -679,6 +686,9 @@ export const Composer = memo(function Composer({
         collaborationModes={collaborationModes}
         selectedCollaborationModeId={selectedCollaborationModeId}
         onSelectCollaborationMode={onSelectCollaborationMode}
+        selectedHarness={selectedHarness}
+        onSelectHarness={onSelectHarness}
+        harnessLocked={harnessLocked}
         models={models}
         selectedModelId={selectedModelId}
         onSelectModel={onSelectModel}

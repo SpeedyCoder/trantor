@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type { AccessMode, ServiceTier } from "@/types";
 import { useThreadCodexParams } from "@threads/hooks/useThreadCodexParams";
 import {
@@ -8,6 +9,8 @@ import {
 } from "@threads/utils/threadCodexParamsSeed";
 
 type ThreadCodexOrchestration = {
+  preferredHarness: AgentHarness;
+  setPreferredHarness: Dispatch<SetStateAction<AgentHarness>>;
   accessMode: AccessMode;
   setAccessMode: Dispatch<SetStateAction<AccessMode>>;
   preferredModelId: string | null;
@@ -26,6 +29,7 @@ type ThreadCodexOrchestration = {
   getThreadCodexParams: ReturnType<typeof useThreadCodexParams>["getThreadCodexParams"];
   patchThreadCodexParams: ReturnType<typeof useThreadCodexParams>["patchThreadCodexParams"];
   persistThreadCodexParams: (patch: {
+    harness?: AgentHarness | null;
     modelId?: string | null;
     effort?: string | null;
     serviceTier?: ServiceTier | null | undefined;
@@ -50,6 +54,7 @@ export function useThreadCodexOrchestration({
     patchThreadCodexParams,
   } = useThreadCodexParams();
   const [accessMode, setAccessMode] = useState<AccessMode>("current");
+  const [preferredHarness, setPreferredHarness] = useState<AgentHarness>("codex");
   const [preferredModelId, setPreferredModelId] = useState<string | null>(null);
   const [preferredEffort, setPreferredEffort] = useState<string | null>(null);
   const [preferredServiceTier, setPreferredServiceTier] = useState<
@@ -69,6 +74,7 @@ export function useThreadCodexOrchestration({
 
   const persistThreadCodexParams = useCallback(
     (patch: {
+      harness?: AgentHarness | null;
       modelId?: string | null;
       effort?: string | null;
       serviceTier?: ServiceTier | null | undefined;
@@ -96,6 +102,8 @@ export function useThreadCodexOrchestration({
 
   return useMemo(
     () => ({
+      preferredHarness,
+      setPreferredHarness,
       accessMode,
       setAccessMode,
       preferredModelId,
@@ -119,6 +127,7 @@ export function useThreadCodexOrchestration({
     }),
     [
       accessMode,
+      preferredHarness,
       preferredCollabModeId,
       preferredCodexArgsOverride,
       preferredEffort,
@@ -130,6 +139,7 @@ export function useThreadCodexOrchestration({
       getThreadCodexParams,
       patchThreadCodexParams,
       persistThreadCodexParams,
+      setPreferredHarness,
     ],
   );
 }

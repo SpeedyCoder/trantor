@@ -888,6 +888,11 @@
   max-width: none;
 }
 
+.composer-select--harness {
+  width: 76px;
+  max-width: 76px;
+}
+
 .composer-select--collab {
   width: 78px;
   max-width: 78px;

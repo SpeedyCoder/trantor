@@ -6,6 +6,7 @@ import {
   type KeyboardEvent,
   type RefObject,
 } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import type {
   AppOption,
@@ -48,6 +49,8 @@ type WorkspaceHomeProps = {
   onStartRun: (images?: string[]) => Promise<boolean>;
   runMode: WorkspaceRunMode;
   onRunModeChange: (mode: WorkspaceRunMode) => void;
+  selectedHarness?: AgentHarness;
+  onSelectHarness?: (harness: AgentHarness) => void;
   models: ModelOption[];
   selectedModelId: string | null;
   onSelectModel: (modelId: string) => void;
@@ -111,6 +114,8 @@ export function WorkspaceHome({
   onStartRun,
   runMode,
   onRunModeChange,
+  selectedHarness = "codex",
+  onSelectHarness,
   models,
   selectedModelId,
   onSelectModel,
@@ -421,6 +426,8 @@ export function WorkspaceHome({
         workspaceKind={workspace.kind}
         runMode={runMode}
         onRunModeChange={onRunModeChange}
+        selectedHarness={selectedHarness}
+        onSelectHarness={onSelectHarness}
         models={models}
         selectedModelId={selectedModelId}
         onSelectModel={onSelectModel}

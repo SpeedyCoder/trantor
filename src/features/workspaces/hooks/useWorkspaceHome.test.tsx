@@ -31,7 +31,7 @@ const worktreeWorkspace: WorkspaceInfo = {
 
 const models: ModelOption[] = [
   {
-    id: "id-1",
+    id: "codex:gpt-5.1-max",
     model: "gpt-5.1-max",
     displayName: "GPT-5.1 Max",
     description: "Test model",
@@ -72,7 +72,7 @@ describe("useWorkspaceHome", () => {
 
     act(() => {
       result.current.setRunMode("worktree");
-      result.current.toggleModelSelection("id-1");
+      result.current.toggleModelSelection("codex:gpt-5.1-max");
       result.current.setDraft("Hello worktree");
     });
 
@@ -80,15 +80,20 @@ describe("useWorkspaceHome", () => {
       await result.current.startRun();
     });
 
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("wt-1", {
+      activate: false,
+      modelId: "codex:gpt-5.1-max",
+    });
     expect(sendUserMessageToThread).toHaveBeenCalledWith(
       worktreeWorkspace,
       "thread-1",
       "Hello worktree",
       [],
-      expect.objectContaining({ model: "gpt-5.1-max" }),
+      expect.objectContaining({ model: "codex:gpt-5.1-max" }),
     );
     expect(seedThreadCodexParams).toHaveBeenCalledWith("wt-1", "thread-1", {
-      modelId: "id-1",
+      harness: "codex",
+      modelId: "codex:gpt-5.1-max",
       effort: null,
       serviceTier: undefined,
     });
@@ -109,7 +114,7 @@ describe("useWorkspaceHome", () => {
       useWorkspaceHome({
         activeWorkspace: workspace,
         models,
-        selectedModelId: "id-1",
+        selectedModelId: "codex:gpt-5.1-max",
         seedThreadCodexParams,
         addWorktreeAgent,
         connectWorkspace,
@@ -123,15 +128,84 @@ describe("useWorkspaceHome", () => {
       expect(started).toBe(true);
     });
 
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("ws-1", {
+      activate: false,
+      modelId: "codex:gpt-5.1-max",
+    });
     expect(sendUserMessageToThread).toHaveBeenCalledWith(
       workspace,
       "thread-1",
       "",
       ["img-1"],
-      expect.objectContaining({ model: "gpt-5.1-max" }),
+      expect.objectContaining({ model: "codex:gpt-5.1-max" }),
     );
     expect(seedThreadCodexParams).toHaveBeenCalledWith("ws-1", "thread-1", {
-      modelId: "id-1",
+      harness: "codex",
+      modelId: "codex:gpt-5.1-max",
+      effort: null,
+      serviceTier: undefined,
+    });
+  });
+
+  it("uses the normalized Claude model id for local runs", async () => {
+    const claudeModels: ModelOption[] = [
+      {
+        id: "claude:sonnet-4.5",
+        model: "sonnet-4.5",
+        runtime: "claude",
+        displayName: "Sonnet 4.5 · Claude",
+        description: "Claude test model",
+        supportedReasoningEfforts: [],
+        defaultReasoningEffort: null,
+        isDefault: true,
+      },
+    ];
+    const addWorktreeAgent = vi.fn();
+    const connectWorkspace = vi.fn().mockResolvedValue(undefined);
+    const startThreadForWorkspace = vi.fn().mockResolvedValue("thread-claude");
+    const sendUserMessageToThread = vi.fn().mockResolvedValue(undefined);
+    const seedThreadCodexParams = vi.fn();
+    vi.mocked(generateRunMetadata).mockResolvedValue({
+      title: "Claude run",
+      worktreeName: "feat/claude",
+    });
+
+    const { result } = renderHook(() =>
+      useWorkspaceHome({
+        activeWorkspace: workspace,
+        models: claudeModels,
+        selectedHarness: "claude",
+        selectedModelId: "claude:sonnet-4.5",
+        seedThreadCodexParams,
+        addWorktreeAgent,
+        connectWorkspace,
+        startThreadForWorkspace,
+        sendUserMessageToThread,
+      }),
+    );
+
+    act(() => {
+      result.current.setDraft("Hello Claude");
+    });
+
+    await act(async () => {
+      await result.current.startRun();
+    });
+
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("ws-1", {
+      activate: false,
+      modelId: "claude:sonnet-4.5",
+    });
+    expect(sendUserMessageToThread).toHaveBeenCalledWith(
+      workspace,
+      "thread-claude",
+      "Hello Claude",
+      [],
+      expect.objectContaining({ model: "claude:sonnet-4.5" }),
+    );
+    expect(seedThreadCodexParams).toHaveBeenCalledWith("ws-1", "thread-claude", {
+      harness: "claude",
+      modelId: "claude:sonnet-4.5",
       effort: null,
       serviceTier: undefined,
     });
@@ -203,8 +277,8 @@ describe("useWorkspaceHome", () => {
 
     act(() => {
       result.current.setRunMode("worktree");
-      result.current.toggleModelSelection("id-1");
-      result.current.setModelCount("id-1", 2);
+      result.current.toggleModelSelection("codex:gpt-5.1-max");
+      result.current.setModelCount("codex:gpt-5.1-max", 2);
       result.current.setDraft("Hello");
     });
 
@@ -233,7 +307,7 @@ describe("useWorkspaceHome", () => {
       useWorkspaceHome({
         activeWorkspace: workspace,
         models,
-        selectedModelId: "id-1",
+        selectedModelId: "codex:gpt-5.1-max",
         addWorktreeAgent,
         connectWorkspace,
         startThreadForWorkspace,
