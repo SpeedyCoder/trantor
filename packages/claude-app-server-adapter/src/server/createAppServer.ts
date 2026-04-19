@@ -1,54 +1,31 @@
 import path from "node:path";
-import { randomUUID } from "node:crypto";
-
-import { normalizeInputItems, parsePrompt } from "../claude/input.js";
-import { listClaudeModels, runClaudeTurn } from "../claude/sdk.js";
-import { ThreadRepository } from "../thread/repository.js";
-import {
-  buildAssistantMessageItem,
-  buildThreadRecord,
-  buildUserMessageItem,
-  createThread,
-  forkThread,
-  now,
-  summarizeThread,
-} from "../thread/threadRecord.js";
-import type {
-  AppServerNotification,
-  JsonRpcNotification,
-  JsonRpcRequest,
-} from "../types/jsonrpc.js";
-import type { ThreadRecord } from "../types/runtime.js";
-import {
-  accountRateLimitsResult,
-  accountReadResult,
-  collaborationModesResult,
-  emptyListResult,
-} from "./staticResponses.js";
+import type { ClientMessage, ServerMessage } from "../types/protocol";
 import { createJsonRpcServer } from "./jsonRpc.js";
-import { notify, sendError, sendResult } from "./protocol.js";
+import { ErrorNotification } from "../generated/v2/ErrorNotification.js";
+import { newHandlers } from "./handler.js";
+import { FileThreadRepository } from "../thread/fileRepository";
+import { ClaudeThreadMetadata, ClaudeTurnMetadata } from "../claude/types";
+import type { Handlers } from "../types/protocol";
 
 type AppServerArgs = {
   workspaceId: string;
   dataDir: string;
   workspacePath?: string;
-  send: (
-    payload:
-      | JsonRpcNotification
-      | AppServerNotification
-      | { id: unknown; result?: unknown; error?: unknown },
-  ) => void;
+  send: (payload: ServerMessage) => void;
+  setServerNotificationFilter?: (ignoreMessages: string[]) => void;
 };
 
-function asParams(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object"
-    ? (value as Record<string, unknown>)
-    : {};
-}
+type AppServerHandler = {
+  handle: (message: ClientMessage) => Promise<void>;
+  getThreadId?: (message: ClientMessage) => string;
+  getTurnId?: (message: ClientMessage) => string;
+};
 
-function threadIdFromParams(params: Record<string, unknown>): string {
-  const threadId = params.threadId ?? params.thread_id;
-  return String(threadId ?? "");
+function getHandler(
+  handlers: Handlers,
+  request: ClientMessage,
+): AppServerHandler | undefined {
+  return handlers[request.method] as AppServerHandler | undefined;
 }
 
 export async function createAppServer({
@@ -56,274 +33,62 @@ export async function createAppServer({
   dataDir,
   workspacePath = process.env.CODEXMONITOR_WORKSPACE_PATH || process.cwd(),
   send,
+  setServerNotificationFilter = () => {},
 }: AppServerArgs) {
   const stateDir = path.join(dataDir, workspaceId);
-  const repository = new ThreadRepository(stateDir);
-  await repository.init();
-  const activeRuns = new Map<string, AbortController>();
-
-  async function getThreadOrThrow(threadId: string): Promise<ThreadRecord> {
-    const thread = await repository.get(threadId);
-    if (!thread) {
-      throw new Error("thread not found");
-    }
-    return thread;
-  }
-
-  async function runTurn(params: Record<string, unknown>) {
-    const thread = await getThreadOrThrow(threadIdFromParams(params));
-    if (activeRuns.has(thread.id)) {
-      throw new Error("thread already processing");
-    }
-
-    const turnId = randomUUID();
-    const userItemId = randomUUID();
-    const agentItemId = randomUUID();
-    const inputItems = normalizeInputItems(params.input);
-    const prompt = parsePrompt(params);
-    const requestedModel =
-      typeof params.model === "string" && params.model.trim().length > 0
-        ? params.model.trim()
-        : null;
-    if (requestedModel) {
-      thread.modelId = `claude:${requestedModel}`;
-    }
-
-    const abortController = new AbortController();
-    activeRuns.set(thread.id, abortController);
-
-    const userItem = buildUserMessageItem(
-      userItemId,
-      prompt,
-      turnId,
-      inputItems,
-    );
-    thread.messages.push(userItem);
-    thread.updatedAt = now();
-    await repository.save(thread);
-
-    send(notify("turn/started", { threadId: thread.id, turnId }));
-    send(
-      notify("thread/status/changed", {
-        threadId: thread.id,
-        status: "running",
-      }),
-    );
-    send(
-      notify("item/started", { threadId: thread.id, turnId, item: userItem }),
-    );
-    send(
-      notify("item/completed", { threadId: thread.id, turnId, item: userItem }),
-    );
-    send(
-      notify("item/started", {
-        threadId: thread.id,
-        turnId,
-        item: { id: agentItemId, type: "agentMessage" },
-      }),
-    );
-
-    try {
-      const result = await runClaudeTurn({
-        thread,
-        prompt,
-        abortController,
-        onSessionReady: async (sessionId) => {
-          thread.sdkSessionId = sessionId;
-          await repository.save(thread);
-        },
-        onDelta: (delta) => {
-          send(
-            notify("item/agentMessage/delta", {
-              threadId: thread.id,
-              turnId,
-              itemId: agentItemId,
-              delta,
-            }),
-          );
-        },
-      });
-
-      thread.updatedAt = now();
-      if (result.text || !result.aborted) {
-        const assistantItem = buildAssistantMessageItem(
-          agentItemId,
-          result.text,
-          turnId,
-        );
-        thread.messages.push(assistantItem);
-        send(
-          notify("item/completed", {
-            threadId: thread.id,
-            turnId,
-            item: assistantItem,
-          }),
-        );
-      }
-      await repository.save(thread);
-      send(
-        notify("turn/completed", {
-          threadId: thread.id,
-          turnId,
-          status: result.aborted ? "interrupted" : "completed",
-        }),
-      );
-      send(
-        notify("thread/status/changed", {
-          threadId: thread.id,
-          status: "idle",
-        }),
-      );
-
-      return {
-        ok: true,
-        threadId: thread.id,
-        turnId,
-        turn: {
-          id: turnId,
-          threadId: thread.id,
-          status: result.aborted ? "interrupted" : "completed",
-        },
-      };
-    } finally {
-      activeRuns.delete(thread.id);
-    }
-  }
-
-  async function handleMethod(request: JsonRpcRequest): Promise<unknown> {
-    const params = asParams(request.params);
-
-    switch (request.method as string) {
-      case "initialize":
-        return { ok: true, protocolVersion: "2" };
-      case "thread/start": {
-        const requestedModel =
-          typeof params.model === "string" && params.model.trim().length > 0
-            ? `claude:${params.model.trim()}`
-            : null;
-        const thread = createThread(
-          typeof params.cwd === "string" && params.cwd.trim().length > 0
-            ? params.cwd
-            : workspacePath,
-          requestedModel,
-        );
-        await repository.save(thread);
-        send(
-          notify("thread/started", {
-            threadId: thread.id,
-            thread: summarizeThread(thread),
-          }),
-        );
-        return { threadId: thread.id, thread: summarizeThread(thread) };
-      }
-      case "thread/resume": {
-        const thread = await getThreadOrThrow(threadIdFromParams(params));
-        return { threadId: thread.id, thread: buildThreadRecord(thread) };
-      }
-      case "thread/read": {
-        const thread = await getThreadOrThrow(threadIdFromParams(params));
-        return { thread: buildThreadRecord(thread), data: thread.messages };
-      }
-      case "thread/fork": {
-        const source = await getThreadOrThrow(threadIdFromParams(params));
-        const clone = forkThread(source);
-        await repository.save(clone);
-        send(
-          notify("thread/started", {
-            threadId: clone.id,
-            thread: summarizeThread(clone),
-          }),
-        );
-        return { threadId: clone.id, thread: summarizeThread(clone) };
-      }
-      case "thread/list": {
-        const threads = await repository.list();
-        return {
-          data: threads
-            .filter((thread) => !thread.archived)
-            .map(summarizeThread),
-        };
-      }
-      case "thread/archive": {
-        const thread = await getThreadOrThrow(threadIdFromParams(params));
-        thread.archived = true;
-        thread.updatedAt = now();
-        await repository.save(thread);
-        send(notify("thread/archived", { threadId: thread.id }));
-        return { ok: true };
-      }
-      case "thread/name/set": {
-        const thread = await getThreadOrThrow(threadIdFromParams(params));
-        thread.name =
-          typeof params.name === "string" && params.name.trim().length > 0
-            ? params.name
-            : typeof params.title === "string" && params.title.trim().length > 0
-              ? params.title
-              : thread.name;
-        thread.updatedAt = now();
-        await repository.save(thread);
-        send(
-          notify("thread/name/updated", {
-            threadId: thread.id,
-            name: thread.name,
-          }),
-        );
-        return { ok: true };
-      }
-      case "thread/compact/start":
-        return { ok: true, compacted: false };
-      case "model/list":
-        return listClaudeModels({ cwd: workspacePath });
-      case "turn/start":
-      case "turn/steer":
-        return runTurn(params);
-      case "turn/interrupt": {
-        const threadId = threadIdFromParams(params);
-        activeRuns.get(threadId)?.abort();
-        activeRuns.delete(threadId);
-        send(notify("thread/status/changed", { threadId, status: "idle" }));
-        return { ok: true };
-      }
-      case "experimentalFeature/list":
-      case "skills/list":
-      case "app/list":
-        return emptyListResult();
-      case "collaborationMode/list":
-        return collaborationModesResult();
-      case "account/rateLimits/read":
-        return accountRateLimitsResult();
-      case "account/read":
-        return accountReadResult();
-      case "review/start":
-        return { ok: true, started: false };
-      default:
-        throw new Error(`Unsupported method: ${request.method}`);
-    }
-  }
+  const repository = new FileThreadRepository<
+    ClaudeThreadMetadata,
+    ClaudeTurnMetadata
+  >(stateDir);
+  const handlers = newHandlers(workspacePath, repository, send);
 
   const server = createJsonRpcServer({
-    async handleRequest(request: JsonRpcRequest) {
+    async handleRequest(request: ClientMessage) {
+      const handler = getHandler(handlers, request);
+      if (!handler) {
+        const params: ErrorNotification = newErrorParams(
+          `Unsupported methods: ${request.method}`,
+        );
+        send({ method: "error", params });
+        return;
+      }
       try {
-        const result = await handleMethod(request);
-        if (Object.prototype.hasOwnProperty.call(request, "id")) {
-          send(sendResult(request.id, result));
-        }
-        if (request.method === "initialize") {
-          send(notify("initialized", {}));
-        }
+        await handler.handle(request);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (Object.prototype.hasOwnProperty.call(request, "id")) {
-          send(sendError(request.id, message));
-        } else {
-          send(notify("error", { message }));
-        }
+
+        send({
+          method: "error",
+          params: newErrorParams(
+            message,
+            handler?.getThreadId?.(request),
+            handler?.getTurnId?.(request),
+          ),
+        });
       }
     },
+    setServerNotificationFilter,
   });
 
   return {
     repository,
     processLine: server.processLine,
+  };
+}
+
+function newErrorParams(
+  message: string,
+  threadId?: string,
+  turnId?: string,
+): ErrorNotification {
+  return {
+    error: {
+      message,
+      codexErrorInfo: null,
+      additionalDetails: null,
+    },
+    willRetry: false,
+    threadId: threadId ?? "",
+    turnId: turnId ?? "",
   };
 }

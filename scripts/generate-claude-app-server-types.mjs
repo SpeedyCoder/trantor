@@ -1,5 +1,5 @@
 import {
-  copyFileSync,
+  cpSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -31,92 +31,72 @@ function listTsFiles(dir) {
   });
 }
 
-function normalizeImportTarget(fromFile, specifier) {
-  return path.normalize(path.resolve(path.dirname(fromFile), `${specifier}.ts`));
+function toImportPath(relativePath) {
+  return `./${relativePath.replace(/\.ts$/, "").split(path.sep).join("/")}`;
 }
 
-function collectDependencies(entryFiles) {
-  const keep = new Set();
-  const queue = [...entryFiles];
-
-  while (queue.length > 0) {
-    const current = queue.pop();
-    if (!current || keep.has(current)) {
-      continue;
-    }
-    keep.add(current);
-
-    const content = readFileSync(current, "utf8");
-    const importMatches = content.matchAll(/from\s+["'](\.\.?\/[^"']+)["']/g);
-    for (const match of importMatches) {
-      const target = normalizeImportTarget(current, match[1]);
-      if (!keep.has(target)) {
-        queue.push(target);
-      }
-    }
-  }
-
-  return keep;
+function toImportAlias(relativePath) {
+  return relativePath
+    .replace(/\.ts$/, "")
+    .split(path.sep)
+    .join("_")
+    .replace(/[^A-Za-z0-9_]/g, "_");
 }
 
-function writeFilteredIndex(keptFiles) {
-  const relativeFiles = [...keptFiles]
-    .map((file) => path.relative(tempDir, file))
-    .filter((file) => !file.startsWith(`v2${path.sep}`))
-    .filter((file) => !file.startsWith(`serde_json${path.sep}`))
-    .filter((file) => file !== "index.ts")
+function writeUnionFile(typeName, suffix, relativeFiles) {
+  const matches = relativeFiles
+    .filter((file) => path.basename(file, ".ts").endsWith(suffix))
     .sort();
 
-  const lines = [
-    "// GENERATED CODE! DO NOT MODIFY BY HAND!",
-    "",
-    ...relativeFiles.map((file) => {
-      const exportPath = `./${file.replace(/\.ts$/, "").split(path.sep).join("/")}`;
-      const symbol = path.basename(file, ".ts");
-      return `export type { ${symbol} } from "${exportPath}";`;
-    }),
-    'export * as v2 from "./v2";',
-    "",
+  const lines = ["// GENERATED CODE! DO NOT MODIFY BY HAND!", ""];
+
+  for (const relativePath of matches) {
+    const symbol = path.basename(relativePath, ".ts");
+    const alias = toImportAlias(relativePath);
+    lines.push(
+      `import type { ${symbol} as ${alias} } from "${toImportPath(relativePath)}";`,
+    );
+  }
+
+  if (matches.length > 0) {
+    lines.push("", `export type ${typeName} =`);
+    lines.push(...matches.map((relativePath) => `  | ${toImportAlias(relativePath)}`));
+    lines.push(";");
+  } else {
+    lines.push("", `export type ${typeName} = never;`);
+  }
+  lines.push("");
+
+  writeFileSync(path.join(outDir, `${typeName}.ts`), lines.join("\n"));
+}
+
+function updateRootIndex() {
+  const indexPath = path.join(outDir, "index.ts");
+  const exportsToAppend = [
+    'export type { JsonRpcParams } from "./JsonRpcParams";',
+    'export type { JsonRpcResponse } from "./JsonRpcResponse";',
   ];
-
-  writeFileSync(path.join(outDir, "index.ts"), lines.join("\n"));
+  const current = readFileSync(indexPath, "utf8");
+  const next = exportsToAppend.reduce((content, line) => {
+    return content.includes(line) ? content : `${content.trimEnd()}\n${line}\n`;
+  }, current);
+  writeFileSync(indexPath, next);
 }
 
-function copyRetainedFiles(keptFiles) {
+function copyGeneratedTree() {
   rmSync(outDir, { recursive: true, force: true });
-  mkdirSync(outDir, { recursive: true });
+  cpSync(tempDir, outDir, { recursive: true });
 
-  for (const sourceFile of keptFiles) {
-    const relativePath = path.relative(tempDir, sourceFile);
-    const destination = path.join(outDir, relativePath);
-    mkdirSync(path.dirname(destination), { recursive: true });
-    copyFileSync(sourceFile, destination);
-  }
+  const relativeFiles = listTsFiles(outDir)
+    .map((file) => path.relative(outDir, file))
+    .filter((file) => file !== "index.ts")
+    .filter((file) => file !== "JsonRpcParams.ts")
+    .filter((file) => file !== "JsonRpcResponse.ts")
+    .sort();
 
-  writeFilteredIndex(keptFiles);
-}
-
-function addOptionalRootEntries(files) {
-  const next = [...files];
-  for (const relativePath of [
-    "ClientRequest.ts",
-    "ServerNotification.ts",
-    "ServerRequest.ts",
-    "RequestId.ts",
-    "InitializeParams.ts",
-    "InitializeResponse.ts",
-    "ClientInfo.ts",
-    "InitializeCapabilities.ts",
-  ]) {
-    const fullPath = path.join(tempDir, relativePath);
-    try {
-      readFileSync(fullPath, "utf8");
-      next.push(fullPath);
-    } catch {
-      // Ignore missing optional files.
-    }
-  }
-  return next;
+  writeUnionFile("JsonRpcParams", "Params", relativeFiles);
+  writeUnionFile("JsonRpcResponse", "Response", relativeFiles);
+  updateRootIndex();
 }
 
 const codexJs = process.env.CODEX_JS?.trim();
@@ -132,9 +112,7 @@ const result = spawnSync(command, commandArgs, {
 
 if (typeof result.status === "number") {
   if (result.status === 0) {
-    const entryFiles = addOptionalRootEntries(listTsFiles(path.join(tempDir, "v2")));
-    const keptFiles = collectDependencies(entryFiles);
-    copyRetainedFiles(keptFiles);
+    copyGeneratedTree();
     rmSync(tempDir, { recursive: true, force: true });
   } else {
     rmSync(tempDir, { recursive: true, force: true });

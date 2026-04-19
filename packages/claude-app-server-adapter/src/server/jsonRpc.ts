@@ -1,24 +1,40 @@
-import type { JsonRpcRequest } from "../types/jsonrpc.js";
+import { ClientNotification } from "../generated";
+import {
+  ClientMessage,
+  InitializeClientMessage,
+  Server,
+} from "../types/protocol";
 
-type JsonRpcServerArgs = {
-  handleRequest: (request: JsonRpcRequest) => Promise<void>;
-};
-
-export function createJsonRpcServer({ handleRequest }: JsonRpcServerArgs) {
+export function createJsonRpcServer({
+  handleRequest,
+  setServerNotificationFilter,
+}: Server) {
+  let initialized = false;
   return {
     async processLine(line: string): Promise<void> {
       if (!line.trim()) {
         return;
       }
 
-      let request: JsonRpcRequest;
+      let request: ClientMessage | ClientNotification | InitializeClientMessage;
       try {
-        request = JSON.parse(line) as JsonRpcRequest;
+        request = JSON.parse(line);
       } catch {
         return;
       }
-
-      if (typeof request.method !== "string" || request.method.trim().length === 0) {
+      if (request.method === "initialize") {
+        const optOut = request.params.capabilities?.optOutNotificationMethods;
+        if (optOut) {
+          setServerNotificationFilter(optOut);
+        }
+        return;
+      }
+      if (request.method === "initialized") {
+        initialized = true;
+        return;
+      }
+      if (!initialized) {
+        console.warn("Ignoring message before initialization:", request.method);
         return;
       }
 

@@ -1,124 +1,53 @@
 import { randomUUID } from "node:crypto";
-
-import type {
-  AgentMessageItem,
-  AdapterInputItem,
-  ThreadMessage,
-  ThreadRecord,
-  ThreadRecordResponse,
-  ThreadSummary,
-  ThreadTurn,
-  UserMessageItem,
-} from "../types/runtime.js";
+import { ThreadRecord } from "./types.js";
 
 export function now(): number {
   return Date.now();
 }
 
-export function buildUserMessageItem(
-  itemId: string,
-  prompt: string,
-  turnId: string,
-  inputItems: AdapterInputItem[] = [],
-): UserMessageItem {
-  return {
-    id: itemId,
-    type: "userMessage",
-    turnId,
-    content:
-      inputItems.length > 0
-        ? inputItems
-        : prompt
-          ? [{ type: "text", text: prompt }]
-          : [],
-  };
-}
-
-export function buildAssistantMessageItem(
-  itemId: string,
-  text: string,
-  turnId: string,
-): AgentMessageItem {
-  return {
-    id: itemId,
-    type: "agentMessage",
-    turnId,
-    text,
-  };
-}
-
-export function summarizeThread(thread: ThreadRecord): ThreadSummary {
-  return {
-    id: thread.id,
-    name: thread.name,
-    cwd: thread.cwd,
-    modelId: thread.modelId,
-    model: thread.modelId,
-    archived: Boolean(thread.archived),
-    createdAt: thread.createdAt,
-    updatedAt: thread.updatedAt,
-    source: { kind: "appServer" },
-  };
-}
-
-export function buildThreadTurns(messages: ThreadMessage[]): ThreadTurn[] {
-  const turns: ThreadTurn[] = [];
-  const turnMap = new Map<string, ThreadTurn>();
-  for (const message of messages) {
-    const turnId = typeof message.turnId === "string" ? message.turnId.trim() : "";
-    if (!turnId) {
-      continue;
-    }
-    let turn = turnMap.get(turnId);
-    if (!turn) {
-      turn = { id: turnId, status: "completed", items: [] };
-      turnMap.set(turnId, turn);
-      turns.push(turn);
-    }
-    turn.items.push(message);
-  }
-  return turns;
-}
-
-export function buildThreadRecord(thread: ThreadRecord): ThreadRecordResponse {
-  const previewSource = [...thread.messages]
-    .reverse()
-    .find((message) => message.type === "agentMessage" && message.text.trim().length > 0);
-
-  return {
-    ...summarizeThread(thread),
-    preview: previewSource?.type === "agentMessage" ? previewSource.text : "",
-    turns: buildThreadTurns(thread.messages),
-  };
-}
-
-export function createThread(
+export function createThread<ThreadMeta extends object>(
   cwd: string,
-  requestedModel: string | null,
-  name = "New Claude thread",
-): ThreadRecord {
+  metadata: ThreadMeta,
+  name = "New AI Agent Thread",
+): ThreadRecord<ThreadMeta> {
   const timestamp = now();
   return {
-    id: randomUUID(),
-    name,
-    cwd,
-    modelId: requestedModel,
+    data: {
+      id: randomUUID(),
+      name,
+      cwd,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      preview: "",
+      ephemeral: false,
+      modelProvider: "",
+      status: { type: "notLoaded" },
+      path: null,
+      cliVersion: "",
+      source: "appServer",
+      agentNickname: null,
+      agentRole: null,
+      gitInfo: null,
+    },
     archived: false,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    sdkSessionId: null,
-    messages: [],
+    metadata,
   };
 }
 
-export function forkThread(source: ThreadRecord): ThreadRecord {
+export function forkThread<ThreadMeta extends object>(
+  source: ThreadRecord<ThreadMeta>,
+  forkMeta: (meta: ThreadMeta) => ThreadMeta,
+): ThreadRecord<ThreadMeta> {
+  const timestamp = now();
   return {
-    ...source,
-    id: randomUUID(),
-    name: `${source.name} (fork)`,
-    createdAt: now(),
-    updatedAt: now(),
+    data: {
+      ...source.data,
+      id: randomUUID(),
+      name: `${source.data.name} (fork)`,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    },
     archived: false,
-    messages: source.messages.map((message) => structuredClone(message)),
+    metadata: forkMeta(source.metadata),
   };
 }
