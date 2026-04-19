@@ -2,13 +2,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const repoRoot = process.cwd();
-const outDir = path.join(
-  repoRoot,
-  "packages",
-  "claude-app-server-adapter",
-  "src",
-  "generated",
-);
+const outDir = path.join(repoRoot, "src", "generated");
 
 const result = spawnSync(
   "codex",
