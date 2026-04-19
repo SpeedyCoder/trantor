@@ -2,7 +2,7 @@ import path from "node:path";
 import type { ClientMessage, ServerMessage } from "../types/protocol";
 import { createJsonRpcServer } from "./jsonRpc.js";
 import { ErrorNotification } from "../generated/v2/ErrorNotification.js";
-import { newHandlers } from "./handler.js";
+import { newHandlers } from "./handlers.js";
 import { FileThreadRepository } from "../thread/fileRepository";
 import { ClaudeThreadMetadata, ClaudeTurnMetadata } from "../claude/types";
 import type { Handlers } from "../types/protocol";
@@ -12,7 +12,6 @@ type AppServerArgs = {
   dataDir: string;
   workspacePath?: string;
   send: (payload: ServerMessage) => void;
-  setServerNotificationFilter?: (ignoreMessages: string[]) => void;
 };
 
 type AppServerHandler = {
@@ -33,14 +32,21 @@ export async function createAppServer({
   dataDir,
   workspacePath = process.env.CODEXMONITOR_WORKSPACE_PATH || process.cwd(),
   send,
-  setServerNotificationFilter = () => {},
 }: AppServerArgs) {
+  let skipSendMessages = new Set<string>();
+  const filteredSend = (payload: ServerMessage) => {
+    const method = "method" in payload ? payload.method : "";
+    if (skipSendMessages.has(method)) {
+      return;
+    }
+    send(payload);
+  };
   const stateDir = path.join(dataDir, workspaceId);
   const repository = new FileThreadRepository<
     ClaudeThreadMetadata,
     ClaudeTurnMetadata
   >(stateDir);
-  const handlers = newHandlers(workspacePath, repository, send);
+  const handlers = newHandlers(workspacePath, repository, filteredSend);
 
   const server = createJsonRpcServer({
     async handleRequest(request: ClientMessage) {
@@ -67,7 +73,9 @@ export async function createAppServer({
         });
       }
     },
-    setServerNotificationFilter,
+    setServerNotificationFilter: (ignoreMessages: string[]) => {
+      skipSendMessages = new Set(ignoreMessages);
+    },
   });
 
   return {
