@@ -1,20 +1,14 @@
-import type { AdapterInputItem } from "../types/runtime.js";
+export type AdapterInputItem =
+  | { type: "text"; text: string }
+  | { type: "image"; url: string }
+  | { type: "localImage"; path: string }
+  | { type: "mention"; name?: string; path?: string }
+  | { type: "skill"; name: string };
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
-}
-
-export function extractTextBlocks(content: unknown): string {
-  if (!Array.isArray(content)) {
-    return "";
-  }
-  return content
-    .map((block) => {
-      const record = asRecord(block);
-      return typeof record?.text === "string" ? record.text : "";
-    })
-    .filter(Boolean)
-    .join("");
+export function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
 }
 
 export function normalizeInputItems(value: unknown): AdapterInputItem[] {
@@ -34,13 +28,19 @@ export function normalizeInputItems(value: unknown): AdapterInputItem[] {
       }
 
       if (type === "text") {
-        return typeof record.text === "string" ? { type, text: record.text } : null;
+        return typeof record.text === "string"
+          ? { type, text: record.text }
+          : null;
       }
       if (type === "image") {
-        return typeof record.url === "string" ? { type, url: record.url } : null;
+        return typeof record.url === "string"
+          ? { type, url: record.url }
+          : null;
       }
       if (type === "localImage") {
-        return typeof record.path === "string" ? { type, path: record.path } : null;
+        return typeof record.path === "string"
+          ? { type, path: record.path }
+          : null;
       }
       if (type === "mention") {
         return {
@@ -50,7 +50,9 @@ export function normalizeInputItems(value: unknown): AdapterInputItem[] {
         };
       }
       if (type === "skill") {
-        return typeof record.name === "string" ? { type, name: record.name } : null;
+        return typeof record.name === "string"
+          ? { type, name: record.name }
+          : null;
       }
       return null;
     })
@@ -84,8 +86,8 @@ export function parsePrompt(params: Record<string, unknown>): string {
     params.prompt ??
     params.text ??
     params.input ??
-    (asRecord(params.userMessage)?.text ?? null) ??
-    (asRecord(params.message)?.text ?? null) ??
+    asRecord(params.userMessage)?.text ??
+    asRecord(params.message)?.text ??
     messages.find((entry) => asRecord(entry)?.role === "user") ??
     "";
 

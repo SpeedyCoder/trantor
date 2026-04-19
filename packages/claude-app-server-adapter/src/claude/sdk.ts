@@ -1,42 +1,43 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { ModelInfo, query, SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 
-import { extractTextBlocks } from "./input.js";
-import type { ThreadRecord } from "../types/runtime.js";
+import type { ReasoningEffort } from "../generated/ReasoningEffort.js";
+import type { ModelListResponse } from "../generated/v2/ModelListResponse.js";
+import type { Model } from "../generated/v2/Model.js";
 
-export function extractAssistantDelta(message: unknown): string {
-  const record = message as Record<string, any> | null;
-  if (!record || record.type !== "stream_event") {
+export function extractAssistantDelta(message: SDKMessage): string {
+  if (message.type !== "stream_event") {
     return "";
   }
-  const event = record.event as Record<string, any> | undefined;
-  if (
-    !event ||
-    typeof event !== "object" ||
-    event.type !== "content_block_delta"
-  ) {
+  const event = message.event;
+  if (event.type !== "content_block_delta") {
     return "";
   }
-  const delta = event.delta as Record<string, any> | undefined;
+  const delta = event.delta;
   if (!delta || typeof delta !== "object") {
     return "";
   }
-  return delta.type === "text_delta" && typeof delta.text === "string"
-    ? delta.text
-    : "";
+  return delta.type === "text_delta" ? delta.text : "";
 }
 
-export function extractAssistantMessageText(message: unknown): string {
-  const record = message as Record<string, any> | null;
-  if (!record || record.type !== "assistant") {
+export function extractAssistantMessageText(message: SDKMessage): string {
+  if (!message || message.type !== "assistant") {
     return "";
   }
-  const assistantMessage = record.message as Record<string, any> | undefined;
-  return extractTextBlocks(assistantMessage?.content);
+  return message.message.content
+    .map((block) => {
+      return block.type === "text" ? block.text : "";
+    })
+    .filter(Boolean)
+    .join("");
 }
 
 type RunClaudeTurnArgs = {
-  thread: ThreadRecord;
+  thread: {
+    cwd: string;
+    sdkSessionId?: string | null;
+  };
   prompt: string;
+  model?: string;
   abortController: AbortController;
   onSessionReady: (sessionId: string) => Promise<void> | void;
   onDelta: (delta: string) => void;
@@ -45,6 +46,7 @@ type RunClaudeTurnArgs = {
 export async function runClaudeTurn({
   thread,
   prompt,
+  model,
   abortController,
   onSessionReady,
   onDelta,
@@ -57,9 +59,11 @@ export async function runClaudeTurn({
       prompt,
       options: {
         cwd: thread.cwd,
+        model,
         resume: thread.sdkSessionId ?? undefined,
         maxTurns: 1,
         includePartialMessages: true,
+        enableFileCheckpointing: true,
         permissionMode: "bypassPermissions",
         allowDangerouslySkipPermissions: true,
         settingSources: ["project"],
@@ -72,21 +76,8 @@ export async function runClaudeTurn({
     });
 
     for await (const message of stream) {
-      const record = message as Record<string, any> | null;
-      const data =
-        (record?.data as Record<string, any> | undefined) ?? undefined;
-      if (
-        record?.type === "system" &&
-        record.subtype === "init" &&
-        typeof data?.session_id === "string"
-      ) {
-        await onSessionReady(data.session_id);
-      } else if (
-        record?.type === "system" &&
-        record.subtype === "init" &&
-        typeof data?.sessionId === "string"
-      ) {
-        await onSessionReady(data.sessionId);
+      if (message.type === "system" && message.subtype === "init") {
+        await onSessionReady(message.session_id);
       }
 
       const delta = extractAssistantDelta(message);
@@ -120,55 +111,65 @@ type ListClaudeModelsArgs = {
   cwd: string;
 };
 
-type ModelListResult = {
-  data: Array<{
-    model: string;
-    displayName: string;
-    description: string;
-    supportedReasoningEfforts: Array<{
-      reasoningEffort: string;
-      description: string;
-    }>;
-    defaultReasoningEffort: string | null;
-    isDefault: boolean;
-  }>;
-};
+function toReasoningEffort(
+  reasoningEffort: NonNullable<ModelInfo["supportedEffortLevels"]>[number],
+): ReasoningEffort | null {
+  switch (reasoningEffort) {
+    case "low":
+    case "medium":
+    case "high":
+    case "xhigh":
+      return reasoningEffort;
+    default:
+      return null;
+  }
+}
 
 function toReasoningEfforts(model: {
-  supportedEffortLevels?: ReadonlyArray<string>;
-}): ModelListResult["data"][number]["supportedReasoningEfforts"] {
-  return (model.supportedEffortLevels ?? []).map((reasoningEffort) => ({
-    reasoningEffort,
-    description: "",
-  }));
+  supportedEffortLevels?: ModelInfo["supportedEffortLevels"];
+}): Model["supportedReasoningEfforts"] {
+  return (model.supportedEffortLevels ?? [])
+    .map((reasoningEffort) => toReasoningEffort(reasoningEffort))
+    .filter((reasoningEffort): reasoningEffort is ReasoningEffort =>
+      Boolean(reasoningEffort),
+    )
+    .map((reasoningEffort) => ({
+      reasoningEffort,
+      description: "",
+    }));
 }
 
 export async function listClaudeModels({
   cwd,
-}: ListClaudeModelsArgs): Promise<ModelListResult> {
+}: ListClaudeModelsArgs): Promise<ModelListResponse> {
   const control = query({
     prompt: "",
     options: {
       cwd,
       maxTurns: 1,
-      includePartialMessages: false,
       permissionMode: "bypassPermissions",
-      allowDangerouslySkipPermissions: true,
-      settingSources: ["project"],
     },
   });
 
   try {
     const models = await control.supportedModels();
     return {
-      data: models.map((model, index) => ({
+      data: models.map<Model>((model) => ({
+        id: model.value,
         model: model.value,
-        displayName: model.displayName,
-        description: model.description,
+        upgrade: null,
+        upgradeInfo: null,
+        availabilityNux: null,
+        displayName: model.displayName ?? "",
+        description: model.description ?? "",
+        hidden: false,
         supportedReasoningEfforts: toReasoningEfforts(model),
-        defaultReasoningEffort: null,
-        isDefault: index === 0,
+        defaultReasoningEffort: "none",
+        inputModalities: ["text"],
+        supportsPersonality: false,
+        isDefault: false,
       })),
+      nextCursor: null,
     };
   } finally {
     await control.interrupt().catch(() => undefined);
