@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type { ModelOption, WorkspaceInfo } from "../../../types";
 import type { WorkspaceRunMode } from "../hooks/useWorkspaceHome";
 import Laptop from "lucide-react/dist/esm/icons/laptop";
@@ -17,12 +18,14 @@ import {
   INSTANCE_OPTIONS,
   resolveModelLabel,
 } from "./workspaceHomeHelpers";
-import { runtimeForModelId } from "../../models/utils/modelRuntime";
+import { harnessForModelId } from "../../models/utils/modelRuntime";
 
 type WorkspaceHomeRunControlsProps = {
   workspaceKind: WorkspaceInfo["kind"];
   runMode: WorkspaceRunMode;
   onRunModeChange: (mode: WorkspaceRunMode) => void;
+  selectedHarness?: AgentHarness;
+  onSelectHarness?: (harness: AgentHarness) => void;
   models: ModelOption[];
   selectedModelId: string | null;
   onSelectModel: (modelId: string) => void;
@@ -43,6 +46,8 @@ export function WorkspaceHomeRunControls({
   workspaceKind,
   runMode,
   onRunModeChange,
+  selectedHarness = "codex",
+  onSelectHarness,
   models,
   selectedModelId,
   onSelectModel,
@@ -78,13 +83,11 @@ export function WorkspaceHomeRunControls({
     : null;
   const selectedModelLabel = resolveModelLabel(selectedModel);
   const modelSummary = buildModelSummary(models, modelSelections);
-  const codexModels = models.filter((model) => runtimeForModelId(model.id) !== "claude");
-  const claudeModels = models.filter((model) => runtimeForModelId(model.id) === "claude");
-  const hasMixedProviders = codexModels.length > 0 && claudeModels.length > 0;
   const showRunMode = (workspaceKind ?? "main") !== "worktree";
   const runModeLabel = runMode === "local" ? "Local" : "Worktree";
   const RunModeIcon = runMode === "local" ? Laptop : GitBranch;
-  const SelectedModelIcon = selectedModel && runtimeForModelId(selectedModel.id) === "claude"
+  const HarnessIcon = selectedHarness === "claude" ? Feather : Cpu;
+  const SelectedModelIcon = selectedModel && harnessForModelId(selectedModel.id) === "claude"
     ? Feather
     : Cpu;
   const toggleRunModeMenu = useCallback(() => {
@@ -152,6 +155,24 @@ export function WorkspaceHomeRunControls({
         </SplitActionMenu>
       )}
 
+      <div className="composer-select-wrap workspace-home-control workspace-home-harness-control">
+        <div className="open-app-button">
+          <span className="composer-icon" aria-hidden>
+            <HarnessIcon size={14} strokeWidth={1.8} />
+          </span>
+          <select
+            className="composer-select composer-select--model composer-select--harness"
+            aria-label="Harness"
+            value={selectedHarness}
+            onChange={(event) => onSelectHarness?.(event.target.value as AgentHarness)}
+            disabled={isSubmitting}
+          >
+            <option value="codex">Codex</option>
+            <option value="claude">Claude</option>
+          </select>
+        </div>
+      </div>
+
       <SplitActionMenu
         containerRef={modelsRef}
         className="open-app-menu workspace-home-control"
@@ -183,7 +204,7 @@ export function WorkspaceHomeRunControls({
             Connect this workspace to load available models.
           </div>
         )}
-        {codexModels.map((model) => {
+        {models.map((model) => {
           const isSelected =
             runMode === "local"
               ? model.id === selectedModelId
@@ -204,66 +225,13 @@ export function WorkspaceHomeRunControls({
                   }
                   onToggleModel(model.id);
                 }}
-                icon={<Cpu className="workspace-home-mode-icon" aria-hidden />}
-                active={isSelected}
-              >
-                {resolveModelLabel(model)}
-              </PopoverMenuItem>
-              {runMode === "worktree" && (
-                <>
-                  <div className="workspace-home-model-meta" aria-hidden>
-                    <span>{count}x</span>
-                    <ChevronRight size={14} />
-                  </div>
-                  <div className="workspace-home-model-submenu ds-popover">
-                    {INSTANCE_OPTIONS.map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        className={`workspace-home-model-submenu-item${
-                          option === count ? " is-active" : ""
-                        }`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onModelCountChange(model.id, option);
-                        }}
-                      >
-                        {option}x
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-        {hasMixedProviders && (
-          <div className="workspace-home-model-divider" role="separator" aria-label="Claude models">
-            <span>Claude</span>
-          </div>
-        )}
-        {claudeModels.map((model) => {
-          const isSelected =
-            runMode === "local"
-              ? model.id === selectedModelId
-              : Boolean(modelSelections[model.id]);
-          const count = modelSelections[model.id] ?? 1;
-          return (
-            <div
-              key={model.id}
-              className={`workspace-home-model-option${isSelected ? " is-active" : ""}`}
-            >
-              <PopoverMenuItem
-                className="open-app-option workspace-home-model-toggle"
-                onClick={() => {
-                  if (runMode === "local") {
-                    onSelectModel(model.id);
-                    closeModels();
-                    return;
-                  }
-                  onToggleModel(model.id);
-                }}
-                icon={<Feather className="workspace-home-mode-icon" aria-hidden />}
+                icon={
+                  harnessForModelId(model.id) === "claude" ? (
+                    <Feather className="workspace-home-mode-icon" aria-hidden />
+                  ) : (
+                    <Cpu className="workspace-home-mode-icon" aria-hidden />
+                  )
+                }
                 active={isSelected}
               >
                 {resolveModelLabel(model)}

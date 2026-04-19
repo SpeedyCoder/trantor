@@ -226,6 +226,10 @@
   padding: 0 16px 0 0;
 }
 
+.workspace-home-harness-control .open-app-button {
+  min-width: 98px;
+}
+
 .workspace-home-dropdown {
   left: 0;
 }

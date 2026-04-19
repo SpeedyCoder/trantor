@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { harnessForModelId } from "@/features/models/utils/modelRuntime";
 import { setWorkspaceRuntimeCodexArgs } from "@services/tauri";
 import { buildCodexArgsOptions } from "@threads/utils/codexArgsProfiles";
 import {
@@ -10,6 +11,7 @@ import type { ThreadCodexParams } from "@threads/utils/threadStorage";
 type ThreadCodexParamsPatch = Partial<
   Pick<
     ThreadCodexParams,
+    | "harness"
     | "modelId"
     | "effort"
     | "serviceTier"
@@ -66,6 +68,10 @@ export function useMainAppThreadCodexState({
 
       const current = getThreadCodexParams(workspaceId, threadId);
       const patch: ThreadCodexParamsPatch = {};
+      const harness = harnessForModelId(modelId);
+      if (harness && !current?.harness) {
+        patch.harness = harness;
+      }
       if (modelId && !current?.modelId) {
         patch.modelId = modelId;
       }

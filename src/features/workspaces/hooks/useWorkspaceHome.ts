@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type {
   ModelOption,
   SendMessageResult,
@@ -34,6 +35,7 @@ export type WorkspaceHomeRun = {
 type UseWorkspaceHomeOptions = {
   activeWorkspace: WorkspaceInfo | null;
   models: ModelOption[];
+  selectedHarness?: AgentHarness;
   selectedModelId: string | null;
   effort?: string | null;
   serviceTier?: ServiceTier | null | undefined;
@@ -42,6 +44,7 @@ type UseWorkspaceHomeOptions = {
     workspaceId: string,
     threadId: string,
     patch: {
+      harness: AgentHarness;
       modelId: string | null;
       effort: string | null;
       serviceTier: ServiceTier | null | undefined;
@@ -55,7 +58,7 @@ type UseWorkspaceHomeOptions = {
   connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
   startThreadForWorkspace: (
     workspaceId: string,
-    options?: { activate?: boolean },
+    options?: { activate?: boolean; modelId?: string | null },
   ) => Promise<string | null>;
   sendUserMessageToThread: (
     workspace: WorkspaceInfo,
@@ -187,6 +190,7 @@ const normalizeWorktreeName = (value: string | null | undefined) => {
 export function useWorkspaceHome({
   activeWorkspace,
   models,
+  selectedHarness = "codex",
   selectedModelId,
   effort = null,
   serviceTier = undefined,
@@ -486,20 +490,19 @@ export function useWorkspaceHome({
           }
           const threadId = await startThreadForWorkspace(activeWorkspace.id, {
             activate: false,
+            modelId: selectedModelId,
           });
           if (!threadId) {
             throw new Error("Failed to start a local thread.");
           }
           seedThreadCodexParams?.(activeWorkspace.id, threadId, {
+            harness: selectedHarness,
             modelId: selectedModelId,
             effort,
             serviceTier,
           });
-          const localModel = selectedModelId
-            ? modelLookup.get(selectedModelId)?.model ?? null
-            : null;
           await sendUserMessageToThread(activeWorkspace, threadId, prompt, images, {
-            model: localModel,
+            model: selectedModelId,
             effort,
             serviceTier,
             collaborationMode,
@@ -553,11 +556,13 @@ export function useWorkspaceHome({
               }
               const threadId = await startThreadForWorkspace(worktreeWorkspace.id, {
                 activate: false,
+                modelId: selection.modelId,
               });
               if (!threadId) {
                 throw new Error("Failed to start a worktree thread.");
               }
               seedThreadCodexParams?.(worktreeWorkspace.id, threadId, {
+                harness: selectedHarness,
                 modelId: selection.modelId,
                 effort,
                 serviceTier,
@@ -568,7 +573,7 @@ export function useWorkspaceHome({
                 prompt,
                 images,
                 {
-                  model: selection.model?.model ?? selection.modelId,
+                  model: selection.modelId,
                   effort,
                   serviceTier,
                   collaborationMode,
@@ -632,6 +637,7 @@ export function useWorkspaceHome({
     updateRunState,
     runMode,
     seedThreadCodexParams,
+    selectedHarness,
     selectedModelId,
     serviceTier,
     sendUserMessageToThread,

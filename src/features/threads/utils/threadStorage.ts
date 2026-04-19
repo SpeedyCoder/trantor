@@ -1,4 +1,5 @@
 import type { AccessMode, ServiceTier } from "@/types";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 
 const STORAGE_KEY_THREAD_ACTIVITY = "codexmonitor.threadLastUserActivity";
 export const STORAGE_KEY_PINNED_THREADS = "codexmonitor.pinnedThreads";
@@ -15,6 +16,7 @@ type DetachedReviewLinksMap = Record<string, Record<string, string>>;
 // Per-thread Codex parameter overrides. Keyed by `${workspaceId}:${threadId}`.
 // These are UI-level preferences (not server state) and are best-effort persisted.
 export type ThreadCodexParams = {
+  harness?: AgentHarness | null;
   modelId: string | null;
   effort: string | null;
   // string => explicit per-thread tier override

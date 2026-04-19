@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
+import { harnessForModelId } from "@/features/models/utils/modelRuntime";
 import { pushErrorToast } from "@/services/toasts";
 import type {
   AccessMode,
@@ -25,6 +27,7 @@ type SetState<T> = Dispatch<SetStateAction<T>>;
 
 type PersistThreadCodexParams = (
   patch: {
+    harness?: AgentHarness | null;
     modelId?: string | null;
     effort?: string | null;
     serviceTier?: ServiceTier | null | undefined;
@@ -40,6 +43,7 @@ type UseThreadSelectionHandlersOrchestrationParams = {
   queueSaveSettings: (next: AppSettings) => Promise<AppSettings | void>;
   activeThreadIdRef: MutableRefObject<string | null>;
   setSelectedModelId: (id: string | null) => void;
+  setSelectedHarness?: (harness: AgentHarness) => void;
   setSelectedEffort: (effort: string | null) => void;
   setSelectedServiceTier: (tier: ServiceTier | null | undefined) => void;
   setSelectedCollaborationModeId: (id: string | null) => void;
@@ -64,6 +68,7 @@ type UseThreadCodexSyncOrchestrationParams = {
   patchThreadCodexParams: ReturnType<typeof useThreadCodexParams>["patchThreadCodexParams"];
   setThreadCodexSelectionKey: SetState<string | null>;
   setAccessMode: SetState<AccessMode>;
+  setPreferredHarness?: SetState<AgentHarness>;
   setPreferredModelId: SetState<string | null>;
   setPreferredEffort: SetState<string | null>;
   setPreferredServiceTier: SetState<ServiceTier | null | undefined>;
@@ -72,6 +77,7 @@ type UseThreadCodexSyncOrchestrationParams = {
   activeThreadIdRef: MutableRefObject<string | null>;
   pendingNewThreadSeedRef: MutableRefObject<PendingNewThreadSeed | null>;
   selectedModelId: string | null;
+  selectedHarness?: AgentHarness;
   resolvedEffort: string | null;
   selectedServiceTier: ServiceTier | null | undefined;
   accessMode: AccessMode;
@@ -91,6 +97,7 @@ type SendOrQueueHandler = (
 type UseThreadUiOrchestrationParams = {
   activeWorkspaceId: string | null | undefined;
   activeThreadId: string | null;
+  selectedHarness?: AgentHarness;
   accessMode: AccessMode;
   selectedServiceTier: ServiceTier | null | undefined;
   selectedCollaborationModeId: string | null;
@@ -131,6 +138,7 @@ export function useThreadCodexSyncOrchestration({
   patchThreadCodexParams,
   setThreadCodexSelectionKey,
   setAccessMode,
+  setPreferredHarness,
   setPreferredModelId,
   setPreferredEffort,
   setPreferredServiceTier,
@@ -139,6 +147,7 @@ export function useThreadCodexSyncOrchestration({
   activeThreadIdRef,
   pendingNewThreadSeedRef,
   selectedModelId,
+  selectedHarness,
   resolvedEffort,
   selectedServiceTier,
   accessMode,
@@ -171,6 +180,7 @@ export function useThreadCodexSyncOrchestration({
     });
 
     setThreadCodexSelectionKey(resolved.scopeKey);
+  setPreferredHarness?.(resolved.preferredHarness);
     setAccessMode(resolved.accessMode);
     setPreferredModelId(resolved.preferredModelId);
     setPreferredEffort(resolved.preferredEffort);
@@ -188,6 +198,7 @@ export function useThreadCodexSyncOrchestration({
     setPreferredCodexArgsOverride,
     setPreferredEffort,
     setPreferredModelId,
+    setPreferredHarness,
     setPreferredServiceTier,
     setThreadCodexSelectionKey,
     threadCodexParamsVersion,
@@ -222,6 +233,7 @@ export function useThreadCodexSyncOrchestration({
       threadId,
       buildThreadCodexSeedPatch({
         workspaceId,
+        selectedHarness: selectedHarness ?? "codex",
         selectedModelId,
         resolvedEffort,
         accessMode,
@@ -246,6 +258,7 @@ export function useThreadCodexSyncOrchestration({
     selectedCollaborationModeId,
     selectedCodexArgsOverride,
     selectedModelId,
+    selectedHarness,
     pendingNewThreadSeedRef,
   ]);
 
@@ -279,6 +292,7 @@ export function useThreadSelectionHandlersOrchestration({
   queueSaveSettings,
   activeThreadIdRef,
   setSelectedModelId,
+  setSelectedHarness,
   setSelectedEffort,
   setSelectedServiceTier,
   setSelectedCollaborationModeId,
@@ -288,6 +302,8 @@ export function useThreadSelectionHandlersOrchestration({
 }: UseThreadSelectionHandlersOrchestrationParams) {
   const handleSelectModel = useCallback(
     (id: string | null) => {
+      const nextHarness = harnessForModelId(id) ?? "codex";
+      setSelectedHarness?.(nextHarness);
       setSelectedModelId(id);
       const hasActiveThread = Boolean(activeThreadIdRef.current);
       if (!appSettingsLoading && !hasActiveThread) {
@@ -300,7 +316,7 @@ export function useThreadSelectionHandlersOrchestration({
           return nextSettings;
         });
       }
-      persistThreadCodexParams({ modelId: id });
+      persistThreadCodexParams({ harness: nextHarness, modelId: id });
     },
     [
       activeThreadIdRef,
@@ -308,8 +324,21 @@ export function useThreadSelectionHandlersOrchestration({
       persistThreadCodexParams,
       queueSaveSettings,
       setAppSettings,
+      setSelectedHarness,
       setSelectedModelId,
     ],
+  );
+
+  const handleSelectHarness = useCallback(
+    (harness: AgentHarness) => {
+      if (activeThreadIdRef.current) {
+        return;
+      }
+      setSelectedHarness?.(harness);
+      setSelectedModelId(null);
+      persistThreadCodexParams({ harness, modelId: null });
+    },
+    [activeThreadIdRef, persistThreadCodexParams, setSelectedHarness, setSelectedModelId],
   );
 
   const handleSelectEffort = useCallback(
@@ -380,6 +409,7 @@ export function useThreadSelectionHandlersOrchestration({
 
   return {
     handleSelectModel,
+    handleSelectHarness,
     handleSelectEffort,
     handleSelectServiceTier,
     handleSelectCollaborationMode,
@@ -391,6 +421,7 @@ export function useThreadSelectionHandlersOrchestration({
 export function useThreadUiOrchestration({
   activeWorkspaceId,
   activeThreadId,
+  selectedHarness = "codex",
   accessMode,
   selectedServiceTier,
   selectedCollaborationModeId,
@@ -413,6 +444,7 @@ export function useThreadUiOrchestration({
     pendingNewThreadSeedRef.current = createPendingThreadSeed({
       activeThreadId: activeThreadId ?? null,
       activeWorkspaceId: activeWorkspaceId ?? null,
+      selectedHarness,
       selectedServiceTier,
       selectedCollaborationModeId,
       accessMode,
@@ -423,6 +455,7 @@ export function useThreadUiOrchestration({
     activeThreadId,
     activeWorkspaceId,
     pendingNewThreadSeedRef,
+    selectedHarness,
     selectedServiceTier,
     selectedCollaborationModeId,
     selectedCodexArgsOverride,

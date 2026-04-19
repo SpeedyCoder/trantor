@@ -1,11 +1,15 @@
 import path from "node:path";
-import type { ClientMessage, ServerMessage } from "../types/protocol";
+import type {
+  ClientMessage,
+  ResponsePayload,
+  ServerMessage,
+} from "../types/protocol.js";
 import { createJsonRpcServer } from "./jsonRpc.js";
 import { ErrorNotification } from "../generated/v2/ErrorNotification.js";
 import { newHandlers } from "./handlers.js";
-import { FileThreadRepository } from "../thread/fileRepository";
-import { ClaudeThreadMetadata, ClaudeTurnMetadata } from "../claude/types";
-import type { Handlers } from "../types/protocol";
+import { FileThreadRepository } from "../thread/fileRepository.js";
+import { ClaudeThreadMetadata, ClaudeTurnMetadata } from "../claude/types.js";
+import type { Handlers } from "../types/protocol.js";
 
 type AppServerArgs = {
   workspaceId: string;
@@ -15,7 +19,7 @@ type AppServerArgs = {
 };
 
 type AppServerHandler = {
-  handle: (message: ClientMessage) => Promise<void>;
+  handle: (message: ClientMessage) => Promise<ResponsePayload>;
   getThreadId?: (message: ClientMessage) => string;
   getTurnId?: (message: ClientMessage) => string;
 };
@@ -49,28 +53,23 @@ export async function createAppServer({
   const handlers = newHandlers(workspacePath, repository, filteredSend);
 
   const server = createJsonRpcServer({
+    send,
     async handleRequest(request: ClientMessage) {
       const handler = getHandler(handlers, request);
       if (!handler) {
-        const params: ErrorNotification = newErrorParams(
-          `Unsupported methods: ${request.method}`,
-        );
-        send({ method: "error", params });
+        send({
+          id: request.id,
+          error: { message: `Unsupported method: ${request.method}` },
+        });
         return;
       }
       try {
-        await handler.handle(request);
+        const result = await handler.handle(request);
+        send({ id: request.id, result });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
 
-        send({
-          method: "error",
-          params: newErrorParams(
-            message,
-            handler?.getThreadId?.(request),
-            handler?.getTurnId?.(request),
-          ),
-        });
+        send({ id: request.id, error: { message } });
       }
     },
     setServerNotificationFilter: (ignoreMessages: string[]) => {
@@ -81,22 +80,5 @@ export async function createAppServer({
   return {
     repository,
     processLine: server.processLine,
-  };
-}
-
-function newErrorParams(
-  message: string,
-  threadId?: string,
-  turnId?: string,
-): ErrorNotification {
-  return {
-    error: {
-      message,
-      codexErrorInfo: null,
-      additionalDetails: null,
-    },
-    willRetry: false,
-    threadId: threadId ?? "",
-    turnId: turnId ?? "",
   };
 }

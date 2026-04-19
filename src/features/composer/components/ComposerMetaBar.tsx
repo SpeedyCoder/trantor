@@ -1,15 +1,19 @@
 import type { CSSProperties } from "react";
 import { BrainCog, Feather, SlidersHorizontal, Zap } from "lucide-react";
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type { AccessMode, ServiceTier, ThreadTokenUsage } from "../../../types";
 import type { CodexArgsOption } from "../../threads/utils/codexArgsProfiles";
 import { formatModelDisplayLabel } from "@/features/models/utils/modelPresentation";
-import { runtimeForModelId } from "@/features/models/utils/modelRuntime";
+import { harnessForModelId } from "@/features/models/utils/modelRuntime";
 
 type ComposerMetaBarProps = {
   disabled: boolean;
   collaborationModes: { id: string; label: string }[];
   selectedCollaborationModeId: string | null;
   onSelectCollaborationMode: (id: string | null) => void;
+  selectedHarness?: AgentHarness;
+  onSelectHarness?: (harness: AgentHarness) => void;
+  harnessLocked?: boolean;
   models: { id: string; displayName: string; model: string }[];
   selectedModelId: string | null;
   onSelectModel: (id: string) => void;
@@ -31,6 +35,9 @@ export function ComposerMetaBar({
   collaborationModes,
   selectedCollaborationModeId,
   onSelectCollaborationMode,
+  selectedHarness = "codex",
+  onSelectHarness,
+  harnessLocked = false,
   models,
   selectedModelId,
   onSelectModel,
@@ -49,13 +56,10 @@ export function ComposerMetaBar({
   const getModelLabel = (model: { id: string; displayName: string; model: string }) => {
     return formatModelDisplayLabel(model);
   };
-  const codexModels = models.filter((model) => runtimeForModelId(model.id) !== "claude");
-  const claudeModels = models.filter((model) => runtimeForModelId(model.id) === "claude");
-  const hasMixedProviders = codexModels.length > 0 && claudeModels.length > 0;
   const selectedModel =
     models.find((model) => model.id === selectedModelId) ?? null;
   const selectedModelLabel = selectedModel ? getModelLabel(selectedModel) : "No models";
-  const selectedModelRuntime = runtimeForModelId(selectedModel?.id ?? selectedModelId);
+  const selectedModelHarness = harnessForModelId(selectedModel?.id ?? selectedModelId);
   const modelSelectStyle = {
     "--composer-model-select-width": `${Math.max(selectedModelLabel.length + 2, 8)}ch`,
   } as CSSProperties;
@@ -149,9 +153,55 @@ export function ComposerMetaBar({
             </div>
           )
         )}
+        <div className="composer-select-wrap">
+          <span className="composer-icon composer-icon--model" aria-hidden>
+            {selectedHarness === "claude" ? (
+              <Feather size={16} strokeWidth={1.8} />
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 4v2"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M8 7.5h8a2.5 2.5 0 0 1 2.5 2.5v5a2.5 2.5 0 0 1-2.5 2.5H8A2.5 2.5 0 0 1 5.5 15v-5A2.5 2.5 0 0 1 8 7.5Z"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinejoin="round"
+                />
+                <circle cx="9.5" cy="12.5" r="1" fill="currentColor" />
+                <circle cx="14.5" cy="12.5" r="1" fill="currentColor" />
+                <path
+                  d="M9.5 15.5h5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M5.5 11H4M20 11h-1.5"
+                  stroke="currentColor"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+              </svg>
+            )}
+          </span>
+          <select
+            className="composer-select composer-select--model composer-select--harness"
+            aria-label="Harness"
+            value={selectedHarness}
+            onChange={(event) => onSelectHarness?.(event.target.value as AgentHarness)}
+            disabled={disabled || harnessLocked}
+          >
+            <option value="codex">Codex</option>
+            <option value="claude">Claude</option>
+          </select>
+        </div>
         <div className="composer-select-wrap composer-select-wrap--model">
           <span className="composer-icon composer-icon--model" aria-hidden>
-            {selectedModelRuntime === "claude" ? (
+            {selectedModelHarness === "claude" ? (
               <Feather size={16} strokeWidth={1.8} />
             ) : (
               <svg viewBox="0 0 24 24" fill="none">
@@ -193,17 +243,7 @@ export function ComposerMetaBar({
             style={modelSelectStyle}
           >
             {models.length === 0 && <option value="">No models</option>}
-            {codexModels.map((model) => (
-              <option key={model.id} value={model.id}>
-                {getModelLabel(model)}
-              </option>
-            ))}
-            {hasMixedProviders && (
-              <option value="__claude_separator__" disabled>
-                ──────────
-              </option>
-            )}
-            {claudeModels.map((model) => (
+            {models.map((model) => (
               <option key={model.id} value={model.id}>
                 {getModelLabel(model)}
               </option>

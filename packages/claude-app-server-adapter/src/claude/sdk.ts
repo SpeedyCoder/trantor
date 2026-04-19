@@ -4,6 +4,11 @@ import type { ReasoningEffort } from "../generated/ReasoningEffort.js";
 import type { ModelListResponse } from "../generated/v2/ModelListResponse.js";
 import type { Model } from "../generated/v2/Model.js";
 
+function claudeExecutablePath(): string | undefined {
+  const value = process.env.CLAUDE_CLI_PATH?.trim();
+  return value ? value : undefined;
+}
+
 export function extractAssistantDelta(message: SDKMessage): string {
   if (message.type !== "stream_event") {
     return "";
@@ -60,6 +65,7 @@ export async function runClaudeTurn({
       options: {
         cwd: thread.cwd,
         model,
+        pathToClaudeCodeExecutable: claudeExecutablePath(),
         resume: thread.sdkSessionId ?? undefined,
         maxTurns: 1,
         includePartialMessages: true,
@@ -146,6 +152,7 @@ export async function listClaudeModels({
     prompt: "",
     options: {
       cwd,
+      pathToClaudeCodeExecutable: claudeExecutablePath(),
       maxTurns: 1,
       permissionMode: "bypassPermissions",
     },

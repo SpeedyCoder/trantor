@@ -211,6 +211,29 @@ describe("useThreads UX integration", () => {
     expect(ensureCallOrder).toBeLessThan(startThreadCallOrder);
   });
 
+  it("passes normalized Claude model ids when starting a thread", async () => {
+    vi.mocked(startThread).mockResolvedValue({
+      result: { thread: { id: "thread-claude" } },
+    } as Awaited<ReturnType<typeof startThread>>);
+
+    const { result } = renderHook(() =>
+      useThreads({
+        activeWorkspace: workspace,
+        onWorkspaceConnected: vi.fn(),
+        model: "claude:sonnet-4.5",
+      }),
+    );
+
+    await act(async () => {
+      await result.current.startThread();
+    });
+
+    expect(vi.mocked(startThread)).toHaveBeenCalledWith(
+      "ws-1",
+      "claude:sonnet-4.5",
+    );
+  });
+
   it("still resumes selected thread when runtime codex args sync fails", async () => {
     const ensureWorkspaceRuntimeCodexArgs = vi.fn(async () => {
       throw new Error("runtime sync failed");

@@ -7,7 +7,6 @@ import { usePullRequestComposer } from "@/features/git/hooks/usePullRequestCompo
 import { useAutoExitEmptyDiff } from "@/features/git/hooks/useAutoExitEmptyDiff";
 import { isMissingRepo } from "@/features/git/utils/repoErrors";
 import { useModels } from "@/features/models/hooks/useModels";
-import { runtimeForModelId } from "@/features/models/utils/modelRuntime";
 import { NO_THREAD_SCOPE_SUFFIX } from "@/features/threads/utils/threadCodexParamsSeed";
 import { useCollaborationModes } from "@/features/collaboration/hooks/useCollaborationModes";
 import { useCollaborationModeSelection } from "@/features/collaboration/hooks/useCollaborationModeSelection";
@@ -194,6 +193,8 @@ export default function MainApp() {
     threadCodexParamsVersion,
     getThreadCodexParams,
     patchThreadCodexParams,
+    preferredHarness,
+    setPreferredHarness,
     accessMode,
     setAccessMode,
     preferredModelId,
@@ -276,11 +277,10 @@ export default function MainApp() {
   const handleThreadMessageActivity = useCallback(() => {
     queueGitStatusRefreshRef.current();
   }, []);
-  const activeThreadRuntime =
-    threadCodexSelectionKey &&
-    !threadCodexSelectionKey.endsWith(`:${NO_THREAD_SCOPE_SUFFIX}`)
-      ? runtimeForModelId(preferredModelId)
-      : null;
+  const selectedHarness = preferredHarness;
+  const isThreadScopedSelection =
+    threadCodexSelectionKey !== null &&
+    !threadCodexSelectionKey.endsWith(`:${NO_THREAD_SCOPE_SUFFIX}`);
 
   const {
     models,
@@ -297,10 +297,9 @@ export default function MainApp() {
     preferredModelId,
     preferredEffort,
     selectionKey: threadCodexSelectionKey,
-    allowedRuntime: activeThreadRuntime,
+    allowedHarness: selectedHarness,
   });
-  const activeModelRuntime = runtimeForModelId(selectedModelId ?? preferredModelId);
-  const isClaudeRuntime = activeModelRuntime === "claude";
+  const isClaudeRuntime = selectedHarness === "claude";
 
   const {
     collaborationModes,
@@ -330,6 +329,7 @@ export default function MainApp() {
 
   const {
     handleSelectModel,
+    handleSelectHarness,
     handleSelectEffort,
     handleSelectServiceTier,
     handleSelectCollaborationMode,
@@ -341,6 +341,7 @@ export default function MainApp() {
     queueSaveSettings,
     activeThreadIdRef,
     setSelectedModelId,
+    setSelectedHarness: setPreferredHarness,
     setSelectedEffort,
     setSelectedServiceTier,
     setSelectedCollaborationModeId,
@@ -413,7 +414,7 @@ export default function MainApp() {
     getWorkspacePromptsDir,
     getGlobalPromptsDir,
   } = useCustomPrompts({ activeWorkspace, onDebug: addDebugEntry });
-  const resolvedModel = selectedModel?.model ?? null;
+  const resolvedModel = selectedModel?.id ?? selectedModelId ?? preferredModelId ?? null;
   const resolvedEffort = reasoningSupported ? selectedEffort : null;
 
   const {
@@ -528,6 +529,7 @@ export default function MainApp() {
     threadSortKey: threadListSortKey,
     onThreadCodexMetadataDetected: handleThreadCodexMetadataDetected,
   });
+  const harnessLocked = Boolean(activeThreadId) && isThreadScopedSelection;
   const { connectionState: remoteThreadConnectionState, reconnectLive } =
     useRemoteThreadLiveConnection({
       backendMode: appSettings.backendMode,
@@ -689,6 +691,7 @@ export default function MainApp() {
     setThreadCodexSelectionKey,
     setAccessMode,
     setPreferredModelId,
+    setPreferredHarness,
     setPreferredEffort,
     setPreferredServiceTier,
     setPreferredCollabModeId,
@@ -696,6 +699,7 @@ export default function MainApp() {
     activeThreadIdRef,
     pendingNewThreadSeedRef,
     selectedModelId,
+    selectedHarness,
     resolvedEffort,
     selectedServiceTier,
     accessMode,
@@ -1138,6 +1142,7 @@ export default function MainApp() {
     },
     models: {
       models,
+      selectedHarness,
       selectedModelId,
       resolvedEffort,
       selectedServiceTier,
@@ -1338,6 +1343,7 @@ export default function MainApp() {
   } = useThreadUiOrchestration({
     activeWorkspaceId,
     activeThreadId,
+    selectedHarness,
     accessMode,
     selectedServiceTier,
     selectedCollaborationModeId,
@@ -1530,9 +1536,11 @@ export default function MainApp() {
           onStartRun: startWorkspaceRun,
           runMode: workspaceRunMode,
           onRunModeChange: setWorkspaceRunMode,
+          selectedHarness,
+          onSelectHarness: handleSelectHarness,
           models,
           selectedModelId,
-          onSelectModel: setSelectedModelId,
+          onSelectModel: handleSelectModel,
           modelSelections: workspaceModelSelections,
           onToggleModel: toggleWorkspaceModelSelection,
           onModelCountChange: setWorkspaceModelCount,
@@ -1709,6 +1717,9 @@ export default function MainApp() {
     handleToggleTerminalWithFocus,
     launchScriptState,
     launchScriptsState,
+    selectedHarness,
+    onSelectHarness: handleSelectHarness,
+    harnessLocked,
     models,
     selectedModelId,
     onSelectModel: handleSelectModel,

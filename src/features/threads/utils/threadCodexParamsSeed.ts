@@ -1,3 +1,5 @@
+import type { AgentHarness } from "@/features/models/utils/modelRuntime";
+import { harnessForModelId } from "@/features/models/utils/modelRuntime";
 import type { AccessMode, ServiceTier } from "@/types";
 import {
   buildEffectiveCodexArgsBadgeLabel,
@@ -10,6 +12,7 @@ export const NO_THREAD_SCOPE_SUFFIX = "__no_thread__";
 
 export type PendingNewThreadSeed = {
   workspaceId: string;
+  harness?: AgentHarness | null;
   serviceTier: ServiceTier | null | undefined;
   collaborationModeId: string | null;
   accessMode: AccessMode;
@@ -29,6 +32,7 @@ type ResolveThreadCodexStateInput = {
 
 type ResolvedThreadCodexState = {
   scopeKey: string;
+  preferredHarness: AgentHarness;
   accessMode: AccessMode;
   preferredModelId: string | null;
   preferredEffort: string | null;
@@ -38,6 +42,7 @@ type ResolvedThreadCodexState = {
 };
 
 type ThreadCodexSeedPatch = {
+  harness: AgentHarness;
   modelId: string | null;
   effort: string | null;
   serviceTier: ServiceTier | null | undefined;
@@ -45,6 +50,19 @@ type ThreadCodexSeedPatch = {
   collaborationModeId: string | null;
   codexArgsOverride: string | null | undefined;
 };
+
+function resolveStoredHarness(...entries: Array<ThreadCodexParams | null>): AgentHarness | null {
+  for (const entry of entries) {
+    if (entry?.harness === "codex" || entry?.harness === "claude") {
+      return entry.harness;
+    }
+    const inferred = harnessForModelId(entry?.modelId);
+    if (inferred) {
+      return inferred;
+    }
+  }
+  return null;
+}
 
 export function resolveWorkspaceRuntimeCodexArgsOverride(options: {
   workspaceId: string;
@@ -86,6 +104,7 @@ export function resolveWorkspaceRuntimeCodexArgsBadgeLabel(options: {
 export function createPendingThreadSeed(options: {
   activeThreadId: string | null;
   activeWorkspaceId: string | null;
+  selectedHarness?: AgentHarness;
   selectedServiceTier: ServiceTier | null | undefined;
   selectedCollaborationModeId: string | null;
   accessMode: AccessMode;
@@ -94,6 +113,7 @@ export function createPendingThreadSeed(options: {
   const {
     activeThreadId,
     activeWorkspaceId,
+    selectedHarness = "codex",
     selectedServiceTier,
     selectedCollaborationModeId,
     accessMode,
@@ -104,6 +124,7 @@ export function createPendingThreadSeed(options: {
   }
   return {
     workspaceId: activeWorkspaceId,
+    harness: selectedHarness,
     serviceTier: selectedServiceTier,
     collaborationModeId: selectedCollaborationModeId,
     accessMode,
@@ -126,8 +147,13 @@ export function resolveThreadCodexState(
   } = input;
 
   if (!threadId) {
+    const preferredHarness =
+      resolveStoredHarness(stored) ??
+      harnessForModelId(lastComposerModelId) ??
+      "codex";
     return {
       scopeKey: `${workspaceId}:${NO_THREAD_SCOPE_SUFFIX}`,
+      preferredHarness,
       accessMode: stored?.accessMode ?? defaultAccessMode,
       preferredModelId: stored?.modelId ?? lastComposerModelId ?? null,
       preferredEffort: stored?.effort ?? lastComposerReasoningEffort ?? null,
@@ -139,9 +165,15 @@ export function resolveThreadCodexState(
 
   const pendingForWorkspace =
     pendingSeed && pendingSeed.workspaceId === workspaceId ? pendingSeed : null;
+  const preferredHarness =
+    resolveStoredHarness(stored, noThreadStored) ??
+    pendingForWorkspace?.harness ??
+    harnessForModelId(lastComposerModelId) ??
+    "codex";
 
   return {
     scopeKey: makeThreadCodexParamsKey(workspaceId, threadId),
+    preferredHarness,
     accessMode: stored?.accessMode ?? pendingForWorkspace?.accessMode ?? defaultAccessMode,
     preferredModelId:
       stored?.modelId ?? noThreadStored?.modelId ?? lastComposerModelId ?? null,
@@ -167,6 +199,7 @@ export function resolveThreadCodexState(
 
 export function buildThreadCodexSeedPatch(options: {
   workspaceId: string;
+  selectedHarness?: AgentHarness;
   selectedModelId: string | null;
   resolvedEffort: string | null;
   accessMode: AccessMode;
@@ -176,6 +209,7 @@ export function buildThreadCodexSeedPatch(options: {
 }): ThreadCodexSeedPatch {
   const {
     workspaceId,
+    selectedHarness = "codex",
     selectedModelId,
     resolvedEffort,
     accessMode,
@@ -188,6 +222,7 @@ export function buildThreadCodexSeedPatch(options: {
     pendingSeed && pendingSeed.workspaceId === workspaceId ? pendingSeed : null;
 
   return {
+    harness: pendingForWorkspace?.harness ?? selectedHarness,
     modelId: selectedModelId,
     effort: resolvedEffort,
     serviceTier: pendingForWorkspace ? pendingForWorkspace.serviceTier : undefined,

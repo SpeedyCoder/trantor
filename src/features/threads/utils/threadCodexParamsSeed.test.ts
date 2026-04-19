@@ -43,6 +43,7 @@ describe("threadCodexParamsSeed", () => {
       }),
     ).toEqual({
       workspaceId: "ws-1",
+      harness: "codex",
       serviceTier: "fast",
       collaborationModeId: "plan",
       accessMode: "full-access",
@@ -78,6 +79,7 @@ describe("threadCodexParamsSeed", () => {
 
     expect(storedResolved).toEqual({
       scopeKey: "ws-1:thread-1",
+      preferredHarness: "codex",
       accessMode: "read-only",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
@@ -105,6 +107,7 @@ describe("threadCodexParamsSeed", () => {
 
     expect(seededResolved).toEqual({
       scopeKey: "ws-1:thread-2",
+      preferredHarness: "codex",
       accessMode: "full-access",
       preferredModelId: "gpt-5",
       preferredEffort: "medium",
@@ -221,6 +224,7 @@ describe("threadCodexParamsSeed", () => {
 
     expect(resolved).toEqual({
       scopeKey: "ws-1:__no_thread__",
+      preferredHarness: "codex",
       accessMode: "read-only",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
@@ -493,6 +497,7 @@ describe("threadCodexParamsSeed", () => {
         },
       }),
     ).toEqual({
+      harness: "codex",
       modelId: "gpt-5",
       effort: "high",
       serviceTier: null,
@@ -518,6 +523,7 @@ describe("threadCodexParamsSeed", () => {
         },
       }),
     ).toEqual({
+      harness: "codex",
       modelId: "gpt-5",
       effort: "high",
       serviceTier: "fast",
@@ -543,6 +549,7 @@ describe("threadCodexParamsSeed", () => {
         },
       }),
     ).toEqual({
+      harness: "codex",
       modelId: "gpt-5",
       effort: "high",
       serviceTier: undefined,
@@ -561,6 +568,7 @@ describe("threadCodexParamsSeed", () => {
         pendingSeed: null,
       }),
     ).toEqual({
+      harness: "codex",
       modelId: "gpt-5",
       effort: "high",
       serviceTier: undefined,
@@ -586,6 +594,7 @@ describe("threadCodexParamsSeed", () => {
         },
       }),
     ).toEqual({
+      harness: "codex",
       modelId: "gpt-5",
       effort: "high",
       serviceTier: null,

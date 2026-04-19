@@ -19,6 +19,49 @@ fn resolve_cli_path(configured: Option<&str>) -> String {
         .to_string()
 }
 
+fn claude_cli_candidate_paths(configured: Option<&str>) -> Vec<PathBuf> {
+    let mut candidates = Vec::new();
+    let resolved = resolve_cli_path(configured);
+    let configured_path = PathBuf::from(resolved.as_str());
+
+    if configured_path.components().count() > 1 || configured_path.is_absolute() {
+        candidates.push(configured_path);
+    } else if let Some(path_env) = build_codex_path_env(Some(resolved.as_str())) {
+        for dir in std::env::split_paths(&path_env) {
+            let candidate = dir.join(resolved.as_str());
+            if candidate.is_file() {
+                candidates.push(candidate);
+            }
+            if cfg!(windows) && Path::new(resolved.as_str()).extension().is_none() {
+                let exe_candidate = dir.join(format!("{resolved}.exe"));
+                if exe_candidate.is_file() {
+                    candidates.push(exe_candidate);
+                }
+            }
+        }
+    }
+
+    if !cfg!(windows) {
+        for candidate in [
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+            "/usr/bin/claude",
+            "/opt/local/bin/claude",
+            "/run/current-system/sw/bin/claude",
+        ] {
+            candidates.push(PathBuf::from(candidate));
+        }
+    }
+
+    candidates
+}
+
+fn resolve_cli_binary_path(configured: Option<&str>) -> Option<PathBuf> {
+    claude_cli_candidate_paths(configured)
+        .into_iter()
+        .find(|candidate| candidate.is_file())
+}
+
 fn parse_status_output(
     cli_path: Option<String>,
     installed: bool,
@@ -97,8 +140,12 @@ fn parse_status_output(
 
 async fn run_auth_status(cli_path: Option<&str>) -> ClaudeAuthStatus {
     let resolved = resolve_cli_path(cli_path);
+    let resolved_binary = resolve_cli_binary_path(cli_path);
+    let command_path = resolved_binary
+        .as_deref()
+        .unwrap_or_else(|| Path::new(resolved.as_str()));
     let path_env = build_codex_path_env(Some(resolved.as_str()));
-    let mut command = tokio_command(&resolved);
+    let mut command = tokio_command(command_path);
     command.args(["auth", "status", "--json"]);
     if let Some(path_env) = path_env {
         command.env("PATH", path_env);
@@ -106,7 +153,13 @@ async fn run_auth_status(cli_path: Option<&str>) -> ClaudeAuthStatus {
 
     match command.output().await {
         Ok(output) => parse_status_output(
-            Some(resolved),
+            Some(
+                resolved_binary
+                    .as_ref()
+                    .and_then(|path| path.to_str())
+                    .unwrap_or(resolved.as_str())
+                    .to_string(),
+            ),
             true,
             &String::from_utf8_lossy(&output.stdout),
             &String::from_utf8_lossy(&output.stderr),
@@ -234,6 +287,8 @@ pub(crate) async fn spawn_workspace_session(
         .or_else(|| resolve_bundled_adapter_path(&app_handle))
         .ok_or_else(|| "Claude adapter not found. Configure a Claude adapter path in Settings.".to_string())?;
     let cli_path = resolve_cli_path(app_settings.claude_cli_path.as_deref());
+    let resolved_cli_path = resolve_cli_binary_path(app_settings.claude_cli_path.as_deref())
+        .unwrap_or_else(|| PathBuf::from(cli_path.as_str()));
     let auth_status = run_auth_status(Some(cli_path.as_str())).await;
     if !auth_status.logged_in {
         return Err(
@@ -254,7 +309,7 @@ pub(crate) async fn spawn_workspace_session(
         "--data-dir",
     ]);
     command.arg(app_data_dir.join("claude-adapter"));
-    command.env("CLAUDE_CLI_PATH", cli_path);
+    command.env("CLAUDE_CLI_PATH", resolved_cli_path);
     command.env("CODEXMONITOR_WORKSPACE_PATH", &entry.path);
 
     let client_version = app_handle.package_info().version.to_string();
@@ -290,8 +345,10 @@ pub(crate) async fn claude_auth_login(
         settings.claude_cli_path.clone()
     };
     let resolved = resolve_cli_path(cli_path.as_deref());
+    let resolved_binary =
+        resolve_cli_binary_path(cli_path.as_deref()).unwrap_or_else(|| PathBuf::from(resolved.as_str()));
     let path_env = build_codex_path_env(Some(resolved.as_str()));
-    let mut command = tokio_command(&resolved);
+    let mut command = tokio_command(&resolved_binary);
     command.args(["auth", "login"]);
     if let Some(path_env) = path_env {
         command.env("PATH", path_env);
@@ -315,8 +372,10 @@ pub(crate) async fn claude_auth_logout(
         settings.claude_cli_path.clone()
     };
     let resolved = resolve_cli_path(cli_path.as_deref());
+    let resolved_binary =
+        resolve_cli_binary_path(cli_path.as_deref()).unwrap_or_else(|| PathBuf::from(resolved.as_str()));
     let path_env = build_codex_path_env(Some(resolved.as_str()));
-    let mut command = tokio_command(&resolved);
+    let mut command = tokio_command(&resolved_binary);
     command.args(["auth", "logout"]);
     if let Some(path_env) = path_env {
         command.env("PATH", path_env);

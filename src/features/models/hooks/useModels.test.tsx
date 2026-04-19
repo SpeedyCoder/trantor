@@ -217,4 +217,88 @@ describe("useModels", () => {
       "claude:sonnet-4.6",
     ]);
   });
+
+  it("re-filters cached models immediately when the allowed harness changes", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.1",
+            model: "gpt-5.1",
+            runtime: "codex",
+            displayName: "GPT-5.1",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+          {
+            id: "claude:sonnet-4.5",
+            model: "sonnet-4.5",
+            runtime: "claude",
+            displayName: "Sonnet 4.5 · Claude",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce(null);
+
+    const { result, rerender } = renderHook(
+      ({ allowedHarness }: { allowedHarness: "codex" | "claude" | null }) =>
+        useModels({
+          activeWorkspace: workspace,
+          allowedHarness,
+        }),
+      {
+        initialProps: { allowedHarness: "codex" as "codex" | "claude" | null },
+      },
+    );
+
+    await waitFor(() => expect(result.current.models.map((model) => model.id)).toEqual([
+      "codex:gpt-5.1",
+    ]));
+
+    rerender({ allowedHarness: "claude" });
+
+    await waitFor(() => expect(result.current.models.map((model) => model.id)).toEqual([
+      "claude:sonnet-4.5",
+    ]));
+
+    expect(getModelList).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to Claude catalog when the backend returns no Claude models", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.1",
+            model: "gpt-5.1",
+            runtime: "codex",
+            displayName: "GPT-5.1",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useModels({
+        activeWorkspace: workspace,
+        allowedHarness: "claude",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.models.map((model) => model.id)).toEqual([
+        "claude:sonnet-4.5",
+        "claude:sonnet-4.6",
+      ]),
+    );
+  });
 });

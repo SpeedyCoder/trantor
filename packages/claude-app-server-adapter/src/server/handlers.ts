@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { parsePrompt } from "../claude/input";
-import { listClaudeModels, runClaudeTurn } from "../claude/sdk";
-import { ClaudeRepository } from "../claude/types";
+import { parsePrompt } from "../claude/input.js";
+import { listClaudeModels, runClaudeTurn } from "../claude/sdk.js";
+import { ClaudeRepository } from "../claude/types.js";
 import {
   ThreadArchiveResponse,
   ThreadCompactStartResponse,
@@ -10,14 +10,16 @@ import {
   ThreadListResponse,
   ThreadReadResponse,
   ThreadResumeResponse,
+  ThreadStartResponse,
   ThreadSetNameResponse,
   Turn,
   TurnInterruptResponse,
   TurnStartResponse,
-} from "../generated/v2";
-import { createThread, forkThread, now } from "../thread/threadRecord";
-import { TurnRecord } from "../thread/types";
-import { Handlers, Send } from "../types/protocol";
+  TurnSteerResponse,
+} from "../generated/v2/index.js";
+import { createThread, forkThread, now } from "../thread/threadRecord.js";
+import { TurnRecord } from "../thread/types.js";
+import { Handlers, Send } from "../types/protocol.js";
 
 function buildThreadResponse(
   thread: Awaited<ReturnType<ClaudeRepository["getThread"]>>,
@@ -29,7 +31,7 @@ function buildThreadResponse(
 function buildResumeResponse(
   thread: Awaited<ReturnType<ClaudeRepository["getThread"]>>,
   turns: Awaited<ReturnType<ClaudeRepository["getThreadTurns"]>>,
-): ThreadResumeResponse | ThreadForkResponse {
+): ThreadResumeResponse | ThreadForkResponse | ThreadStartResponse {
   return {
     thread: buildThreadResponse(thread, turns),
     model: thread.metadata.model ?? "",
@@ -49,6 +51,37 @@ function buildTurn(status: Turn["status"]): Turn {
     items: [],
     status,
     error: null,
+  };
+}
+
+function buildAgentMessageItem(itemId: string, text: string) {
+  return {
+    type: "agentMessage" as const,
+    id: itemId,
+    text,
+    phase: "final_answer" as const,
+  };
+}
+
+function buildUserMessageItem(itemId: string, params: Record<string, unknown>) {
+  const input = Array.isArray(params.input) ? params.input : [];
+  if (input.length > 0) {
+    return {
+      type: "userMessage" as const,
+      id: itemId,
+      content: input,
+    };
+  }
+
+  const prompt = parsePrompt(params);
+  if (!prompt) {
+    return null;
+  }
+
+  return {
+    type: "userMessage" as const,
+    id: itemId,
+    content: [{ type: "text" as const, text: prompt, text_elements: [] }],
   };
 }
 
@@ -88,6 +121,8 @@ export function newHandlers(
       data: buildTurn("inProgress"),
       metadata: {},
     };
+    const userMessageItemId = randomUUID();
+    const agentMessageItemId = randomUUID();
     const abortController = new AbortController();
     const requestedModel =
       typeof params.model === "string" && params.model.trim().length > 0
@@ -106,6 +141,19 @@ export function newHandlers(
       repository.saveThread(thread),
       persistThreadTurn(threadId, turns, turnRecord),
     ]);
+
+    const userMessageItem = buildUserMessageItem(userMessageItemId, params);
+    if (userMessageItem) {
+      turnRecord.data.items = [userMessageItem];
+      send({
+        method: "item/completed",
+        params: {
+          threadId,
+          turnId: turnRecord.data.id,
+          item: userMessageItem,
+        },
+      });
+    }
 
     send({
       method: "turn/started",
@@ -129,8 +177,36 @@ export function newHandlers(
           thread.metadata.sessionId = sessionId;
           await repository.saveThread(thread);
         },
-        onDelta: () => {},
+        onDelta: (delta) => {
+          send({
+            method: "item/agentMessage/delta",
+            params: {
+              threadId,
+              turnId: turnRecord.data.id,
+              itemId: agentMessageItemId,
+              delta,
+            },
+          });
+        },
       });
+
+      if (result.text) {
+        const agentMessageItem = buildAgentMessageItem(
+          agentMessageItemId,
+          result.text,
+        );
+        turnRecord.data.items = userMessageItem
+          ? [...turnRecord.data.items, agentMessageItem]
+          : [agentMessageItem];
+        send({
+          method: "item/completed",
+          params: {
+            threadId,
+            turnId: turnRecord.data.id,
+            item: agentMessageItem,
+          },
+        });
+      }
 
       turnRecord.data = {
         ...turnRecord.data,
@@ -184,10 +260,16 @@ export function newHandlers(
           },
         );
         await repository.saveThread(thread);
+        const turns = await repository.getThreadTurns(thread.data.id);
         send({
           method: "thread/started",
           params: { thread: { ...thread.data, turns: [] } },
         });
+        const response: ThreadStartResponse = buildResumeResponse(
+          thread,
+          turns,
+        );
+        return response;
       },
     },
     "thread/resume": {
@@ -199,9 +281,8 @@ export function newHandlers(
           thread,
           turns,
         );
-        send(response);
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "thread/read": {
       handle: async (message) => {
@@ -211,9 +292,8 @@ export function newHandlers(
         const response: ThreadReadResponse = {
           thread: buildThreadResponse(thread, turns),
         };
-        send(response);
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "thread/fork": {
       handle: async (message) => {
@@ -232,9 +312,8 @@ export function newHandlers(
           forkedThread,
           turns,
         );
-        send(response);
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "thread/list": {
       handle: async () => {
@@ -243,7 +322,7 @@ export function newHandlers(
           data: threads.map((thread) => ({ ...thread.data, turns: [] })),
           nextCursor: null,
         };
-        send(response);
+        return response;
       },
     },
     "thread/archive": {
@@ -253,13 +332,12 @@ export function newHandlers(
         thread.data.updatedAt = now();
         await repository.saveThread(thread);
         const response: ThreadArchiveResponse = {};
-        send(response);
         send({
           method: "thread/archived",
           params: { threadId: message.params.threadId },
         });
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "thread/name/set": {
       handle: async (message) => {
@@ -273,7 +351,6 @@ export function newHandlers(
         thread.data.updatedAt = now();
         await repository.saveThread(thread);
         const response: ThreadSetNameResponse = {};
-        send(response);
         send({
           method: "thread/name/updated",
           params: {
@@ -281,13 +358,12 @@ export function newHandlers(
             threadName: nextName ?? undefined,
           },
         });
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "thread/compact/start": {
       handle: async (message) => {
         const response: ThreadCompactStartResponse = {};
-        send(response);
         send({
           method: "thread/compacted",
           params: {
@@ -295,13 +371,13 @@ export function newHandlers(
             turnId: randomUUID(),
           },
         });
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "model/list": {
       handle: async () => {
         const response = await listClaudeModels({ cwd: workspacePath });
-        send(response);
+        return response;
       },
     },
     "turn/start": {
@@ -311,9 +387,8 @@ export function newHandlers(
           message.params as unknown as Record<string, unknown>,
         );
         const response: TurnStartResponse = { turn };
-        send(response);
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "turn/steer": {
       handle: async (message) => {
@@ -321,10 +396,9 @@ export function newHandlers(
           message.params.threadId,
           message.params as unknown as Record<string, unknown>,
         );
-        const response: TurnStartResponse = { turn };
-        send(response);
+        const response: TurnSteerResponse = { turnId: turn.id };
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
     "turn/interrupt": {
       handle: async (message) => {
@@ -337,7 +411,6 @@ export function newHandlers(
         await repository.saveThread(thread);
 
         const response: TurnInterruptResponse = {};
-        send(response);
         send({
           method: "thread/status/changed",
           params: {
@@ -345,8 +418,8 @@ export function newHandlers(
             status: thread.data.status,
           },
         });
+        return response;
       },
-      getThreadId: (message) => message.params.threadId,
     },
   };
 }
