@@ -5,6 +5,7 @@ import type {
   AppSettings,
   CodexDoctorResult,
   CodexUpdateResult,
+  RateLimitSnapshot,
   WorkspaceInfo,
 } from "@/types";
 import { useGlobalAgentsMd } from "./useGlobalAgentsMd";
@@ -12,10 +13,13 @@ import { useGlobalCodexConfigToml } from "./useGlobalCodexConfigToml";
 import { useSettingsDefaultModels } from "./useSettingsDefaultModels";
 import { buildEditorContentMeta } from "@settings/components/settingsViewHelpers";
 import { normalizeCodexArgsInput } from "@/utils/codexArgsInput";
+import { getUsageLabels } from "@/features/app/utils/usageLabels";
 
 type UseSettingsCodexSectionArgs = {
   appSettings: AppSettings;
   projects: WorkspaceInfo[];
+  accountRateLimits: RateLimitSnapshot | null;
+  usageShowRemaining: boolean;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
   onRunDoctor: (
     codexBin: string | null,
@@ -61,6 +65,12 @@ export type SettingsCodexSectionProps = {
   globalConfigRefreshDisabled: boolean;
   globalConfigSaveDisabled: boolean;
   globalConfigSaveLabel: string;
+  sessionPercent: number | null;
+  weeklyPercent: number | null;
+  sessionResetLabel: string | null;
+  weeklyResetLabel: string | null;
+  creditsLabel: string | null;
+  showWeekly: boolean;
   onSetCodexPathDraft: Dispatch<SetStateAction<string>>;
   onSetCodexArgsDraft: Dispatch<SetStateAction<string>>;
   onSetGlobalAgentsContent: (value: string) => void;
@@ -78,6 +88,8 @@ export type SettingsCodexSectionProps = {
 export const useSettingsCodexSection = ({
   appSettings,
   projects,
+  accountRateLimits,
+  usageShowRemaining,
   onUpdateAppSettings,
   onRunDoctor,
   onRunCodexUpdate,
@@ -143,6 +155,15 @@ export const useSettingsCodexSection = ({
     truncated: globalConfigTruncated,
     isDirty: globalConfigDirty,
   });
+
+  const {
+    sessionPercent,
+    weeklyPercent,
+    sessionResetLabel,
+    weeklyResetLabel,
+    creditsLabel,
+    showWeekly,
+  } = getUsageLabels(accountRateLimits, usageShowRemaining);
 
   useEffect(() => {
     setCodexPathDraft(appSettings.codexBin ?? "");
@@ -271,6 +292,12 @@ export const useSettingsCodexSection = ({
     globalConfigRefreshDisabled: globalConfigEditorMeta.refreshDisabled,
     globalConfigSaveDisabled: globalConfigEditorMeta.saveDisabled,
     globalConfigSaveLabel: globalConfigEditorMeta.saveLabel,
+    sessionPercent,
+    weeklyPercent,
+    sessionResetLabel,
+    weeklyResetLabel,
+    creditsLabel,
+    showWeekly,
     onSetCodexPathDraft: setCodexPathDraft,
     onSetCodexArgsDraft: setCodexArgsDraft,
     onSetGlobalAgentsContent: setGlobalAgentsContent,

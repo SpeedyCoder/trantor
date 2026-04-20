@@ -227,6 +227,8 @@ const renderDisplaySection = (
     onDownloadDictationModel: vi.fn(),
     onCancelDictationDownload: vi.fn(),
     onRemoveDictationModel: vi.fn(),
+    accountRateLimits: null,
+    usageShowRemaining: false,
   };
 
   render(<SettingsView {...props} />);
@@ -271,6 +273,8 @@ const renderComposerSection = (
     onDownloadDictationModel: vi.fn(),
     onCancelDictationDownload: vi.fn(),
     onRemoveDictationModel: vi.fn(),
+    accountRateLimits: null,
+    usageShowRemaining: false,
     initialSection: "composer",
   };
 
@@ -320,6 +324,8 @@ const renderAboutSection = (
     onDownloadDictationModel: vi.fn(),
     onCancelDictationDownload: vi.fn(),
     onRemoveDictationModel: vi.fn(),
+    accountRateLimits: null,
+    usageShowRemaining: false,
   };
 
   render(<SettingsView {...props} />);
@@ -397,6 +403,8 @@ const renderFeaturesSection = (
     onDownloadDictationModel: vi.fn(),
     onCancelDictationDownload: vi.fn(),
     onRemoveDictationModel: vi.fn(),
+    accountRateLimits: null,
+    usageShowRemaining: false,
     initialSection: "features",
   };
 
@@ -493,6 +501,8 @@ const renderEnvironmentsSection = (
     onDownloadDictationModel: vi.fn(),
     onCancelDictationDownload: vi.fn(),
     onRemoveDictationModel: vi.fn(),
+    accountRateLimits: null,
+    usageShowRemaining: false,
     initialSection: "environments",
   });
 
@@ -547,6 +557,65 @@ describe("SettingsView Display", () => {
         expect.objectContaining({ usageShowRemaining: true }),
       );
     });
+  });
+
+  it("renders account limits in the Codex section", () => {
+    cleanup();
+    const props: ComponentProps<typeof SettingsView> = {
+      reduceTransparency: false,
+      onToggleTransparency: vi.fn(),
+      appSettings: baseSettings,
+      openAppIconById: {},
+      onUpdateAppSettings: vi.fn().mockResolvedValue(undefined),
+      workspaceGroups: [],
+      groupedWorkspaces: [],
+      ungroupedLabel: "Ungrouped",
+      onClose: vi.fn(),
+      onMoveWorkspace: vi.fn(),
+      onDeleteWorkspace: vi.fn(),
+      onCreateWorkspaceGroup: vi.fn().mockResolvedValue(null),
+      onRenameWorkspaceGroup: vi.fn().mockResolvedValue(null),
+      onMoveWorkspaceGroup: vi.fn().mockResolvedValue(null),
+      onDeleteWorkspaceGroup: vi.fn().mockResolvedValue(null),
+      onAssignWorkspaceGroup: vi.fn().mockResolvedValue(null),
+      onRunDoctor: vi.fn().mockResolvedValue(createDoctorResult()),
+      onUpdateWorkspaceSettings: vi.fn().mockResolvedValue(undefined),
+      scaleShortcutTitle: "Scale shortcut",
+      scaleShortcutText: "Use Command +/-",
+      onTestNotificationSound: vi.fn(),
+      onTestSystemNotification: vi.fn(),
+      dictationModelStatus: null,
+      onDownloadDictationModel: vi.fn(),
+      onCancelDictationDownload: vi.fn(),
+      onRemoveDictationModel: vi.fn(),
+      accountRateLimits: {
+        primary: {
+          usedPercent: 62,
+          windowDurationMins: 300,
+          resetsAt: Math.round(Date.now() / 1000) + 3600,
+        },
+        secondary: {
+          usedPercent: 74,
+          windowDurationMins: 10080,
+          resetsAt: Math.round(Date.now() / 1000) + 7200,
+        },
+        credits: {
+          hasCredits: true,
+          unlimited: false,
+          balance: "120",
+        },
+        planType: "pro",
+      },
+      usageShowRemaining: false,
+    };
+
+    render(<SettingsView {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: "Codex" }));
+
+    expect(screen.getByText("Usage")).toBeTruthy();
+    expect(screen.getByText(/^Available credits:/).textContent ?? "").toContain("120");
+    expect(screen.getByText("Session")).toBeTruthy();
+    expect(screen.getByText("Weekly")).toBeTruthy();
   });
 
   it("toggles file path visibility in messages", async () => {
@@ -1113,6 +1182,8 @@ describe("SettingsView Codex section", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
         initialSection="codex"
       />,
     );
@@ -1162,6 +1233,8 @@ describe("SettingsView Codex section", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
         initialSection="server"
       />,
     );
@@ -1237,6 +1310,8 @@ describe("SettingsView Codex section", () => {
           onDownloadDictationModel={vi.fn()}
           onCancelDictationDownload={vi.fn()}
           onRemoveDictationModel={vi.fn()}
+          accountRateLimits={null}
+          usageShowRemaining={false}
           initialSection="server"
         />,
       );
@@ -1358,6 +1433,8 @@ describe("SettingsView Codex section", () => {
           onDownloadDictationModel={vi.fn()}
           onCancelDictationDownload={vi.fn()}
           onRemoveDictationModel={vi.fn()}
+          accountRateLimits={null}
+          usageShowRemaining={false}
           initialSection="server"
         />,
       );
@@ -1558,6 +1635,8 @@ describe("SettingsView Codex defaults", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
         initialSection="codex"
       />,
     );
@@ -1655,6 +1734,8 @@ describe("SettingsView Codex defaults", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
         initialSection="codex"
       />,
     );
@@ -1936,6 +2017,8 @@ describe("SettingsView mobile layout", () => {
           onDownloadDictationModel={vi.fn()}
           onCancelDictationDownload={vi.fn()}
           onRemoveDictationModel={vi.fn()}
+          accountRateLimits={null}
+          usageShowRemaining={false}
         />,
       );
 
@@ -2039,6 +2122,8 @@ describe("SettingsView Shortcuts", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
       />,
     );
 
@@ -2083,6 +2168,8 @@ describe("SettingsView Shortcuts", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
       />,
     );
 
@@ -2125,6 +2212,8 @@ describe("SettingsView Shortcuts", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
       />,
     );
 
@@ -2171,6 +2260,8 @@ describe("SettingsView Shortcuts", () => {
         onDownloadDictationModel={vi.fn()}
         onCancelDictationDownload={vi.fn()}
         onRemoveDictationModel={vi.fn()}
+        accountRateLimits={null}
+        usageShowRemaining={false}
         initialSection="shortcuts"
       />,
     );

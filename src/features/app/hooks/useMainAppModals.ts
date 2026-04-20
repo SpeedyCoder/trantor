@@ -5,6 +5,7 @@ import type {
   BranchInfo,
   CodexDoctorResult,
   CodexUpdateResult,
+  RateLimitSnapshot,
   ThreadSummary,
   WorkspaceGroup,
   WorkspaceInfo,
@@ -131,6 +132,8 @@ type UseMainAppModalsArgs = {
       cancel?: () => void;
       remove?: () => void;
     };
+    accountRateLimits: RateLimitSnapshot | null;
+    usageShowRemaining: boolean;
   };
 };
 
@@ -198,6 +201,8 @@ function buildSettingsViewProps({
     onDownloadDictationModel: settings.dictationModel.download,
     onCancelDictationDownload: settings.dictationModel.cancel,
     onRemoveDictationModel: settings.dictationModel.remove,
+    accountRateLimits: settings.accountRateLimits,
+    usageShowRemaining: settings.usageShowRemaining,
   };
 }
 

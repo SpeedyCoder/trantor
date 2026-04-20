@@ -10,12 +10,6 @@ import {
 import { useMenuController } from "../hooks/useMenuController";
 
 type SidebarBottomRailProps = {
-  sessionPercent: number | null;
-  weeklyPercent: number | null;
-  sessionResetLabel: string | null;
-  weeklyResetLabel: string | null;
-  creditsLabel: string | null;
-  showWeekly: boolean;
   onOpenSettings: () => void;
   onOpenDebug: () => void;
   showDebugButton: boolean;
@@ -29,36 +23,7 @@ type SidebarBottomRailProps = {
   onCancelSwitchAccount: () => void;
 };
 
-type UsageRowProps = {
-  label: string;
-  percent: number | null;
-  resetLabel: string | null;
-};
-
-function UsageRow({ label, percent, resetLabel }: UsageRowProps) {
-  return (
-    <div className="sidebar-usage-row">
-      <div className="sidebar-usage-row-head">
-        <span className="sidebar-usage-name">{label}</span>
-        <span className="sidebar-usage-value">
-          {percent === null ? "--" : `${percent}%`}
-        </span>
-      </div>
-      <div className="sidebar-usage-bar" aria-hidden>
-        <span className="sidebar-usage-bar-fill" style={{ width: `${percent ?? 0}%` }} />
-      </div>
-      {resetLabel && <div className="sidebar-usage-reset">{resetLabel}</div>}
-    </div>
-  );
-}
-
 export function SidebarBottomRail({
-  sessionPercent,
-  weeklyPercent,
-  sessionResetLabel,
-  weeklyResetLabel,
-  creditsLabel,
-  showWeekly,
   onOpenSettings,
   onOpenDebug,
   showDebugButton,
@@ -87,26 +52,6 @@ export function SidebarBottomRail({
 
   return (
     <div className="sidebar-bottom-rail">
-      <div className="sidebar-usage-panel">
-        <div className="sidebar-usage-header">
-          <div className="sidebar-usage-kicker">Usage</div>
-          {creditsLabel && <div className="sidebar-usage-credits">{creditsLabel}</div>}
-        </div>
-        <div className="sidebar-usage-list">
-          <UsageRow
-            label="Session"
-            percent={sessionPercent}
-            resetLabel={sessionResetLabel}
-          />
-          {showWeekly && (
-            <UsageRow
-              label="Weekly"
-              percent={weeklyPercent}
-              resetLabel={weeklyResetLabel}
-            />
-          )}
-        </div>
-      </div>
       <div
         className={`sidebar-bottom-actions${showAccountSwitcher ? "" : " is-compact"}`}
       >

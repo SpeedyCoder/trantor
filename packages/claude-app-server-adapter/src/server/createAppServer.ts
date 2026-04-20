@@ -6,7 +6,7 @@ import type {
 } from "../types/protocol.js";
 import { createJsonRpcServer } from "./jsonRpc.js";
 import { ErrorNotification } from "../generated/v2/ErrorNotification.js";
-import { newHandlers } from "./handlers.js";
+import { newHandlers } from "../claude/handlers.js";
 import { FileThreadRepository } from "../thread/fileRepository.js";
 import { ClaudeThreadMetadata, ClaudeTurnMetadata } from "../claude/types.js";
 import type { Handlers } from "../types/protocol.js";

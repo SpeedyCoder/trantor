@@ -42,7 +42,7 @@ CodexMonitor is a Tauri app for orchestrating multiple Codex agents across local
 
 - Resizable sidebar/right/plan/terminal/debug panels with persisted sizes.
 - Responsive layouts (desktop/tablet/phone) with tabbed navigation.
-- Sidebar usage and credits meter for account rate limits plus a home usage snapshot.
+- Account rate limits and credits in Settings plus a home usage snapshot.
 - Terminal dock with multiple tabs for background commands (experimental).
 - In-app updates with toast-driven download/install, debug panel copy/clear, sound notifications, plus platform-specific window effects (macOS overlay title bar + vibrancy) and a reduced transparency toggle.
 

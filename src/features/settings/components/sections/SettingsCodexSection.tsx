@@ -47,6 +47,12 @@ type SettingsCodexSectionProps = {
   globalConfigRefreshDisabled: boolean;
   globalConfigSaveDisabled: boolean;
   globalConfigSaveLabel: string;
+  sessionPercent: number | null;
+  weeklyPercent: number | null;
+  sessionResetLabel: string | null;
+  weeklyResetLabel: string | null;
+  creditsLabel: string | null;
+  showWeekly: boolean;
   onSetCodexPathDraft: Dispatch<SetStateAction<string>>;
   onSetCodexArgsDraft: Dispatch<SetStateAction<string>>;
   onSetGlobalAgentsContent: (value: string) => void;
@@ -133,6 +139,12 @@ export function SettingsCodexSection({
   globalConfigRefreshDisabled,
   globalConfigSaveDisabled,
   globalConfigSaveLabel,
+  sessionPercent,
+  weeklyPercent,
+  sessionResetLabel,
+  weeklyResetLabel,
+  creditsLabel,
+  showWeekly,
   onSetCodexPathDraft,
   onSetCodexArgsDraft,
   onSetGlobalAgentsContent,
@@ -232,6 +244,51 @@ export function SettingsCodexSection({
       title="Codex"
       subtitle="Configure the Codex CLI used by CodexMonitor and validate the install."
     >
+      <div className="settings-usage-panel">
+        <div className="settings-usage-header">
+          <div className="settings-field-label">Usage</div>
+          {creditsLabel && <div className="settings-usage-credits">{creditsLabel}</div>}
+        </div>
+        <div className="settings-usage-list">
+          <div className="settings-usage-row">
+            <div className="settings-usage-row-head">
+              <span className="settings-usage-name">Session</span>
+              <span className="settings-usage-value">
+                {sessionPercent === null ? "--" : `${sessionPercent}%`}
+              </span>
+            </div>
+            <div className="settings-usage-bar" aria-hidden>
+              <span
+                className="settings-usage-bar-fill"
+                style={{ width: `${sessionPercent ?? 0}%` }}
+              />
+            </div>
+            {sessionResetLabel && (
+              <div className="settings-usage-reset">{sessionResetLabel}</div>
+            )}
+          </div>
+          {showWeekly && (
+            <div className="settings-usage-row">
+              <div className="settings-usage-row-head">
+                <span className="settings-usage-name">Weekly</span>
+                <span className="settings-usage-value">
+                  {weeklyPercent === null ? "--" : `${weeklyPercent}%`}
+                </span>
+              </div>
+              <div className="settings-usage-bar" aria-hidden>
+                <span
+                  className="settings-usage-bar-fill"
+                  style={{ width: `${weeklyPercent ?? 0}%` }}
+                />
+              </div>
+              {weeklyResetLabel && (
+                <div className="settings-usage-reset">{weeklyResetLabel}</div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="settings-divider" />
       <div className="settings-field">
         <label className="settings-field-label" htmlFor="codex-path">
           Default Codex path
