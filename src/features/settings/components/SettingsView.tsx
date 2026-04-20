@@ -5,6 +5,7 @@ import type {
   CodexDoctorResult,
   CodexUpdateResult,
   DictationModelStatus,
+  RateLimitSnapshot,
   WorkspaceSettings,
   WorkspaceGroup,
   WorkspaceInfo,
@@ -65,6 +66,8 @@ export type SettingsViewProps = {
   onCancelDictationDownload?: () => void;
   onRemoveDictationModel?: () => void;
   initialSection?: CodexSection;
+  accountRateLimits: RateLimitSnapshot | null;
+  usageShowRemaining: boolean;
 };
 
 export function SettingsView({
@@ -98,6 +101,8 @@ export function SettingsView({
   onCancelDictationDownload,
   onRemoveDictationModel,
   initialSection,
+  accountRateLimits,
+  usageShowRemaining,
 }: SettingsViewProps) {
   const {
     activeSection,
@@ -136,6 +141,8 @@ export function SettingsView({
     onDownloadDictationModel,
     onCancelDictationDownload,
     onRemoveDictationModel,
+    accountRateLimits,
+    usageShowRemaining,
   });
 
   useSettingsViewCloseShortcuts(onClose);

@@ -954,6 +954,49 @@ export default function MainApp() {
     },
   });
 
+  const showHome = !activeWorkspace;
+  const {
+    latestAgentRuns,
+    isLoadingLatestAgents,
+    usageMetric,
+    setUsageMetric,
+    usageWorkspaceId,
+    setUsageWorkspaceId,
+    usageWorkspaceOptions,
+    localUsageSnapshot,
+    isLoadingLocalUsage,
+    localUsageError,
+    refreshLocalUsage,
+  } = useWorkspaceInsightsOrchestration({
+    workspaces,
+    workspacesById,
+    hasLoaded,
+    showHome,
+    threadsByWorkspace,
+    lastAgentMessageByThread,
+    threadStatusById,
+    threadListLoadingByWorkspace,
+    getWorkspaceGroupName,
+  });
+
+  const activeRateLimits = activeWorkspaceId
+    ? rateLimitsByWorkspace[activeWorkspaceId] ?? null
+    : null;
+  const {
+    homeAccount,
+    homeRateLimits,
+  } = useHomeAccount({
+    showHome,
+    usageWorkspaceId,
+    workspaces,
+    threadsByWorkspace,
+    threadListLoadingByWorkspace,
+    rateLimitsByWorkspace,
+    accountByWorkspace,
+    refreshAccountInfo,
+    refreshAccountRateLimits,
+  });
+  const settingsRateLimits = activeWorkspace ? activeRateLimits : homeRateLimits;
   const { appModalsProps, modalActions } = useMainAppModals({
     settingsViewComponent: SettingsView,
     workspaces,
@@ -1038,6 +1081,8 @@ export default function MainApp() {
       handleTestSystemNotification,
       handleMobileConnectSuccess,
       dictationModel,
+      accountRateLimits: settingsRateLimits,
+      usageShowRemaining: appSettings.usageShowRemaining,
     },
   });
 
@@ -1053,49 +1098,6 @@ export default function MainApp() {
     },
     [modalActions],
   );
-
-  const showHome = !activeWorkspace;
-  const {
-    latestAgentRuns,
-    isLoadingLatestAgents,
-    usageMetric,
-    setUsageMetric,
-    usageWorkspaceId,
-    setUsageWorkspaceId,
-    usageWorkspaceOptions,
-    localUsageSnapshot,
-    isLoadingLocalUsage,
-    localUsageError,
-    refreshLocalUsage,
-  } = useWorkspaceInsightsOrchestration({
-    workspaces,
-    workspacesById,
-    hasLoaded,
-    showHome,
-    threadsByWorkspace,
-    lastAgentMessageByThread,
-    threadStatusById,
-    threadListLoadingByWorkspace,
-    getWorkspaceGroupName,
-  });
-
-  const activeRateLimits = activeWorkspaceId
-    ? rateLimitsByWorkspace[activeWorkspaceId] ?? null
-    : null;
-  const {
-    homeAccount,
-    homeRateLimits,
-  } = useHomeAccount({
-    showHome,
-    usageWorkspaceId,
-    workspaces,
-    threadsByWorkspace,
-    threadListLoadingByWorkspace,
-    rateLimitsByWorkspace,
-    accountByWorkspace,
-    refreshAccountInfo,
-    refreshAccountRateLimits,
-  });
   const activeTokenUsage = activeThreadId
     ? tokenUsageByThread[activeThreadId] ?? null
     : null;

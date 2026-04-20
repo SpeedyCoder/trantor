@@ -4,6 +4,7 @@ import type {
   CodexDoctorResult,
   CodexUpdateResult,
   DictationModelStatus,
+  RateLimitSnapshot,
   WorkspaceGroup,
   WorkspaceSettings,
 } from "@/types";
@@ -67,6 +68,8 @@ type UseSettingsViewOrchestrationArgs = {
   onDownloadDictationModel?: () => void;
   onCancelDictationDownload?: () => void;
   onRemoveDictationModel?: () => void;
+  accountRateLimits: RateLimitSnapshot | null;
+  usageShowRemaining: boolean;
 };
 
 export function useSettingsViewOrchestration({
@@ -98,6 +101,8 @@ export function useSettingsViewOrchestration({
   onDownloadDictationModel,
   onCancelDictationDownload,
   onRemoveDictationModel,
+  accountRateLimits,
+  usageShowRemaining,
 }: UseSettingsViewOrchestrationArgs) {
   const projects = useMemo(
     () => groupedWorkspaces.flatMap((group) => group.workspaces),
@@ -196,6 +201,8 @@ export function useSettingsViewOrchestration({
   const codexSectionProps = useSettingsCodexSection({
     appSettings,
     projects,
+    accountRateLimits,
+    usageShowRemaining,
     onUpdateAppSettings,
     onRunDoctor,
     onRunCodexUpdate,

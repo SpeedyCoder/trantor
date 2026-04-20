@@ -1,7 +1,6 @@
 import type {
   AccountSnapshot,
   RequestUserInputRequest,
-  RateLimitSnapshot,
   ThreadListOrganizeMode,
   ThreadListSortKey,
   ThreadSummary,
@@ -36,7 +35,6 @@ import { useSidebarMenus } from "../hooks/useSidebarMenus";
 import { useSidebarScrollFade } from "../hooks/useSidebarScrollFade";
 import { useThreadRows } from "../hooks/useThreadRows";
 import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
-import { getUsageLabels } from "../utils/usageLabels";
 import { formatRelativeTimeShort } from "../../../utils/time";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 
@@ -118,8 +116,6 @@ type SidebarProps = {
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
   userInputRequests?: RequestUserInputRequest[];
-  accountRateLimits: RateLimitSnapshot | null;
-  usageShowRemaining: boolean;
   accountInfo: AccountSnapshot | null;
   onSwitchAccount: () => void;
   onCancelSwitchAccount: () => void;
@@ -179,8 +175,6 @@ export const Sidebar = memo(function Sidebar({
   activeWorkspaceId,
   activeThreadId,
   userInputRequests = [],
-  accountRateLimits,
-  usageShowRemaining,
   accountInfo,
   onSwitchAccount,
   onCancelSwitchAccount,
@@ -253,14 +247,6 @@ export const Sidebar = memo(function Sidebar({
       onDeleteWorkspace,
       onDeleteWorktree,
     });
-  const {
-    sessionPercent,
-    weeklyPercent,
-    sessionResetLabel,
-    weeklyResetLabel,
-    creditsLabel,
-    showWeekly,
-  } = getUsageLabels(accountRateLimits, usageShowRemaining);
   const debouncedQuery = useDebouncedValue(searchQuery, 150);
   const normalizedQuery = debouncedQuery.trim().toLowerCase();
   const isSearchActive = Boolean(normalizedQuery);
@@ -1028,12 +1014,6 @@ export const Sidebar = memo(function Sidebar({
         </div>
       </div>
       <SidebarBottomRail
-        sessionPercent={sessionPercent}
-        weeklyPercent={weeklyPercent}
-        sessionResetLabel={sessionResetLabel}
-        weeklyResetLabel={weeklyResetLabel}
-        creditsLabel={creditsLabel}
-        showWeekly={showWeekly}
         onOpenSettings={onOpenSettings}
         onOpenDebug={onOpenDebug}
         showDebugButton={showDebugButton}

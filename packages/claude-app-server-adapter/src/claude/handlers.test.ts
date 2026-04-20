@@ -1,0 +1,480 @@
+import { describe, expect, it, vi, beforeEach } from "vitest";
+
+import { newHandlers } from "./handlers.js";
+import type { ClaudeRepository } from "./types.js";
+import type { TurnRecord } from "../thread/types.js";
+
+vi.mock("./sdk.js", () => ({
+  extractAssistantMessageText: vi.fn((message: { message?: { content?: Array<{ type?: string; text?: string }> } }) =>
+    (message.message?.content ?? [])
+      .map((block) => (block.type === "text" ? block.text ?? "" : ""))
+      .join(""),
+  ),
+  listClaudeModels: vi.fn(),
+  runClaudeTurn: vi.fn(),
+}));
+
+import { runClaudeTurn } from "./sdk.js";
+
+function createRepository(): ClaudeRepository {
+  const thread = {
+    archived: false,
+    metadata: { sessionId: "", model: null },
+    data: {
+      id: "thread-1",
+      name: "Thread",
+      cwd: "/tmp/workspace",
+      createdAt: 1,
+      updatedAt: 1,
+      preview: "",
+      ephemeral: false,
+      modelProvider: "",
+      status: { type: "idle" as const },
+      path: null,
+      cliVersion: "",
+      source: "appServer" as const,
+      agentNickname: null,
+      agentRole: null,
+      gitInfo: null,
+    },
+  };
+  let turns: TurnRecord<object>[] = [];
+
+  return {
+    listThreads: async () => [thread],
+    getThread: async (threadId: string) => {
+      if (threadId !== thread.data.id) {
+        throw new Error(`Thread not found: ${threadId}`);
+      }
+      return thread;
+    },
+    saveThread: async (nextThread) => {
+      Object.assign(thread, nextThread);
+    },
+    getThreadTurns: async (threadId: string) => {
+      if (threadId !== thread.data.id) {
+        throw new Error(`Thread not found: ${threadId}`);
+      }
+      return turns;
+    },
+    saveThreadTurns: async (threadId: string, nextTurns: TurnRecord<object>[]) => {
+      if (threadId !== thread.data.id) {
+        throw new Error(`Thread not found: ${threadId}`);
+      }
+      turns = nextTurns;
+    },
+  };
+}
+
+describe("newHandlers", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("emits separate Claude assistant messages and file changes during turn/start", async () => {
+    vi.mocked(runClaudeTurn).mockImplementation(async ({ onDelta, onMessage }) => {
+      onDelta("Let me inspect");
+      onDelta(" this file.");
+      await onMessage?.({
+        type: "assistant",
+        message: {
+          content: [{ type: "text", text: "Let me inspect this file.", citations: [] }],
+        } as never,
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000009",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_start",
+          index: 0,
+          content_block: {
+            type: "tool_use",
+            id: "toolu_01D7FLrfh4GYq7yT1ULFeyMV",
+            name: "Read",
+            input: { file_path: "src/App.tsx" },
+            caller: { type: "direct" },
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000000",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: {
+            type: "input_json_delta",
+            partial_json: "{\"file_p",
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000005",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: {
+            type: "input_json_delta",
+            partial_json: "ath\":\"src",
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000005",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: {
+            type: "input_json_delta",
+            partial_json: "/App.tsx\"}",
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000005",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_stop",
+          index: 0,
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000006",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_start",
+          index: 1,
+          content_block: {
+            type: "tool_use",
+            id: "toolu_01EDIT",
+            name: "Edit",
+            input: {
+              file_path: "src/App.tsx",
+              old_string: "Hello",
+              new_string: "Hello world",
+            },
+            caller: { type: "direct" },
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000010",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_stop",
+          index: 1,
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000011",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "system",
+        subtype: "task_started",
+        task_id: "task-1",
+        description: "Run tests",
+        uuid: "00000000-0000-0000-0000-000000000001",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "tool_progress",
+        tool_use_id: "tool-1",
+        tool_name: "Bash",
+        parent_tool_use_id: null,
+        elapsed_time_seconds: 1,
+        task_id: "task-1",
+        uuid: "00000000-0000-0000-0000-000000000002",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "system",
+        subtype: "task_progress",
+        task_id: "task-1",
+        description: "Running tests",
+        summary: "npm test",
+        usage: {
+          total_tokens: 0,
+          tool_uses: 1,
+          duration_ms: 25,
+        },
+        uuid: "00000000-0000-0000-0000-000000000003",
+        session_id: "session-1",
+      });
+      onDelta("I updated");
+      onDelta(" the file.");
+      await onMessage?.({
+        type: "assistant",
+        message: {
+          content: [{ type: "text", text: "I updated the file.", citations: [] }],
+        } as never,
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000012",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "system",
+        subtype: "task_notification",
+        task_id: "task-1",
+        status: "completed",
+        output_file: "/tmp/out",
+        summary: "Tests finished",
+        usage: {
+          total_tokens: 0,
+          tool_uses: 1,
+          duration_ms: 40,
+        },
+        uuid: "00000000-0000-0000-0000-000000000004",
+        session_id: "session-1",
+      });
+      return { text: "I updated the file.", aborted: false };
+    });
+
+    const repository = createRepository();
+    const sent: unknown[] = [];
+    const handlers = newHandlers("/tmp/workspace", repository, (payload) => {
+      sent.push(payload);
+    });
+
+    const response = await handlers["turn/start"]?.handle({
+      id: 1,
+      method: "turn/start",
+      params: {
+        threadId: "thread-1",
+        input: [{ type: "text", text: "Say hello", text_elements: [] }],
+      },
+    });
+
+    expect(response).toMatchObject({
+      turn: {
+        status: "completed",
+      },
+    });
+
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "userMessage",
+              content: [{ type: "text", text: "Say hello", text_elements: [] }],
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/started",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "commandExecution",
+              command: "Read src/App.tsx",
+              status: "inProgress",
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/commandExecution/outputDelta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "{\"file_p",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/commandExecution/outputDelta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "ath\":\"src",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/commandExecution/outputDelta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "/App.tsx\"}",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "commandExecution",
+              command: "Read src/App.tsx",
+              status: "completed",
+              aggregatedOutput: '{\n  "file_path": "src/App.tsx"\n}',
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/started",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "fileChange",
+              status: "inProgress",
+              changes: [
+                expect.objectContaining({
+                  path: "src/App.tsx",
+                }),
+              ],
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "fileChange",
+              status: "completed",
+              changes: [
+                expect.objectContaining({
+                  path: "src/App.tsx",
+                  diff: expect.stringContaining("-Hello"),
+                }),
+              ],
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/started",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "commandExecution",
+              command: "Run tests",
+              status: "inProgress",
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/commandExecution/outputDelta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "npm test",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "commandExecution",
+              status: "completed",
+              aggregatedOutput: expect.stringContaining("Tests finished"),
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/agentMessage/delta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "Let me inspect",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/agentMessage/delta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: " this file.",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "agentMessage",
+              text: "Let me inspect this file.",
+              phase: "final_answer",
+            }),
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/agentMessage/delta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: "I updated",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/agentMessage/delta",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            delta: " the file.",
+          }),
+        }),
+        expect.objectContaining({
+          method: "item/completed",
+          params: expect.objectContaining({
+            threadId: "thread-1",
+            item: expect.objectContaining({
+              type: "agentMessage",
+              text: "I updated the file.",
+              phase: "final_answer",
+            }),
+          }),
+        }),
+      ]),
+    );
+
+    const turns = await repository.getThreadTurns("thread-1");
+    expect(turns).toHaveLength(1);
+    expect(turns[0]?.data.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "userMessage",
+          content: [{ type: "text", text: "Say hello", text_elements: [] }],
+        }),
+        expect.objectContaining({
+          type: "commandExecution",
+          command: "Read src/App.tsx",
+          status: "completed",
+          aggregatedOutput: '{\n  "file_path": "src/App.tsx"\n}',
+        }),
+        expect.objectContaining({
+          type: "commandExecution",
+          status: "completed",
+          aggregatedOutput: expect.stringContaining("npm test"),
+        }),
+        expect.objectContaining({
+          type: "fileChange",
+          status: "completed",
+          changes: [
+            expect.objectContaining({
+              path: "src/App.tsx",
+              diff: expect.stringContaining("+Hello world"),
+            }),
+          ],
+        }),
+        expect.objectContaining({
+          type: "agentMessage",
+          text: "Let me inspect this file.",
+          phase: "final_answer",
+        }),
+        expect.objectContaining({
+          type: "agentMessage",
+          text: "I updated the file.",
+          phase: "final_answer",
+        }),
+      ]),
+    );
+  });
+});

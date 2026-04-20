@@ -46,6 +46,7 @@ type RunClaudeTurnArgs = {
   abortController: AbortController;
   onSessionReady: (sessionId: string) => Promise<void> | void;
   onDelta: (delta: string) => void;
+  onMessage?: (message: SDKMessage) => Promise<void> | void;
 };
 
 export async function runClaudeTurn({
@@ -55,6 +56,7 @@ export async function runClaudeTurn({
   abortController,
   onSessionReady,
   onDelta,
+  onMessage,
 }: RunClaudeTurnArgs): Promise<{ text: string; aborted: boolean }> {
   let accumulated = "";
   let finalText = "";
@@ -67,7 +69,6 @@ export async function runClaudeTurn({
         model,
         pathToClaudeCodeExecutable: claudeExecutablePath(),
         resume: thread.sdkSessionId ?? undefined,
-        maxTurns: 1,
         includePartialMessages: true,
         enableFileCheckpointing: true,
         permissionMode: "bypassPermissions",
@@ -82,6 +83,8 @@ export async function runClaudeTurn({
     });
 
     for await (const message of stream) {
+      await onMessage?.(message);
+
       if (message.type === "system" && message.subtype === "init") {
         await onSessionReady(message.session_id);
       }

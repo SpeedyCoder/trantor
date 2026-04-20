@@ -1,5 +1,11 @@
 import type { RefObject } from "react";
-import type { AppSettings, ComposerEditorSettings, WorkspaceInfo } from "@/types";
+import type {
+  AccountSnapshot,
+  AppSettings,
+  ComposerEditorSettings,
+  RateLimitSnapshot,
+  WorkspaceInfo,
+} from "@/types";
 import type { ThreadState } from "@/features/threads/hooks/useThreadsReducer";
 import type { WorkspaceLaunchScriptsState } from "@app/hooks/useWorkspaceLaunchScripts";
 import { REMOTE_THREAD_POLL_INTERVAL_MS } from "@app/hooks/useRemoteThreadRefreshOnFocus";
@@ -56,8 +62,8 @@ type UseMainAppLayoutSurfacesArgs = {
   activeItems: LayoutNodesOptions["primary"]["messagesProps"]["items"];
   userInputRequests: SidebarProps["userInputRequests"];
   approvals: LayoutNodesOptions["primary"]["approvalToastsProps"]["approvals"];
-  activeRateLimits: SidebarProps["accountRateLimits"];
-  activeAccount: SidebarProps["accountInfo"];
+  activeRateLimits: RateLimitSnapshot | null;
+  activeAccount: AccountSnapshot | null;
   homeRateLimits: LayoutNodesOptions["primary"]["homeProps"]["accountRateLimits"];
   homeAccount: LayoutNodesOptions["primary"]["homeProps"]["accountInfo"];
   accountSwitching: SidebarProps["accountSwitching"];
@@ -231,8 +237,7 @@ type UseMainAppLayoutSurfacesArgs = {
 };
 
 type MainAppLayoutSurfacesContext = UseMainAppLayoutSurfacesArgs & {
-  sidebarRateLimits: SidebarProps["accountRateLimits"];
-  sidebarAccount: SidebarProps["accountInfo"];
+  sidebarAccount: AccountSnapshot | null;
 };
 
 function buildPrimarySurface({
@@ -262,7 +267,6 @@ function buildPrimarySurface({
   activeItems,
   userInputRequests,
   approvals,
-  sidebarRateLimits,
   sidebarAccount,
   homeRateLimits,
   homeAccount,
@@ -404,8 +408,6 @@ function buildPrimarySurface({
       activeWorkspaceId,
       activeThreadId,
       userInputRequests,
-      accountRateLimits: sidebarRateLimits,
-      usageShowRemaining: appSettings.usageShowRemaining,
       accountInfo: sidebarAccount,
       onSwitchAccount,
       onCancelSwitchAccount,
@@ -1111,7 +1113,6 @@ export function useMainAppLayoutSurfaces({
   showDebugButton,
   handleDebugClick,
 }: UseMainAppLayoutSurfacesArgs): LayoutNodesOptions {
-  const sidebarRateLimits = activeWorkspace ? activeRateLimits : homeRateLimits;
   const sidebarAccount = activeWorkspace ? activeAccount : homeAccount;
   const context: MainAppLayoutSurfacesContext = {
     appSettings,
@@ -1275,7 +1276,6 @@ export function useMainAppLayoutSurfaces({
     dismissErrorToast,
     showDebugButton,
     handleDebugClick,
-    sidebarRateLimits,
     sidebarAccount,
   };
 
