@@ -248,6 +248,31 @@ const CommandOutput = memo(function CommandOutput({ output }: CommandOutputProps
   );
 });
 
+function countDiffLines(diff?: string) {
+  if (!diff) {
+    return { additions: 0, deletions: 0 };
+  }
+  return diff.split(/\r?\n/).reduce(
+    (counts, line) => {
+      if (line.startsWith("+") && !line.startsWith("+++")) {
+        counts.additions += 1;
+      } else if (line.startsWith("-") && !line.startsWith("---")) {
+        counts.deletions += 1;
+      }
+      return counts;
+    },
+    { additions: 0, deletions: 0 },
+  );
+}
+
+function formatChangeLineCounts(diff?: string) {
+  const { additions, deletions } = countDiffLines(diff);
+  if (additions === 0 && deletions === 0) {
+    return "";
+  }
+  return `+${additions} -${deletions}`;
+}
+
 function toolIconForSummary(
   item: Extract<ConversationItem, { kind: "tool" }>,
   summary: ToolSummary,
@@ -401,6 +426,7 @@ export const MessageRow = memo(function MessageRow({
     hasText &&
     imageItems.length === 0 &&
     isStandaloneMarkdownTable(item.text);
+  const showMessageControls = item.role !== "assistant";
 
   const getSelectedMessageText = useCallback(() => {
     const bubble = bubbleRef.current;
@@ -473,7 +499,7 @@ export const MessageRow = memo(function MessageRow({
             onClose={() => setLightboxIndex(null)}
           />
         )}
-        {onQuote && hasText && (
+        {showMessageControls && onQuote && hasText && (
           <button
             type="button"
             className="ghost message-quote-button"
@@ -490,18 +516,20 @@ export const MessageRow = memo(function MessageRow({
             <Quote size={14} aria-hidden />
           </button>
         )}
-        <button
-          type="button"
-          className={`ghost message-copy-button${isCopied ? " is-copied" : ""}`}
-          onClick={() => onCopy(item)}
-          aria-label="Copy message"
-          title="Copy message"
-        >
-          <span className="message-copy-icon" aria-hidden>
-            <Copy className="message-copy-icon-copy" size={14} />
-            <Check className="message-copy-icon-check" size={14} />
-          </span>
-        </button>
+        {showMessageControls && (
+          <button
+            type="button"
+            className={`ghost message-copy-button${isCopied ? " is-copied" : ""}`}
+            onClick={() => onCopy(item)}
+            aria-label="Copy message"
+            title="Copy message"
+          >
+            <span className="message-copy-icon" aria-hidden>
+              <Copy className="message-copy-icon-copy" size={14} />
+              <Check className="message-copy-icon-check" size={14} />
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
@@ -704,6 +732,16 @@ export const ToolRow = memo(function ToolRow({
   const changeNames = (item.changes ?? [])
     .map((change) => basename(change.path))
     .filter(Boolean);
+  const changeSummaries = (item.changes ?? [])
+    .map((change) => {
+      const fileName = basename(change.path);
+      if (!fileName) {
+        return "";
+      }
+      const lineCounts = formatChangeLineCounts(change.diff);
+      return lineCounts ? `${fileName} (${lineCounts})` : fileName;
+    })
+    .filter(Boolean);
   const hasChanges = changeNames.length > 0;
   const tone = toolStatusTone(item, hasChanges);
   const ToolIcon = toolIconForSummary(item, summary);
@@ -716,9 +754,9 @@ export const ToolRow = memo(function ToolRow({
       : summary.label;
   const inlineStatus = formatToolStatusLabel(item);
   const summaryValue = isFileChange
-    ? changeNames.length > 1
-      ? `${changeNames[0]} +${changeNames.length - 1}`
-      : changeNames[0] || "changes"
+    ? changeSummaries.length > 2
+      ? `${changeSummaries.slice(0, 2).join(", ")} +${changeSummaries.length - 2}`
+      : changeSummaries.join(", ") || "changes"
     : summary.value;
   const shouldFadeCommand =
     isCommand && !isExpanded && (summaryValue?.length ?? 0) > 80;
@@ -846,6 +884,11 @@ export const ToolRow = memo(function ToolRow({
                   <span className="tool-inline-change-path">
                     {basename(change.path)}
                   </span>
+                  {formatChangeLineCounts(change.diff) && (
+                    <span className="tool-inline-change-lines">
+                      {formatChangeLineCounts(change.diff)}
+                    </span>
+                  )}
                 </div>
                 {change.diff && (
                   <div className="diff-viewer-output">

@@ -361,8 +361,6 @@
 }
 
 .diff-viewer-header-sticky {
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
   pointer-events: auto;
 }
 
@@ -536,7 +534,6 @@
 
 .diff-line.is-selectable:hover {
   background: color-mix(in srgb, var(--surface-active) 55%, transparent);
-  box-shadow: inset 3px 0 0 var(--border-accent-soft);
 }
 
 .diff-line.is-selected {

@@ -11,6 +11,7 @@ import { PlanReadyFollowupMessage } from "../../app/components/PlanReadyFollowup
 import { RequestUserInputMessage } from "../../app/components/RequestUserInputMessage";
 import { useFileLinkOpener } from "../hooks/useFileLinkOpener";
 import { formatCount, parseReasoning } from "../utils/messageRenderUtils";
+import type { ToolGroup } from "../utils/messageRenderUtils";
 import {
   DiffRow,
   ExploreRow,
@@ -109,7 +110,7 @@ export const Messages = memo(function Messages({
     requestAutoScroll,
     expandedItems,
     toggleExpanded,
-    collapsedToolGroups,
+    expandedToolGroups,
     toggleToolGroup,
     copiedMessageId,
     handleCopyMessage,
@@ -143,6 +144,19 @@ export const Messages = memo(function Messages({
         }}
       />
     ) : null;
+
+  const buildCollapsedFileChangeItem = (
+    groupId: string,
+    files: ToolGroup["editedFiles"],
+  ): Extract<ConversationItem, { kind: "tool" }> => ({
+    id: `collapsed-edits-${groupId}`,
+    kind: "tool",
+    toolType: "fileChange",
+    title: "File change",
+    detail: "",
+    status: "completed",
+    changes: files,
+  });
 
   const renderItem = (item: ConversationItem) => {
     if (item.kind === "message") {
@@ -241,14 +255,21 @@ export const Messages = memo(function Messages({
         {groupedItems.map((entry) => {
           if (entry.kind === "toolGroup") {
             const { group } = entry;
-            const isCollapsed = collapsedToolGroups.has(group.id);
+            const isCollapsed = !group.isActive && !expandedToolGroups.has(group.id);
             const summaryParts = [
               formatCount(group.toolCount, "tool call", "tool calls"),
             ];
-            if (group.messageCount > 0) {
-              summaryParts.push(formatCount(group.messageCount, "message", "messages"));
+            if (group.taskCount > 0) {
+              summaryParts.push(formatCount(group.taskCount, "task", "tasks"));
             }
-            const summaryText = summaryParts.join(", ");
+            if (group.editCount > 0) {
+              const editSummary = [
+                formatCount(group.editCount, "file edit", "file edits"),
+                `across ${formatCount(group.editedFileCount, "file", "files")}`,
+                `+${group.additions} -${group.deletions}`,
+              ].join(" ");
+              summaryParts.push(editSummary);
+            }
             const groupBodyId = `tool-group-${group.id}`;
             const ChevronIcon = isCollapsed ? ChevronDown : ChevronUp;
             return (
@@ -268,14 +289,40 @@ export const Messages = memo(function Messages({
                     <span className="tool-group-chevron" aria-hidden>
                       <ChevronIcon size={14} />
                     </span>
-                    <span className="tool-group-summary">{summaryText}</span>
+                    <span className="tool-group-summary">
+                      {summaryParts.map((part, index) => (
+                        <span key={`${group.id}-summary-${part}`}>
+                          {index > 0 ? ", " : ""}
+                          {part}
+                        </span>
+                      ))}
+                    </span>
                   </button>
                 </div>
-                {!isCollapsed && (
+                {isCollapsed && group.lastAssistantMessage ? (
+                  <div className="tool-group-preview">
+                    {renderItem(group.lastAssistantMessage)}
+                    {group.editedFiles.length > 0 && (
+                      <div className="tool-group-edited-files" aria-label="Edited files">
+                        <ToolRow
+                          item={buildCollapsedFileChangeItem(group.id, group.editedFiles)}
+                          isExpanded={expandedItems.has(`collapsed-edits-${group.id}`)}
+                          onToggle={toggleExpanded}
+                          showMessageFilePath={showMessageFilePath}
+                          workspacePath={workspacePath}
+                          onOpenFileLink={openFileLink}
+                          onOpenFileLinkMenu={showFileLinkMenu}
+                          onOpenThreadLink={handleOpenThreadLink}
+                          onRequestAutoScroll={requestAutoScroll}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : !isCollapsed ? (
                   <div className="tool-group-body" id={groupBodyId}>
                     {group.items.map(renderItem)}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           }

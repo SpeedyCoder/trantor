@@ -95,8 +95,6 @@ export default function MainApp() {
     doctor,
     codexUpdate,
     appSettingsLoading,
-    reduceTransparency,
-    setReduceTransparency,
     scaleShortcutTitle,
     scaleShortcutText,
     queueSaveSettings,
@@ -119,7 +117,6 @@ export default function MainApp() {
     addDebugEntry,
     handleCopyDebug,
     clearDebugEntries,
-    shouldReduceTransparency,
   } = useAppBootstrapOrchestration();
   const {
     threadListSortKey,
@@ -1066,8 +1063,6 @@ export default function MainApp() {
       moveWorkspaceGroup,
       deleteWorkspaceGroup,
       assignWorkspaceGroup,
-      reduceTransparency,
-      setReduceTransparency,
       appSettings,
       openAppIconById,
       queueSaveSettings,
@@ -1421,7 +1416,6 @@ export default function MainApp() {
     isTablet,
     sidebarCollapsed,
     rightPanelCollapsed,
-    shouldReduceTransparency,
     isWorkspaceDropActive,
     centerMode,
     selectedDiffPath,

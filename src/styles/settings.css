@@ -24,10 +24,6 @@
   background: var(--surface-topbar);
 }
 
-.app.reduced-transparency .settings-titlebar {
-  backdrop-filter: none;
-}
-
 .settings-title {
   font-size: 15px;
   font-weight: 600;
@@ -274,8 +270,6 @@
 .settings-add-remote-overlay .ds-modal-backdrop,
 .settings-delete-remote-overlay .ds-modal-backdrop {
   background: rgba(5, 8, 14, 0.8);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .settings-add-remote-card {
@@ -1229,11 +1223,6 @@
 .settings-toggle.on {
   background: linear-gradient(135deg, rgba(100, 200, 255, 0.6), rgba(120, 235, 190, 0.6));
   border-color: var(--border-accent);
-}
-
-.app.reduced-transparency .settings-toggle:not(.on) {
-  background: var(--surface-control-hover);
-  border-color: var(--border-stronger);
 }
 
 .settings-toggle-knob {

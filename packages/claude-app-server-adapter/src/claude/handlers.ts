@@ -161,6 +161,18 @@ function formatJsonIfPossible(value: string) {
   }
 }
 
+function parseJsonIfPossible(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeToolName(name: string) {
   return name.trim().toLowerCase();
 }
@@ -203,10 +215,13 @@ function buildSyntheticDiff(path: string, input: unknown) {
   const newString =
     typeof record.new_string === "string" ? record.new_string : null;
   if (oldString !== null && newString !== null) {
+    const oldLineCount = Math.max(1, oldString.split("\n").length);
+    const newLineCount = Math.max(1, newString.split("\n").length);
     return [
+      `diff --git a/${path} b/${path}`,
       `--- ${path || "before"}`,
       `+++ ${path || "after"}`,
-      "@@",
+      `@@ -1,${oldLineCount} +1,${newLineCount} @@`,
       ...oldString.split("\n").map((line) => `-${line}`),
       ...newString.split("\n").map((line) => `+${line}`),
     ].join("\n");
@@ -226,25 +241,36 @@ function buildSyntheticDiff(path: string, input: unknown) {
         if (editOld === null || editNew === null) {
           return "";
         }
+        const oldLineCount = Math.max(1, editOld.split("\n").length);
+        const newLineCount = Math.max(1, editNew.split("\n").length);
         return [
-          "@@",
+          `@@ -1,${oldLineCount} +1,${newLineCount} @@`,
           ...editOld.split("\n").map((line) => `-${line}`),
           ...editNew.split("\n").map((line) => `+${line}`),
         ].join("\n");
       })
       .filter(Boolean);
     if (editDiffs.length > 0) {
-      return [`--- ${path || "before"}`, `+++ ${path || "after"}`, ...editDiffs].join(
-        "\n",
-      );
+      return [
+        `diff --git a/${path} b/${path}`,
+        `--- ${path || "before"}`,
+        `+++ ${path || "after"}`,
+        ...editDiffs,
+      ].join("\n");
     }
   }
 
   const content = typeof record.content === "string" ? record.content : null;
   if (content !== null) {
-    return [`+++ ${path || "after"}`, ...content.split("\n").map((line) => `+${line}`)].join(
-      "\n",
-    );
+    const newLineCount = Math.max(1, content.split("\n").length);
+    return [
+      `diff --git a/${path} b/${path}`,
+      "new file mode 100644",
+      "--- /dev/null",
+      `+++ ${path || "after"}`,
+      `@@ -0,0 +1,${newLineCount} @@`,
+      ...content.split("\n").map((line) => `+${line}`),
+    ].join("\n");
   }
 
   return "";
@@ -315,6 +341,7 @@ type ToolBlockState =
       itemType: "fileChange";
       itemId: string;
       toolName: string;
+      input: unknown;
       changes: Array<{
         path: string;
         kind: { type: "add" } | { type: "delete" } | { type: "update"; move_path: string | null };
@@ -627,6 +654,7 @@ export function newHandlers(
                   itemType: "fileChange",
                   itemId,
                   toolName: block.name,
+                  input: block.input,
                   changes,
                 });
                 ensureFileChangeItemStarted(itemId, changes);
@@ -667,6 +695,14 @@ export function newHandlers(
                   event.delta.partial_json,
                   "raw",
                 );
+              } else if (toolBlock?.itemType === "fileChange") {
+                outputByItemId.set(
+                  toolBlock.itemId,
+                  appendRaw(
+                    outputByItemId.get(toolBlock.itemId) ?? "",
+                    event.delta.partial_json,
+                  ),
+                );
               }
               return;
             }
@@ -701,7 +737,17 @@ export function newHandlers(
                   "json",
                 );
               } else {
-                completeFileChangeItem(toolBlock.itemId, toolBlock.changes);
+                const streamedInput =
+                  parseJsonIfPossible(outputByItemId.get(toolBlock.itemId) ?? "") ??
+                  toolBlock.input;
+                const streamedChanges = buildFileChangesFromTool(
+                  toolBlock.toolName,
+                  streamedInput,
+                );
+                completeFileChangeItem(
+                  toolBlock.itemId,
+                  streamedChanges.length > 0 ? streamedChanges : toolBlock.changes,
+                );
               }
               toolBlockByIndex.delete(event.index);
               return;

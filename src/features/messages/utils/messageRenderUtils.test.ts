@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ConversationItem } from "../../../types";
-import { buildToolSummary, statusToneFromText } from "./messageRenderUtils";
+import { buildToolGroups, buildToolSummary, statusToneFromText } from "./messageRenderUtils";
 
 function makeToolItem(
   overrides: Partial<Extract<ConversationItem, { kind: "tool" }>>,
@@ -63,5 +63,98 @@ describe("messageRenderUtils", () => {
     expect(summary.label).toBe("waited for");
     expect(summary.value).toBe("Robie [explorer]");
     expect(summary.output).toContain("Robie [explorer]: completed");
+  });
+
+  it("groups agent activity after a user request and summarizes file edits", () => {
+    const items: ConversationItem[] = [
+      {
+        id: "user-1",
+        kind: "message",
+        role: "user",
+        text: "Add the feature",
+      },
+      {
+        id: "tool-1",
+        kind: "tool",
+        toolType: "fileChange",
+        title: "File change",
+        detail: "",
+        changes: [
+          {
+            path: "src/a.ts",
+            kind: "modify",
+            diff: "diff --git a/src/a.ts b/src/a.ts\n@@\n-old\n+new\n+extra",
+          },
+          {
+            path: "src/b.ts",
+            kind: "add",
+            diff: "diff --git a/src/b.ts b/src/b.ts\n@@\n+created",
+          },
+        ],
+      },
+      {
+        id: "assistant-1",
+        kind: "message",
+        role: "assistant",
+        text: "Done.",
+      },
+    ];
+
+    const grouped = buildToolGroups(items);
+    expect(grouped[0]).toEqual({ kind: "item", item: items[0] });
+    expect(grouped[1]?.kind).toBe("toolGroup");
+    if (grouped[1]?.kind !== "toolGroup") {
+      throw new Error("Expected tool group");
+    }
+    expect(grouped[1].group.toolCount).toBe(1);
+    expect(grouped[1].group.editCount).toBe(2);
+    expect(grouped[1].group.editedFileCount).toBe(2);
+    expect(grouped[1].group.editedFiles).toEqual([
+      {
+        path: "src/a.ts",
+        kind: "modify",
+        diff: "diff --git a/src/a.ts b/src/a.ts\n@@\n-old\n+new\n+extra",
+        additions: 2,
+        deletions: 1,
+      },
+      {
+        path: "src/b.ts",
+        kind: "add",
+        diff: "diff --git a/src/b.ts b/src/b.ts\n@@\n+created",
+        additions: 1,
+        deletions: 0,
+      },
+    ]);
+    expect(grouped[1].group.additions).toBe(3);
+    expect(grouped[1].group.deletions).toBe(1);
+    expect(grouped[1].group.lastAssistantMessage?.id).toBe("assistant-1");
+  });
+
+  it("marks the latest agent activity group active while thinking", () => {
+    const grouped = buildToolGroups(
+      [
+        {
+          id: "user-1",
+          kind: "message",
+          role: "user",
+          text: "Run tests",
+        },
+        {
+          id: "tool-1",
+          kind: "tool",
+          toolType: "commandExecution",
+          title: "Command: npm test",
+          detail: "/tmp",
+          status: "running",
+        },
+      ],
+      { isThinking: true },
+    );
+
+    expect(grouped[1]?.kind).toBe("toolGroup");
+    if (grouped[1]?.kind !== "toolGroup") {
+      throw new Error("Expected tool group");
+    }
+    expect(grouped[1].group.isActive).toBe(true);
   });
 });

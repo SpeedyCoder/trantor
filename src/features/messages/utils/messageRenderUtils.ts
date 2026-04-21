@@ -27,11 +27,29 @@ export type ToolGroupItem = Extract<
   { kind: "tool" | "reasoning" | "explore" | "userInput" }
 >;
 
+export type AgentTurnGroupItem = Exclude<
+  ConversationItem,
+  { kind: "message"; role: "user" }
+>;
+
 export type ToolGroup = {
   id: string;
-  items: ToolGroupItem[];
+  items: AgentTurnGroupItem[];
   toolCount: number;
-  messageCount: number;
+  taskCount: number;
+  editCount: number;
+  editedFileCount: number;
+  editedFiles: {
+    path: string;
+    kind?: string;
+    diff?: string;
+    additions: number;
+    deletions: number;
+  }[];
+  additions: number;
+  deletions: number;
+  lastAssistantMessage: Extract<ConversationItem, { kind: "message" }> | null;
+  isActive: boolean;
 };
 
 export type MessageListEntry =
@@ -219,12 +237,33 @@ export function normalizeMessageImageSrc(path: string) {
   }
 }
 
+function isAgentTurnGroupItem(item: ConversationItem): item is AgentTurnGroupItem {
+  return !(item.kind === "message" && item.role === "user");
+}
+
 function isToolGroupItem(item: ConversationItem): item is ToolGroupItem {
   return (
     item.kind === "tool" ||
     item.kind === "reasoning" ||
     item.kind === "explore" ||
     item.kind === "userInput"
+  );
+}
+
+function countChangeDiffLines(diff?: string) {
+  if (!diff) {
+    return { additions: 0, deletions: 0 };
+  }
+  return diff.split(/\r?\n/).reduce(
+    (counts, line) => {
+      if (line.startsWith("+") && !line.startsWith("+++")) {
+        counts.additions += 1;
+      } else if (line.startsWith("-") && !line.startsWith("---")) {
+        counts.deletions += 1;
+      }
+      return counts;
+    },
+    { additions: 0, deletions: 0 },
   );
 }
 
@@ -243,8 +282,8 @@ function mergeExploreItems(
   };
 }
 
-function mergeConsecutiveExploreRuns(items: ToolGroupItem[]): ToolGroupItem[] {
-  const result: ToolGroupItem[] = [];
+function mergeConsecutiveExploreRuns<T extends ConversationItem>(items: T[]): T[] {
+  const result: T[] = [];
   let run: Extract<ConversationItem, { kind: "explore" }>[] = [];
 
   const flushRun = () => {
@@ -252,9 +291,9 @@ function mergeConsecutiveExploreRuns(items: ToolGroupItem[]): ToolGroupItem[] {
       return;
     }
     if (run.length === 1) {
-      result.push(run[0]);
+      result.push(run[0] as T);
     } else {
-      result.push(mergeExploreItems(run));
+      result.push(mergeExploreItems(run) as T);
     }
     run = [];
   };
@@ -271,52 +310,146 @@ function mergeConsecutiveExploreRuns(items: ToolGroupItem[]): ToolGroupItem[] {
   return result;
 }
 
-export function buildToolGroups(items: ConversationItem[]): MessageListEntry[] {
-  const entries: MessageListEntry[] = [];
-  let buffer: ToolGroupItem[] = [];
+function buildAgentTurnGroup(
+  items: AgentTurnGroupItem[],
+  isActive: boolean,
+): ToolGroup {
+  const toolCount = items.reduce((total, item) => {
+    if (item.kind === "tool") {
+      return total + 1;
+    }
+    if (item.kind === "explore") {
+      return total + item.entries.length;
+    }
+    return total;
+  }, 0);
+  const taskCount = items.reduce((total, item) => {
+    if (item.kind === "reasoning" || item.kind === "review" || item.kind === "userInput") {
+      return total + 1;
+    }
+    if (item.kind === "diff") {
+      return total + 1;
+    }
+    return total;
+  }, 0);
+  const editedFiles = new Map<
+    string,
+    { path: string; kind?: string; diff?: string; additions: number; deletions: number }
+  >();
+  let editCount = 0;
+  let additions = 0;
+  let deletions = 0;
+  items.forEach((item) => {
+    if (item.kind !== "tool") {
+      return;
+    }
+    item.changes?.forEach((change) => {
+      const path = change.path.trim();
+      if (!path) {
+        return;
+      }
+      editCount += 1;
+      const lineCounts = countChangeDiffLines(change.diff);
+      const fileSummary = editedFiles.get(path) ?? {
+        path,
+        kind: change.kind,
+        diff: "",
+        additions: 0,
+        deletions: 0,
+      };
+      if (change.kind) {
+        fileSummary.kind = change.kind;
+      }
+      if (change.diff?.trim()) {
+        fileSummary.diff = fileSummary.diff
+          ? `${fileSummary.diff}\n\n${change.diff}`
+          : change.diff;
+      }
+      fileSummary.additions += lineCounts.additions;
+      fileSummary.deletions += lineCounts.deletions;
+      editedFiles.set(path, fileSummary);
+      additions += lineCounts.additions;
+      deletions += lineCounts.deletions;
+    });
+  });
+  let lastAssistantMessage: ToolGroup["lastAssistantMessage"] = null;
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const item = items[index];
+    if (item.kind === "message" && item.role === "assistant") {
+      lastAssistantMessage = item;
+      break;
+    }
+  }
+  return {
+    id: items[0].id,
+    items,
+    toolCount,
+    taskCount,
+    editCount,
+    editedFileCount: editedFiles.size,
+    editedFiles: Array.from(editedFiles.values()),
+    additions,
+    deletions,
+    lastAssistantMessage,
+    isActive,
+  };
+}
 
-  const flush = () => {
+export function buildToolGroups(
+  items: ConversationItem[],
+  options?: { isThinking?: boolean },
+): MessageListEntry[] {
+  const entries: MessageListEntry[] = [];
+  let buffer: AgentTurnGroupItem[] = [];
+  let hasSeenUserRequest = false;
+  let bufferStartedAfterUser = false;
+
+  const flush = (isActive = false) => {
     if (buffer.length === 0) {
       return;
     }
     const normalizedBuffer = mergeConsecutiveExploreRuns(buffer);
-    const toolCount = normalizedBuffer.reduce((total, item) => {
-      if (item.kind === "tool") {
-        return total + 1;
-      }
-      if (item.kind === "explore") {
-        return total + item.entries.length;
-      }
-      return total;
-    }, 0);
-    const messageCount = normalizedBuffer.filter(
-      (item) => item.kind !== "tool" && item.kind !== "explore",
-    ).length;
-    if (toolCount === 0 || normalizedBuffer.length === 1) {
+    const group = buildAgentTurnGroup(normalizedBuffer, isActive);
+    const isSingleExplore =
+      normalizedBuffer.length === 1 && normalizedBuffer[0]?.kind === "explore";
+    if (
+      !bufferStartedAfterUser &&
+      (group.toolCount === 0 || (normalizedBuffer.length === 1 && !isSingleExplore))
+    ) {
       normalizedBuffer.forEach((item) => entries.push({ kind: "item", item }));
     } else {
       entries.push({
         kind: "toolGroup",
-        group: {
-          id: normalizedBuffer[0].id,
-          items: normalizedBuffer,
-          toolCount,
-          messageCount,
-        },
+        group,
       });
     }
     buffer = [];
+    bufferStartedAfterUser = false;
   };
 
-  items.forEach((item) => {
-    if (isToolGroupItem(item)) {
+  items.forEach((item, index) => {
+    if (item.kind === "message" && item.role === "user") {
+      flush(false);
+      hasSeenUserRequest = true;
+      entries.push({ kind: "item", item });
+      return;
+    }
+    if (hasSeenUserRequest && isAgentTurnGroupItem(item)) {
+      if (buffer.length === 0) {
+        bufferStartedAfterUser = true;
+      }
+      buffer.push(item);
+    } else if (!hasSeenUserRequest && isToolGroupItem(item)) {
       buffer.push(item);
     } else {
-      flush();
+      flush(false);
       entries.push({ kind: "item", item });
     }
+    if (index === items.length - 1) {
+      flush(Boolean(options?.isThinking));
+    }
   });
-  flush();
+  flush(false);
   return entries;
 }
 
