@@ -175,7 +175,7 @@
 .home-usage-toggle-button.is-active {
   background: var(--surface-card-strong);
   color: var(--text-stronger);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: none;
 }
 
 .home-usage-refresh {
@@ -189,14 +189,13 @@
   justify-content: center;
   color: var(--text-faint);
   cursor: pointer;
-  transition: color 120ms ease, transform 120ms ease, opacity 120ms ease;
+  transition: color 120ms ease, opacity 120ms ease;
   padding: 0;
   line-height: 0;
 }
 
 .home-usage-refresh:hover {
   color: var(--text-stronger);
-  transform: translateY(-1px);
 }
 
 .home-usage-refresh.is-loading {
@@ -354,14 +353,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 120ms ease, transform 120ms ease, border-color 120ms ease;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
   padding: 0;
 }
 
 .home-usage-chart-button:hover {
   background: var(--surface-card-strong);
   border-color: var(--border-strong);
-  transform: translateY(-1px);
+  color: var(--text-stronger);
 }
 
 .home-usage-chart-button:disabled {
@@ -572,7 +571,7 @@
     linear-gradient(135deg, rgba(100, 200, 255, 0.12), transparent 60%),
     var(--surface-card);
   border: 1px solid var(--border-subtle);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   overflow: hidden;
   text-align: left;
 }
@@ -592,12 +591,13 @@
   width: 100%;
   color: inherit;
   font: inherit;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: color 120ms ease;
 }
 
 .home-latest-card-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.24);
+  color: var(--text-stronger);
+  box-shadow: none;
+  transform: none;
 }
 
 .home-latest-card-button:focus-visible {
