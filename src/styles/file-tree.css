@@ -320,12 +320,13 @@
   background: var(--surface-active);
   color: var(--text-strong);
   border: 1px solid var(--border-accent);
-  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
 }
 
 .file-preview-action--add:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+  color: var(--text-stronger);
+  transform: none;
+  box-shadow: none;
 }
 
 .file-preview-lines {
@@ -382,21 +383,23 @@
 }
 
 .file-preview-line.is-selected {
-  background: color-mix(in srgb, var(--surface-active) 65%, transparent);
+  background:
+    linear-gradient(90deg, var(--border-accent) 0 3px, transparent 3px),
+    color-mix(in srgb, var(--surface-active) 65%, transparent);
   border-color: transparent;
-  box-shadow: inset 3px 0 0 var(--border-accent);
+  box-shadow: none;
 }
 
 .file-preview-line.is-selected.is-start {
-  box-shadow: inset 3px 0 0 var(--border-accent);
+  box-shadow: none;
 }
 
 .file-preview-line.is-selected.is-end {
-  box-shadow: inset 3px 0 0 var(--border-accent);
+  box-shadow: none;
 }
 
 .file-preview-line.is-selected.is-start.is-end {
-  box-shadow: inset 3px 0 0 var(--border-accent);
+  box-shadow: none;
 }
 
 .file-preview-line-number {

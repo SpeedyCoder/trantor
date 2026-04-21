@@ -42,7 +42,7 @@ html[data-mobile-composer-focus="true"] .app.layout-phone .tabbar {
   justify-content: center;
   gap: 4px;
   cursor: pointer;
-  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .tabbar-item:hover {
@@ -54,7 +54,7 @@ html[data-mobile-composer-focus="true"] .app.layout-phone .tabbar {
   color: var(--text-strong);
   background: var(--surface-control-hover);
   border-color: var(--border-accent-soft);
-  box-shadow: 0 0 0 1px rgba(100, 200, 255, 0.2);
+  box-shadow: none;
 }
 
 .tabbar-label {

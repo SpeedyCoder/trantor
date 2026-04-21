@@ -537,9 +537,11 @@
 }
 
 .diff-line.is-selected {
-  background: color-mix(in srgb, var(--surface-active) 75%, transparent);
+  background:
+    linear-gradient(90deg, var(--border-accent) 0 3px, transparent 3px),
+    color-mix(in srgb, var(--surface-active) 75%, transparent);
   position: relative;
-  box-shadow: inset 3px 0 0 var(--border-accent);
+  box-shadow: none;
 }
 
 .diff-line.is-selected::before {

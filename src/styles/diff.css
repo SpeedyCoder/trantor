@@ -303,11 +303,12 @@
 
 .git-root-item.active {
   background: var(--cm-surface-panel-active);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cm-border-accent) 55%, transparent);
+  box-shadow: none;
 }
 
 .git-root-item:hover {
   background: var(--cm-surface-panel-hover);
+  color: var(--text-stronger);
   box-shadow: none;
   transform: none;
 }
@@ -516,13 +517,14 @@
 
 .per-file-edit-row:hover {
   background: var(--cm-surface-panel-hover);
+  color: var(--text-stronger);
   box-shadow: none;
   transform: none;
 }
 
 .per-file-edit-row.active {
   background: var(--cm-surface-panel-active);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cm-border-accent) 55%, transparent);
+  box-shadow: none;
 }
 
 .per-file-edit-status {
@@ -646,7 +648,7 @@
   cursor: pointer;
   border: 0;
   background: transparent;
-  transition: background 160ms ease, box-shadow 160ms ease;
+  transition: background 160ms ease;
 }
 
 .diff-row-meta {
@@ -659,12 +661,13 @@
 
 .diff-row:hover {
   background: var(--cm-surface-panel-hover);
+  color: var(--text-stronger);
   box-shadow: none;
 }
 
 .diff-row.active {
   background: var(--cm-surface-panel-active);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cm-border-accent) 65%, transparent);
+  box-shadow: none;
 }
 
 .diff-row.selected {
@@ -988,7 +991,7 @@
   box-shadow: none;
   outline: none;
   transform: none;
-  transition: background 160ms ease, box-shadow 160ms ease;
+  transition: background 160ms ease;
   min-width: 0;
 }
 
@@ -999,6 +1002,7 @@
 .git-pr-entry:hover,
 .git-pr-entry:focus-visible {
   background: var(--cm-surface-panel-hover);
+  color: var(--text-stronger);
   box-shadow: none;
   outline: none;
   transform: none;
@@ -1007,7 +1011,7 @@
 .git-log-entry.active,
 .git-pr-entry.active {
   background: var(--cm-surface-panel-active);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cm-border-accent) 65%, transparent);
+  box-shadow: none;
 }
 
 .git-log-entry-compact {
