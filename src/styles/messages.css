@@ -178,8 +178,7 @@
   transition:
     background-color 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    backdrop-filter 0.18s ease;
+    box-shadow 0.18s ease;
 }
 
 .message-bubble {
@@ -285,11 +284,11 @@
 .message.assistant .bubble {
   max-width: 100%;
   width: 100%;
-  padding: 16px 18px;
-  background: var(--cm-surface-panel-strong);
-  border-color: transparent;
-  border-radius: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .message-image-grid {
@@ -400,8 +399,7 @@
   transition:
     background-color 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    backdrop-filter 0.18s ease;
+    box-shadow 0.18s ease;
 }
 
 .item-card.review {
@@ -920,6 +918,10 @@
   border-radius: 6px;
 }
 
+.tool-group-toggle:active:not(:disabled) {
+  transform: none;
+}
+
 .tool-group-chevron {
   display: inline-flex;
   align-items: center;
@@ -942,19 +944,18 @@
   overflow: visible;
 }
 
-.message.assistant .bubble:hover,
-.message.assistant .bubble:focus-within,
-.item-card:hover,
-.item-card:focus-within {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 10px 28px rgba(7, 12, 34, 0.12);
-  backdrop-filter: saturate(1.08) brightness(1.05);
+.tool-group-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
-.message.assistant .bubble:hover,
-.message.assistant .bubble:focus-within {
-  background: color-mix(in srgb, var(--cm-surface-panel-strong) 88%, white);
+.tool-group-edited-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 6px;
+  padding: 0;
 }
 
 .item-card:hover,
@@ -969,6 +970,24 @@
   background: transparent;
   box-shadow: none;
   padding: 8px 12px;
+}
+
+.tool-group-edited-files .tool-inline {
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 8px 12px;
+}
+
+.tool-group .item-card:hover,
+.tool-group .item-card:focus-within,
+.tool-group .tool-inline:hover,
+.tool-group .tool-inline:focus-within,
+.tool-group .message.assistant .bubble:hover,
+.tool-group .message.assistant .bubble:focus-within {
+  box-shadow: none;
 }
 
 .tool-group-body .tool-inline-content {

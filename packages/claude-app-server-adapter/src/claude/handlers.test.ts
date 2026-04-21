@@ -162,16 +162,40 @@ describe("newHandlers", () => {
             type: "tool_use",
             id: "toolu_01EDIT",
             name: "Edit",
-            input: {
-              file_path: "src/App.tsx",
-              old_string: "Hello",
-              new_string: "Hello world",
-            },
+            input: {},
             caller: { type: "direct" },
           },
         },
         parent_tool_use_id: null,
         uuid: "00000000-0000-0000-0000-000000000010",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 1,
+          delta: {
+            type: "input_json_delta",
+            partial_json: "{\"file_path\":\"src/App.tsx\",",
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000013",
+        session_id: "session-1",
+      });
+      await onMessage?.({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 1,
+          delta: {
+            type: "input_json_delta",
+            partial_json: "\"old_string\":\"Hello\",\"new_string\":\"Hello world\"}",
+          },
+        },
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000014",
         session_id: "session-1",
       });
       await onMessage?.({
@@ -329,11 +353,6 @@ describe("newHandlers", () => {
             item: expect.objectContaining({
               type: "fileChange",
               status: "inProgress",
-              changes: [
-                expect.objectContaining({
-                  path: "src/App.tsx",
-                }),
-              ],
             }),
           }),
         }),
@@ -347,7 +366,9 @@ describe("newHandlers", () => {
               changes: [
                 expect.objectContaining({
                   path: "src/App.tsx",
-                  diff: expect.stringContaining("-Hello"),
+                  diff: expect.stringMatching(
+                    /diff --git a\/src\/App\.tsx b\/src\/App\.tsx[\s\S]*-Hello/,
+                  ),
                 }),
               ],
             }),

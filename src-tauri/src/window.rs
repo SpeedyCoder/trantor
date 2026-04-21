@@ -56,7 +56,7 @@ pub(crate) fn apply_window_appearance(window: &Window, theme: &str) -> Result<()
     {
         let next_theme = match theme {
             "light" => Some(Theme::Light),
-            "dark" | "dim" => Some(Theme::Dark),
+            "dark" => Some(Theme::Dark),
             _ => None,
         };
         let _ = window.set_theme(next_theme);

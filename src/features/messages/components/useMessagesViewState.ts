@@ -53,10 +53,9 @@ export function useMessagesViewState({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const autoScrollRef = useRef(true);
   const copyTimeoutRef = useRef<number | null>(null);
-  const manuallyToggledExpandedRef = useRef<Set<string>>(new Set());
 
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [collapsedToolGroups, setCollapsedToolGroups] = useState<Set<string>>(
+  const [expandedToolGroups, setExpandedToolGroups] = useState<Set<string>>(
     new Set(),
   );
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
@@ -119,7 +118,6 @@ export function useMessagesViewState({
   }, []);
 
   const toggleExpanded = useCallback((id: string) => {
-    manuallyToggledExpandedRef.current.add(id);
     setExpandedItems((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
@@ -132,7 +130,7 @@ export function useMessagesViewState({
   }, []);
 
   const toggleToolGroup = useCallback((id: string) => {
-    setCollapsedToolGroups((prev) => {
+    setExpandedToolGroups((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -221,31 +219,38 @@ export function useMessagesViewState({
     [items, reasoningMetaById],
   );
 
-  useEffect(() => {
-    for (let index = visibleItems.length - 1; index >= 0; index -= 1) {
-      const item = visibleItems[index];
-      if (
-        item.kind === "tool" &&
-        item.toolType === "plan" &&
-        (item.output ?? "").trim().length > 0
-      ) {
-        if (manuallyToggledExpandedRef.current.has(item.id)) {
-          return;
-        }
-        setExpandedItems((prev) => {
-          if (prev.has(item.id)) {
-            return prev;
-          }
-          const next = new Set(prev);
-          next.add(item.id);
-          return next;
-        });
-        return;
-      }
-    }
-  }, [visibleItems]);
+  const groupedItems = useMemo(
+    () => buildToolGroups(visibleItems, { isThinking }),
+    [isThinking, visibleItems],
+  );
 
-  const groupedItems = useMemo(() => buildToolGroups(visibleItems), [visibleItems]);
+  useEffect(() => {
+    const groupIds = new Set(
+      groupedItems
+        .filter((entry) => entry.kind === "toolGroup")
+        .map((entry) => entry.group.id),
+    );
+    setExpandedToolGroups((prev) => {
+      let changed = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (groupIds.has(id)) {
+          next.add(id);
+        }
+      });
+      if (next.size !== prev.size) {
+        changed = true;
+      } else {
+        for (const id of next) {
+          if (!prev.has(id)) {
+            changed = true;
+            break;
+          }
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [groupedItems]);
 
   const planFollowup = useMemo(() => {
     if (!onPlanAccept || !onPlanSubmitChanges) {
@@ -293,7 +298,7 @@ export function useMessagesViewState({
     requestAutoScroll,
     expandedItems,
     toggleExpanded,
-    collapsedToolGroups,
+    expandedToolGroups,
     toggleToolGroup,
     copiedMessageId,
     handleCopyMessage,

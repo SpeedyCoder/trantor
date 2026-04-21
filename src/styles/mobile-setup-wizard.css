@@ -3,13 +3,7 @@
 }
 
 .mobile-setup-wizard-overlay .ds-modal-backdrop {
-  background: rgba(6, 10, 16, 0.78);
-  backdrop-filter: blur(14px) saturate(1.15);
-  -webkit-backdrop-filter: blur(14px) saturate(1.15);
-}
-
-.app.reduced-transparency .mobile-setup-wizard-overlay .ds-modal-backdrop {
-  background: rgba(8, 12, 18, 0.92);
+  background: var(--surface-messages);
 }
 
 .mobile-setup-wizard-card {

@@ -38,8 +38,6 @@ export type SettingsViewProps = {
     workspaceId: string,
     groupId: string | null,
   ) => Promise<boolean | null>;
-  reduceTransparency: boolean;
-  onToggleTransparency: (value: boolean) => void;
   appSettings: AppSettings;
   openAppIconById: Record<string, string>;
   onUpdateAppSettings: (next: AppSettings) => Promise<void>;
@@ -82,8 +80,6 @@ export function SettingsView({
   onMoveWorkspaceGroup,
   onDeleteWorkspaceGroup,
   onAssignWorkspaceGroup,
-  reduceTransparency,
-  onToggleTransparency,
   appSettings,
   openAppIconById,
   onUpdateAppSettings,
@@ -116,8 +112,6 @@ export function SettingsView({
     workspaceGroups,
     groupedWorkspaces,
     ungroupedLabel,
-    reduceTransparency,
-    onToggleTransparency,
     appSettings,
     openAppIconById,
     onUpdateAppSettings,

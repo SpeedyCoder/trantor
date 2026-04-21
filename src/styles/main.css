@@ -11,9 +11,6 @@
   --main-panel-padding: 24px;
   --conversation-column-width: 900px;
   transition: grid-template-columns 220ms ease;
-}
-
-.app.reduced-transparency .main {
   background: var(--surface-messages);
 }
 
@@ -365,7 +362,6 @@
   position: sticky;
   top: 0;
   z-index: 3;
-  backdrop-filter: blur(18px) saturate(1.2);
   min-height: var(--main-topbar-height);
   transition: padding-left 180ms ease, padding-right 180ms ease;
 }
@@ -405,11 +401,6 @@
     + var(--window-caption-gap, 0px)
   );
 }
-
-.app.reduced-transparency .main-topbar {
-  backdrop-filter: none;
-}
-
 
 .main-topbar-left {
   display: flex;
@@ -1022,10 +1013,6 @@
   visibility: visible;
   z-index: 0;
   contain: layout style paint;
-}
-
-.app.reduced-transparency .content {
-  background: var(--surface-messages);
 }
 
 .right-panel {

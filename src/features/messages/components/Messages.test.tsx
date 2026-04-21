@@ -36,6 +36,14 @@ vi.mock("@services/tauri", async () => {
   };
 });
 
+vi.mock("../../git/components/PierreDiffBlock", () => ({
+  PierreDiffBlock: ({ diff, displayPath }: { diff: string; displayPath: string }) => (
+    <pre data-testid="mock-diff-block" data-display-path={displayPath}>
+      {diff}
+    </pre>
+  ),
+}));
+
 describe("Messages", () => {
   beforeAll(() => {
     if (!HTMLElement.prototype.scrollIntoView) {
@@ -180,7 +188,7 @@ describe("Messages", () => {
       {
         id: "msg-quote-1",
         kind: "message",
-        role: "assistant",
+        role: "user",
         text: "First line\nSecond line",
       },
     ];
@@ -207,7 +215,7 @@ describe("Messages", () => {
       {
         id: "msg-quote-selection-1",
         kind: "message",
-        role: "assistant",
+        role: "user",
         text: "Alpha beta gamma",
       },
     ];
@@ -761,6 +769,116 @@ describe("Messages", () => {
     expect(useFileLinkOpenerMock).toHaveBeenCalledTimes(1);
   });
 
+  it("collapses completed agent activity after a user request to the last agent message", () => {
+    const items: ConversationItem[] = [
+      {
+        id: "user-activity-1",
+        kind: "message",
+        role: "user",
+        text: "Change the file",
+      },
+      {
+        id: "tool-activity-1",
+        kind: "tool",
+        toolType: "fileChange",
+        title: "File change",
+        detail: "",
+        status: "completed",
+        changes: [
+          {
+            path: "src/App.tsx",
+            kind: "modify",
+            diff: "diff --git a/src/App.tsx b/src/App.tsx\n@@\n-old\n+new",
+          },
+        ],
+      },
+      {
+        id: "assistant-activity-1",
+        kind: "message",
+        role: "assistant",
+        text: "Updated the file.",
+      },
+    ];
+
+    const { container } = render(
+      <Messages
+        items={items}
+        threadId="thread-1"
+        workspaceId="ws-1"
+        isThinking={false}
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    const finalMessage = screen.getByText("Updated the file.");
+    expect(finalMessage).toBeTruthy();
+    expect(screen.getByText(/1 tool call/)).toBeTruthy();
+    expect(screen.getByText(/1 file edit across 1 file \+1 -1/)).toBeTruthy();
+    expect(screen.queryByText(/agent message/)).toBeNull();
+    expect(container.querySelector(".tool-group-collapsed")).toBeTruthy();
+    expect(screen.getByText("file edited:")).toBeTruthy();
+    const editedFile = screen.getByText("App.tsx (+1 -1)");
+    expect(editedFile).toBeTruthy();
+    expect(container.querySelector(".diff-viewer-output")).toBeNull();
+    expect(container.textContent ?? "").not.toContain("new");
+    fireEvent.click(screen.getByRole("button", { name: "Toggle tool details" }));
+    expect(container.querySelector(".diff-viewer-output")).toBeTruthy();
+    expect(container.textContent ?? "").toContain("new");
+    const groupHeader = container.querySelector(".tool-group-header");
+    const finalMessageNode = finalMessage.closest(".message");
+    const editedFilesNode = editedFile.closest(".tool-group-edited-files");
+    expect(groupHeader).toBeTruthy();
+    expect(finalMessageNode).toBeTruthy();
+    expect(editedFilesNode).toBeTruthy();
+    expect(
+      (groupHeader as Element).compareDocumentPosition(finalMessageNode as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      (finalMessageNode as Element).compareDocumentPosition(editedFilesNode as Element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("keeps active agent activity expanded until thinking finishes", () => {
+    const items: ConversationItem[] = [
+      {
+        id: "user-active-1",
+        kind: "message",
+        role: "user",
+        text: "Run the checks",
+      },
+      {
+        id: "tool-active-1",
+        kind: "tool",
+        toolType: "commandExecution",
+        title: "Command: npm run typecheck",
+        detail: "/tmp/project",
+        status: "running",
+      },
+    ];
+
+    const { container } = render(
+      <Messages
+        items={items}
+        threadId="thread-1"
+        workspaceId="ws-1"
+        isThinking
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    expect(container.querySelector(".tool-group-collapsed")).toBeNull();
+    expect(screen.getByText("npm run typecheck")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: "Collapse tool calls" })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+  });
+
   it("uses reasoning title for the working indicator and hides title-only reasoning rows", () => {
     const items: ConversationItem[] = [
       {
@@ -1047,10 +1165,14 @@ describe("Messages", () => {
       />,
     );
 
+    expect(screen.getByText("2 tool calls")).toBeTruthy();
+    expect(container.querySelector(".explore-inline")).toBeNull();
+    screen
+      .getAllByRole("button", { name: "Expand tool calls" })
+      .forEach((button) => fireEvent.click(button));
     await waitFor(() => {
       expect(container.querySelector(".explore-inline")).toBeTruthy();
     });
-    expect(screen.queryByText(/tool calls/i)).toBeNull();
     const exploreItems = container.querySelectorAll(".explore-inline-item");
     expect(exploreItems.length).toBe(2);
     expect(container.querySelector(".explore-inline-title")?.textContent ?? "").toContain(
@@ -1085,6 +1207,8 @@ describe("Messages", () => {
       />,
     );
 
+    expect(screen.getByText("2 tool calls")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Expand tool calls" }));
     await waitFor(() => {
       expect(container.querySelectorAll(".explore-inline").length).toBe(1);
     });
@@ -1128,6 +1252,10 @@ describe("Messages", () => {
       />,
     );
 
+    screen
+      .getAllByRole("button", { name: "Expand tool calls" })
+      .forEach((button) => fireEvent.click(button));
+
     await waitFor(() => {
       const exploreBlocks = container.querySelectorAll(".explore-inline");
       expect(exploreBlocks.length).toBe(2);
@@ -1169,6 +1297,8 @@ describe("Messages", () => {
         selectedOpenAppId=""
       />,
     );
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand tool calls" }));
 
     await waitFor(() => {
       expect(container.querySelectorAll(".explore-inline").length).toBe(2);
@@ -1220,6 +1350,10 @@ describe("Messages", () => {
         selectedOpenAppId=""
       />,
     );
+
+    screen
+      .getAllByRole("button", { name: "Expand tool calls" })
+      .forEach((button) => fireEvent.click(button));
 
     await waitFor(() => {
       const exploreBlocks = container.querySelectorAll(".explore-inline");
@@ -1279,6 +1413,49 @@ describe("Messages", () => {
     await waitFor(() => {
       expect(screen.getByText("5 tool calls")).toBeTruthy();
     });
+  });
+
+  it("collapses tool groups by default until expanded", async () => {
+    const items: ConversationItem[] = [
+      {
+        id: "tool-group-default-1",
+        kind: "tool",
+        toolType: "commandExecution",
+        title: "Command: npm test",
+        detail: "/repo",
+        status: "completed",
+        output: "test output",
+      },
+      {
+        id: "tool-group-default-2",
+        kind: "tool",
+        toolType: "fileChange",
+        title: "File edited",
+        detail: "",
+        status: "completed",
+        changes: [{ path: "src/App.tsx", kind: "modify" }],
+      },
+    ];
+
+    render(
+      <Messages
+        items={items}
+        threadId="thread-1"
+        workspaceId="ws-1"
+        isThinking={false}
+        openTargets={[]}
+        selectedOpenAppId=""
+      />,
+    );
+
+    expect(screen.getByText("2 tool calls")).toBeTruthy();
+    expect(screen.queryByText("npm test")).toBeNull();
+    expect(screen.queryByText("file edited:")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand tool calls" }));
+
+    expect(screen.getByText("npm test")).toBeTruthy();
+    expect(screen.getByText("file edited:")).toBeTruthy();
   });
 
   it("re-pins to bottom on thread switch even when previous thread was scrolled up", () => {
@@ -1395,9 +1572,11 @@ describe("Messages", () => {
       />,
     );
 
-    const exportButton = await screen.findByRole("button", {
-      name: "Export .md",
-    });
+    expect(screen.queryByRole("button", { name: "Export .md" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle tool details" }));
+
+    const exportButton = screen.getByRole("button", { name: "Export .md" });
     fireEvent.click(exportButton);
 
     await waitFor(() =>
