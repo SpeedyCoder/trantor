@@ -6,7 +6,6 @@ import FolderTree from "lucide-react/dist/esm/icons/folder-tree";
 import ListFilter from "lucide-react/dist/esm/icons/list-filter";
 import ListTree from "lucide-react/dist/esm/icons/list-tree";
 import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
-import Search from "lucide-react/dist/esm/icons/search";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ThreadListOrganizeMode, ThreadListSortKey } from "../../../types";
 import {
@@ -17,10 +16,7 @@ import {
 import { useMenuController } from "../hooks/useMenuController";
 
 type SidebarHeaderProps = {
-  onSelectHome: () => void;
   onAddWorkspace: () => void;
-  onToggleSearch: () => void;
-  isSearchOpen: boolean;
   threadListSortKey: ThreadListSortKey;
   onSetThreadListSortKey: (sortKey: ThreadListSortKey) => void;
   threadListOrganizeMode: ThreadListOrganizeMode;
@@ -31,10 +27,7 @@ type SidebarHeaderProps = {
 };
 
 export function SidebarHeader({
-  onSelectHome,
   onAddWorkspace,
-  onToggleSearch,
-  isSearchOpen,
   threadListSortKey,
   onSetThreadListSortKey,
   threadListOrganizeMode,
@@ -129,21 +122,13 @@ export function SidebarHeader({
             className="sidebar-title-add ds-tooltip-trigger"
             onClick={onAddWorkspace}
             data-tauri-drag-region="false"
-            aria-label="Add workspaces"
-            data-tooltip="Add workspaces"
+            aria-label="Add project"
+            data-tooltip="Add project"
             data-tooltip-align="start"
             data-tooltip-placement="bottom"
             type="button"
           >
             <FolderPlus aria-hidden />
-          </button>
-          <button
-            className="subtitle subtitle-button sidebar-title-button"
-            onClick={onSelectHome}
-            data-tauri-drag-region="false"
-            aria-label="Open home"
-          >
-            Projects
           </button>
         </div>
       </div>
@@ -252,19 +237,6 @@ export function SidebarHeader({
             className={refreshInProgress ? "sidebar-refresh-icon spinning" : "sidebar-refresh-icon"}
             aria-hidden
           />
-        </button>
-        <button
-          className={`ghost sidebar-search-toggle ds-tooltip-trigger${isSearchOpen ? " is-active" : ""}`}
-          onClick={onToggleSearch}
-          data-tauri-drag-region="false"
-          aria-label="Toggle search"
-          data-tooltip={isSearchOpen ? "Close search" : "Search threads"}
-          data-tooltip-align="end"
-          data-tooltip-placement="bottom"
-          aria-pressed={isSearchOpen}
-          type="button"
-        >
-          <Search aria-hidden />
         </button>
       </div>
     </div>

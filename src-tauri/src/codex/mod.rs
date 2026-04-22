@@ -203,11 +203,12 @@ pub(crate) async fn start_thread(
         if matches!(runtime_for_model_id(model_id.as_deref()), AgentRuntime::Claude) {
             return Err("Claude runtime is supported only in local desktop mode.".to_string());
         }
+        let native_model_id = model_id.as_deref().map(codex_core::native_model_id);
         return remote_backend::call_remote(
             &*state,
             app,
             "start_thread",
-            json!({ "workspaceId": workspace_id, "modelId": model_id }),
+            json!({ "workspaceId": workspace_id, "modelId": native_model_id }),
         )
         .await;
     }
@@ -522,7 +523,10 @@ pub(crate) async fn send_user_message(
         payload.insert("workspaceId".to_string(), json!(workspace_id));
         payload.insert("threadId".to_string(), json!(thread_id));
         payload.insert("text".to_string(), json!(text));
-        payload.insert("model".to_string(), json!(model));
+        payload.insert(
+            "model".to_string(),
+            json!(model.as_deref().map(codex_core::native_model_id)),
+        );
         payload.insert("effort".to_string(), json!(effort));
         insert_optional_nullable_string(&mut payload, "serviceTier", service_tier);
         payload.insert("accessMode".to_string(), json!(access_mode));

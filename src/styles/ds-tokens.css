@@ -34,9 +34,24 @@
   --ds-popover-item-text-active: var(--text-stronger);
 
   --ds-diff-lib-bg-light: rgba(255, 255, 255, 0.35);
-  --ds-diff-lib-bg-dark: rgba(10, 12, 16, 0.35);
+  --ds-diff-lib-bg-dark: var(--surface-messages);
   --ds-diff-lib-bg-system-light: rgba(255, 255, 255, 0.35);
-  --ds-diff-lib-bg-system-dark: rgba(10, 12, 16, 0.35);
+  --ds-diff-lib-bg-system-dark: var(--surface-messages);
+  --ds-diff-add-text: var(--status-success);
+  --ds-diff-add-bg: color-mix(in srgb, var(--status-success) 14%, transparent);
+  --ds-diff-add-bg-strong: color-mix(in srgb, var(--status-success) 22%, transparent);
+  --ds-diff-add-border: color-mix(in srgb, var(--status-success) 40%, transparent);
+  --ds-diff-del-text: var(--status-error);
+  --ds-diff-del-bg: color-mix(in srgb, var(--status-error) 14%, transparent);
+  --ds-diff-del-bg-strong: color-mix(in srgb, var(--status-error) 22%, transparent);
+  --ds-diff-del-border: color-mix(in srgb, var(--status-error) 42%, transparent);
+  --ds-diff-mod-text: var(--status-warning);
+  --ds-diff-mod-bg: color-mix(in srgb, var(--status-warning) 14%, transparent);
+  --ds-diff-mod-bg-strong: color-mix(in srgb, var(--status-warning) 22%, transparent);
+  --ds-diff-mod-border: color-mix(in srgb, var(--status-warning) 40%, transparent);
+  --ds-diff-info-text: var(--text-accent);
+  --ds-diff-info-bg: color-mix(in srgb, var(--text-accent) 12%, transparent);
+  --ds-diff-info-border: color-mix(in srgb, var(--text-accent) 35%, transparent);
 
   /* Global layer scale (keep numeric so it works with z-index + calc()). */
   --ds-layer-modal: 10000;

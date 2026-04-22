@@ -14,9 +14,6 @@ type ThreadListProps = {
   workspaceId: string;
   pinnedRows: ThreadListRow[];
   unpinnedRows: ThreadListRow[];
-  totalThreadRoots: number;
-  isExpanded: boolean;
-  showExpandToggle?: boolean;
   nextCursor: string | null;
   isPaging: boolean;
   nested?: boolean;
@@ -28,7 +25,6 @@ type ThreadListProps = {
   getThreadTime: (thread: ThreadSummary) => string | null;
   getThreadArgsBadge?: (workspaceId: string, threadId: string) => string | null;
   isThreadPinned: (workspaceId: string, threadId: string) => boolean;
-  onToggleExpanded: (workspaceId: string) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onSelectThread: (workspaceId: string, threadId: string) => void;
   onShowThreadMenu: (
@@ -43,9 +39,6 @@ export function ThreadList({
   workspaceId,
   pinnedRows,
   unpinnedRows,
-  totalThreadRoots,
-  isExpanded,
-  showExpandToggle = true,
   nextCursor,
   isPaging,
   nested,
@@ -57,7 +50,6 @@ export function ThreadList({
   getThreadTime,
   getThreadArgsBadge,
   isThreadPinned,
-  onToggleExpanded,
   onLoadOlderThreads,
   onSelectThread,
   onShowThreadMenu,
@@ -142,18 +134,7 @@ export function ThreadList({
           onToggleSubagents={(_, threadId) => toggleThreadSubagents(threadId)}
         />
       ))}
-      {showExpandToggle && totalThreadRoots > 3 && (
-        <button
-          className="thread-more"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleExpanded(workspaceId);
-          }}
-        >
-          {isExpanded ? "Show less" : "More..."}
-        </button>
-      )}
-      {showLoadOlder && nextCursor && (isExpanded || totalThreadRoots <= 3) && (
+      {showLoadOlder && nextCursor && (
         <button
           className="thread-more"
           onClick={(event) => {
@@ -162,11 +143,7 @@ export function ThreadList({
           }}
           disabled={isPaging}
         >
-          {isPaging
-            ? "Loading..."
-            : totalThreadRoots === 0
-              ? "Search older..."
-              : "Load older..."}
+          {isPaging ? "Loading..." : "Load older..."}
         </button>
       )}
     </div>

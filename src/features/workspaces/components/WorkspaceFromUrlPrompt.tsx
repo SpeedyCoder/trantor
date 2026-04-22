@@ -38,7 +38,7 @@ export function WorkspaceFromUrlPrompt({
 
   return (
     <ModalShell
-      ariaLabel="Add workspace from URL"
+      ariaLabel="Add project from URL"
       className="workspace-from-url-modal"
       cardClassName="workspace-from-url-modal-card"
       onBackdropClick={() => {
@@ -48,7 +48,7 @@ export function WorkspaceFromUrlPrompt({
       }}
     >
       <div className="workspace-from-url-modal-content">
-        <div className="ds-modal-title">Add workspace from URL</div>
+        <div className="ds-modal-title">Add project from URL</div>
         <label className="ds-modal-label" htmlFor="workspace-url-input">
           Remote Git URL
         </label>
@@ -105,7 +105,7 @@ export function WorkspaceFromUrlPrompt({
             onClick={onConfirm}
             disabled={isBusy || !canSubmit}
           >
-            {isBusy ? "Cloning…" : "Clone and Add"}
+            {isBusy ? "Cloning…" : "Clone and Add Project"}
           </button>
         </div>
       </div>

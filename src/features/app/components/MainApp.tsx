@@ -58,7 +58,6 @@ import type {
   WorkspaceInfo,
 } from "@/types";
 import { useOpenAppIcons } from "@app/hooks/useOpenAppIcons";
-import { useAccountSwitching } from "@app/hooks/useAccountSwitching";
 import { useNewAgentDraft } from "@app/hooks/useNewAgentDraft";
 import { useSystemNotificationThreadLinks } from "@app/hooks/useSystemNotificationThreadLinks";
 import { useThreadListSortKey } from "@app/hooks/useThreadListSortKey";
@@ -726,18 +725,6 @@ export default function MainApp() {
   });
 
   const {
-    activeAccount,
-    accountSwitching,
-    handleSwitchAccount,
-    handleCancelSwitchAccount,
-  } = useAccountSwitching({
-    activeWorkspaceId,
-    accountByWorkspace,
-    refreshAccountInfo,
-    refreshAccountRateLimits,
-    alertError,
-  });
-  const {
     newAgentDraftWorkspaceId,
     startingDraftThreadWorkspaceId,
     isDraftModeForActiveWorkspace: isNewAgentDraftMode,
@@ -955,20 +942,9 @@ export default function MainApp() {
   const {
     latestAgentRuns,
     isLoadingLatestAgents,
-    usageMetric,
-    setUsageMetric,
-    usageWorkspaceId,
-    setUsageWorkspaceId,
-    usageWorkspaceOptions,
-    localUsageSnapshot,
-    isLoadingLocalUsage,
-    localUsageError,
-    refreshLocalUsage,
   } = useWorkspaceInsightsOrchestration({
     workspaces,
-    workspacesById,
     hasLoaded,
-    showHome,
     threadsByWorkspace,
     lastAgentMessageByThread,
     threadStatusById,
@@ -979,12 +955,9 @@ export default function MainApp() {
   const activeRateLimits = activeWorkspaceId
     ? rateLimitsByWorkspace[activeWorkspaceId] ?? null
     : null;
-  const {
-    homeAccount,
-    homeRateLimits,
-  } = useHomeAccount({
+  const { homeRateLimits } = useHomeAccount({
     showHome,
-    usageWorkspaceId,
+    usageWorkspaceId: null,
     workspaces,
     threadsByWorkspace,
     threadListLoadingByWorkspace,
@@ -1592,7 +1565,6 @@ export default function MainApp() {
   const { workspaceHomeNode } = displayNodes;
   const layoutSurfaces = useMainAppLayoutSurfaces({
     appSettings: {
-      usageShowRemaining: appSettings.usageShowRemaining,
       composerCodeBlockCopyUseModifier:
         appSettings.composerCodeBlockCopyUseModifier,
       showMessageFilePath: appSettings.showMessageFilePath,
@@ -1632,12 +1604,7 @@ export default function MainApp() {
     userInputRequests,
     approvals,
     activeRateLimits,
-    activeAccount,
     homeRateLimits,
-    homeAccount,
-    accountSwitching,
-    onSwitchAccount: handleSwitchAccount,
-    onCancelSwitchAccount: handleCancelSwitchAccount,
     onDecision: handleApprovalDecision,
     onRemember: handleApprovalRemember,
     onUserInputSubmit: handleUserInputSubmit,
@@ -1647,17 +1614,6 @@ export default function MainApp() {
     activeTokenUsage,
     latestAgentRuns,
     isLoadingLatestAgents,
-    localUsageSnapshot,
-    isLoadingLocalUsage,
-    localUsageError,
-    onRefreshLocalUsage: () => {
-      refreshLocalUsage()?.catch(() => {});
-    },
-    usageMetric,
-    onUsageMetricChange: setUsageMetric,
-    usageWorkspaceId,
-    usageWorkspaceOptions,
-    onUsageWorkspaceChange: setUsageWorkspaceId,
     gitState,
     selectedServiceTier: selectedServiceTier ?? null,
     composerWorkspaceState,

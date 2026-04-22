@@ -28,8 +28,6 @@ const baseProps = {
   workspaceId: "ws-1",
   pinnedRows: [],
   unpinnedRows: [{ thread, depth: 0 }],
-  totalThreadRoots: 1,
-  isExpanded: false,
   nextCursor: null,
   isPaging: false,
   nested: false,
@@ -38,7 +36,6 @@ const baseProps = {
   threadStatusById: statusMap,
   getThreadTime: () => "2m",
   isThreadPinned: () => false,
-  onToggleExpanded: vi.fn(),
   onLoadOlderThreads: vi.fn(),
   onSelectThread: vi.fn(),
   onShowThreadMenu: vi.fn(),
@@ -81,19 +78,15 @@ describe("ThreadList", () => {
     );
   });
 
-  it("shows the more button and toggles expanded", () => {
-    const onToggleExpanded = vi.fn();
+  it("does not render a more or show less control", () => {
     render(
       <ThreadList
         {...baseProps}
-        totalThreadRoots={4}
-        onToggleExpanded={onToggleExpanded}
       />,
     );
 
-    const moreButton = screen.getByRole("button", { name: "More..." });
-    fireEvent.click(moreButton);
-    expect(onToggleExpanded).toHaveBeenCalledWith("ws-1");
+    expect(screen.queryByRole("button", { name: "More..." })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show less" })).toBeNull();
   });
 
   it("loads older threads when a cursor is available", () => {

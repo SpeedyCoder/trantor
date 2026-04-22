@@ -339,9 +339,9 @@ export const Messages = memo(function Messages({
           showPollingFetchStatus={showPollingFetchStatus}
           pollingIntervalMs={pollingIntervalMs}
         />
-        {!items.length && !userInputNode && !isThinking && !isLoadingMessages && (
+        {threadId && !items.length && !userInputNode && !isThinking && !isLoadingMessages && (
           <div className="empty messages-empty">
-            {threadId ? "Send a prompt to the agent." : "Send a prompt to start a new agent."}
+            Send a prompt to the agent.
           </div>
         )}
         {!items.length && !userInputNode && !isThinking && isLoadingMessages && (

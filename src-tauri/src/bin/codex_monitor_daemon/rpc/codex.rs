@@ -35,7 +35,8 @@ pub(super) async fn try_handle(
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
-            Some(state.start_thread(workspace_id).await)
+            let model_id = parse_optional_string(params, "modelId");
+            Some(state.start_thread(workspace_id, model_id).await)
         }
         "resume_thread" => {
             let workspace_id = match parse_string(params, "workspaceId") {

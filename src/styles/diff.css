@@ -541,21 +541,21 @@
 }
 
 .per-file-edit-status[data-status="A"] {
-  color: #47d488;
-  border-color: rgba(71, 212, 136, 0.4);
-  background: rgba(71, 212, 136, 0.12);
+  color: var(--ds-diff-add-text);
+  border-color: var(--ds-diff-add-border);
+  background: var(--ds-diff-add-bg);
 }
 
 .per-file-edit-status[data-status="D"] {
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.45);
-  background: rgba(255, 107, 107, 0.12);
+  color: var(--ds-diff-del-text);
+  border-color: var(--ds-diff-del-border);
+  background: var(--ds-diff-del-bg);
 }
 
 .per-file-edit-status[data-status="R"] {
-  color: #f5c363;
-  border-color: rgba(245, 195, 99, 0.4);
-  background: rgba(245, 195, 99, 0.12);
+  color: var(--ds-diff-mod-text);
+  border-color: var(--ds-diff-mod-border);
+  background: var(--ds-diff-mod-bg);
 }
 
 .per-file-edit-label {
@@ -576,11 +576,11 @@
 }
 
 .per-file-edit-stat-add {
-  color: #47d488;
+  color: var(--ds-diff-add-text);
 }
 
 .per-file-edit-stat-del {
-  color: #ff6b6b;
+  color: var(--ds-diff-del-text);
 }
 
 .diff-empty {
@@ -590,7 +590,7 @@
 
 .diff-error {
   font-size: 12px;
-  color: rgba(255, 160, 160, 0.9);
+  color: var(--status-error);
   white-space: pre-wrap;
 }
 
@@ -702,6 +702,34 @@
   transform: translateX(0);
 }
 
+.diff-row-actions--key {
+  width: 47px;
+  max-width: none;
+  flex: 0 0 47px;
+  margin-left: 0;
+  margin-right: 4px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: visible;
+  transform: none;
+  transition: none;
+}
+
+.diff-row:hover .diff-row-actions--key,
+.diff-row:focus-within .diff-row-actions--key {
+  max-width: none;
+  margin-left: 0;
+  margin-right: 4px;
+  opacity: 1;
+  pointer-events: auto;
+  overflow: visible;
+  transform: none;
+}
+
+.diff-row-actions--key .diff-row-action {
+  transition: none;
+}
+
 .diff-row-action {
   width: 22px;
   height: 22px;
@@ -742,9 +770,9 @@
 }
 
 .diff-row-action--stage:hover {
-  background: rgba(71, 212, 136, 0.14);
-  border-color: rgba(71, 212, 136, 0.35);
-  color: #47d488;
+  background: var(--ds-diff-add-bg);
+  border-color: var(--ds-diff-add-border);
+  color: var(--ds-diff-add-text);
 }
 
 .diff-row-action--unstage {
@@ -753,9 +781,9 @@
 }
 
 .diff-row-action--unstage:hover {
-  background: rgba(245, 195, 99, 0.14);
-  border-color: rgba(245, 195, 99, 0.35);
-  color: #f5c363;
+  background: var(--ds-diff-mod-bg);
+  border-color: var(--ds-diff-mod-border);
+  color: var(--ds-diff-mod-text);
 }
 
 .diff-row-action--discard {
@@ -764,21 +792,21 @@
 }
 
 .diff-row-action--discard:hover {
-  background: rgba(255, 107, 107, 0.14);
-  border-color: rgba(255, 107, 107, 0.35);
-  color: #ff6b6b;
+  background: var(--ds-diff-del-bg);
+  border-color: var(--ds-diff-del-border);
+  color: var(--ds-diff-del-text);
 }
 
 .diff-row-action--review:hover {
-  background: rgba(90, 169, 255, 0.14);
-  border-color: rgba(90, 169, 255, 0.35);
-  color: #5aa9ff;
+  background: var(--ds-diff-info-bg);
+  border-color: var(--ds-diff-info-border);
+  color: var(--ds-diff-info-text);
 }
 
 .diff-row-action--apply:hover {
-  background: rgba(90, 169, 255, 0.14);
-  border-color: rgba(90, 169, 255, 0.35);
-  color: #5aa9ff;
+  background: var(--ds-diff-info-bg);
+  border-color: var(--ds-diff-info-border);
+  color: var(--ds-diff-info-text);
 }
 
 .diff-icon {
@@ -796,21 +824,21 @@
 }
 
 .diff-icon-added {
-  color: #47d488;
-  border-color: rgba(71, 212, 136, 0.4);
-  background: rgba(71, 212, 136, 0.12);
+  color: var(--ds-diff-add-text);
+  border-color: var(--ds-diff-add-border);
+  background: var(--ds-diff-add-bg);
 }
 
 .diff-icon-modified {
-  color: #f5c363;
-  border-color: rgba(245, 195, 99, 0.4);
-  background: rgba(245, 195, 99, 0.12);
+  color: var(--ds-diff-mod-text);
+  border-color: var(--ds-diff-mod-border);
+  background: var(--ds-diff-mod-bg);
 }
 
 .diff-icon-deleted {
-  color: #ff6b6b;
-  border-color: rgba(255, 107, 107, 0.45);
-  background: rgba(255, 107, 107, 0.12);
+  color: var(--ds-diff-del-text);
+  border-color: var(--ds-diff-del-border);
+  background: var(--ds-diff-del-bg);
 }
 
 
@@ -887,11 +915,11 @@
 }
 
 .diff-add {
-  color: #47d488;
+  color: var(--ds-diff-add-text);
 }
 
 .diff-del {
-  color: #ff6b6b;
+  color: var(--ds-diff-del-text);
 }
 
 .diff-sep {
@@ -1141,17 +1169,6 @@
   color: var(--text-dim);
 }
 
-/* Commit message generation */
-.commit-message-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px;
-  border-radius: 18px;
-  border: 1px solid var(--cm-border-default);
-  background: var(--cm-surface-panel-soft);
-}
-
 .commit-message-input-wrapper {
   position: relative;
 }
@@ -1164,7 +1181,7 @@
   color: var(--text-emphasis);
   background: var(--cm-surface-panel);
   border: 1px solid var(--cm-border-default);
-  border-radius: 14px;
+  border-radius: 8px;
   padding: 11px 40px 11px 12px;
   resize: vertical;
   min-height: 56px;
@@ -1190,14 +1207,14 @@
 
 .commit-message-generate-button {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 5px;
+  right: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 999px;
+  border-radius: 6px;
   border: 1px solid var(--cm-border-soft);
   background: var(--cm-surface-panel-soft);
   color: var(--text-muted);
@@ -1230,13 +1247,13 @@
 
 .commit-message-error {
   font-size: 11px;
-  color: rgba(255, 160, 160, 0.9);
+  color: var(--status-error);
   padding: 2px 0;
 }
 
 /* Commit button */
 .commit-button-container {
-  margin-top: 0;
+  margin-top: -6px;
 }
 
 .commit-button {
@@ -1251,7 +1268,7 @@
   color: var(--text-emphasis);
   background: var(--cm-surface-panel);
   border: 1px solid var(--cm-border-default);
-  border-radius: 14px;
+  border-radius: 8px;
   cursor: pointer;
   box-shadow: none;
   transform: none;

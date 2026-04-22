@@ -316,12 +316,15 @@ pub(crate) async fn start_thread_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: String,
+    model_id: Option<String>,
 ) -> Result<Value, String> {
     let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
+    let native_model = model_id.as_deref().map(native_model_id);
     let params = json!({
         "cwd": workspace_path,
-        "approvalPolicy": "on-request"
+        "approvalPolicy": "on-request",
+        "model": native_model
     });
     session
         .send_request_for_workspace(&workspace_id, "thread/start", params)
@@ -1005,6 +1008,13 @@ mod tests {
     #[test]
     fn normalize_trims_whitespace() {
         assert_eq!(normalize_file_path("  /tmp/image.png  "), "/tmp/image.png");
+    }
+
+    #[test]
+    fn native_model_id_strips_runtime_prefixes() {
+        assert_eq!(native_model_id("codex:gpt-5.4"), "gpt-5.4");
+        assert_eq!(native_model_id("claude:sonnet-4.5"), "sonnet-4.5");
+        assert_eq!(native_model_id(" gpt-5.4 "), "gpt-5.4");
     }
 
     #[test]

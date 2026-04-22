@@ -115,6 +115,37 @@ describe("GitDiffPanel", () => {
     expect(onCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("orders unstaged row controls as changed lines, stage, discard from the right edge", () => {
+    const onStageFile = vi.fn();
+    const onRevertFile = vi.fn();
+    const { container } = render(
+      <GitDiffPanel
+        {...baseProps}
+        onStageFile={onStageFile}
+        onRevertFile={onRevertFile}
+        unstagedFiles={[
+          { path: "src/file.ts", status: "M", additions: 4, deletions: 1 },
+        ]}
+      />,
+    );
+
+    const row = container.querySelector(".diff-row");
+    expect(row).not.toBeNull();
+    const meta = row?.querySelector(".diff-row-meta");
+    const actions = row?.querySelector(".diff-row-actions--key");
+    const counts = row?.querySelector(".diff-counts-inline");
+    expect(meta?.children[0]).toBe(actions);
+    expect(meta?.children[1]).toBe(counts);
+    expect(actions?.classList.contains("diff-row-actions")).toBe(true);
+
+    const buttons = within(actions as HTMLElement).getAllByRole("button");
+    expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Discard changes",
+      "Stage file",
+    ]);
+    expect(counts?.textContent).toBe("+4/-1");
+  });
+
   it("runs uncommitted review from unstaged section actions", () => {
     const onReviewUncommittedChanges = vi.fn();
     render(

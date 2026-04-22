@@ -25,7 +25,6 @@ describe("WorktreeSection", () => {
         threadListLoadingByWorkspace={{ [worktree.id]: false }}
         threadListPagingByWorkspace={{ [worktree.id]: false }}
         threadListCursorByWorkspace={{ [worktree.id]: "cursor" }}
-        expandedWorkspaces={new Set()}
         activeWorkspaceId={null}
         activeThreadId={null}
         getThreadRows={() => ({
@@ -44,14 +43,10 @@ describe("WorktreeSection", () => {
         onSelectThread={vi.fn()}
         onShowThreadMenu={vi.fn()}
         onShowWorktreeMenu={vi.fn()}
-        onToggleExpanded={vi.fn()}
         onLoadOlderThreads={vi.fn()}
       />,
     );
 
-    expect(
-      screen.queryByRole("button", { name: "Search older..." }),
-    ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Load older..." }),
     ).toBeNull();
