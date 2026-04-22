@@ -2,9 +2,9 @@ use std::path::PathBuf;
 
 pub(crate) fn daemon_binary_candidates() -> &'static [&'static str] {
     if cfg!(windows) {
-        &["codex_monitor_daemon.exe", "codex-monitor-daemon.exe"]
+        &["trantor_daemon.exe", "trantor-daemon.exe"]
     } else {
-        &["codex_monitor_daemon", "codex-monitor-daemon"]
+        &["trantor_daemon", "trantor-daemon"]
     }
 }
 
@@ -95,6 +95,6 @@ mod tests {
 
     #[test]
     fn daemon_binary_candidates_prioritize_underscored_name() {
-        assert!(daemon_binary_candidates()[0].starts_with("codex_monitor_daemon"));
+        assert!(daemon_binary_candidates()[0].starts_with("trantor_daemon"));
     }
 }

@@ -1,13 +1,13 @@
 # Uncomment the next line to define a global platform for your project
 
-target 'codex-monitor_iOS' do
+target 'trantor_iOS' do
 platform :ios, '14.0'
-  # Pods for codex-monitor_iOS
+  # Pods for trantor_iOS
 end
 
-target 'codex-monitor_macOS' do
+target 'trantor_macOS' do
 platform :osx, '11.0'
-  # Pods for codex-monitor_macOS
+  # Pods for trantor_macOS
 end
 
 # Delete the deployment target for iOS and macOS, causing it to be inherited from the Podfile

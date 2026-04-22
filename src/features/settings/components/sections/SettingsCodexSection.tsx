@@ -242,7 +242,7 @@ export function SettingsCodexSection({
   return (
     <SettingsSection
       title="Codex"
-      subtitle="Configure the Codex CLI used by CodexMonitor and validate the install."
+      subtitle="Configure the Codex CLI used by Trantor and validate the install."
     >
       <div className="settings-usage-panel">
         <div className="settings-usage-header">

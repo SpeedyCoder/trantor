@@ -1,6 +1,6 @@
-name: codex-monitor
+name: trantor
 options:
-  bundleIdPrefix: com.dimillian.codexmonitor
+  bundleIdPrefix: com.dimillian.trantor
   deploymentTarget:
     iOS: 14.0
 fileGroups: [../../src]
@@ -10,8 +10,8 @@ configs:
 settingGroups:
   app:
     base:
-      PRODUCT_NAME: Codex Monitor
-      PRODUCT_BUNDLE_IDENTIFIER: com.dimillian.codexmonitor
+      PRODUCT_NAME: Trantor
+      PRODUCT_BUNDLE_IDENTIFIER: com.dimillian.trantor
 targetTemplates:
   app:
     type: application
@@ -24,20 +24,20 @@ targetTemplates:
     settings:
       groups: [app]
 targets:
-  codex-monitor_iOS:
+  trantor_iOS:
     type: application
     platform: iOS
     sources:
       - path: Sources
       - path: Assets.xcassets
       - path: Externals
-      - path: codex-monitor_iOS
+      - path: trantor_iOS
       - path: assets
         buildPhase: resources
         type: folder
       - path: LaunchScreen.storyboard
     info:
-      path: codex-monitor_iOS/Info.plist
+      path: trantor_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
@@ -56,7 +56,7 @@ targets:
         CFBundleShortVersionString: 0.7.45
         CFBundleVersion: "0.7.45"
     entitlements:
-      path: codex-monitor_iOS/codex-monitor_iOS.entitlements
+      path: trantor_iOS/trantor_iOS.entitlements
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full

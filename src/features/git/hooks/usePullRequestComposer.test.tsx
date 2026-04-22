@@ -41,7 +41,7 @@ const selectedCommit: GitLogEntry = {
 
 const connectedWorkspace: WorkspaceInfo = {
   id: "workspace-1",
-  name: "CodexMonitor",
+  name: "Trantor",
   path: "/tmp/codex",
   connected: true,
   settings: { sidebarCollapsed: false },
