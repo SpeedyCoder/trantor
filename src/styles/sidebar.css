@@ -137,6 +137,10 @@
   margin-left: -9px;
 }
 
+.sidebar-title-add--inline-actions {
+  margin-left: 0;
+}
+
 .sidebar-title-add svg {
   width: 14px;
   height: 14px;

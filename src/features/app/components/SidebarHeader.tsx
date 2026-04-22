@@ -8,6 +8,8 @@ import ListTree from "lucide-react/dist/esm/icons/list-tree";
 import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ThreadListOrganizeMode, ThreadListSortKey } from "../../../types";
+import { useWindowFullscreenState } from "@/features/layout/hooks/useWindowFullscreenState";
+import { isMacPlatform } from "@utils/platformPaths";
 import {
   MenuTrigger,
   PopoverMenuItem,
@@ -39,6 +41,8 @@ export function SidebarHeader({
   const sortMenu = useMenuController();
   const { isOpen: sortMenuOpen, containerRef: sortMenuRef } = sortMenu;
   const sortMenuPopoverRef = useRef<HTMLDivElement | null>(null);
+  const isFullscreen = useWindowFullscreenState();
+  const showAddWorkspaceWithActions = isMacPlatform() && !isFullscreen;
   const [sortMenuShift, setSortMenuShift] = useState<{ x: number; y: number }>({
     x: 0,
     y: 0,
@@ -117,22 +121,38 @@ export function SidebarHeader({
   return (
     <div className="sidebar-header">
       <div className="sidebar-header-title">
-        <div className="sidebar-title-group">
+        {!showAddWorkspaceWithActions && (
+          <div className="sidebar-title-group">
+            <button
+              className="sidebar-title-add ds-tooltip-trigger"
+              onClick={onAddWorkspace}
+              data-tauri-drag-region="false"
+              aria-label="Add project"
+              data-tooltip="Add project"
+              data-tooltip-align="start"
+              data-tooltip-placement="bottom"
+              type="button"
+            >
+              <FolderPlus aria-hidden />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="sidebar-header-actions">
+        {showAddWorkspaceWithActions && (
           <button
-            className="sidebar-title-add ds-tooltip-trigger"
+            className="sidebar-title-add sidebar-title-add--inline-actions ds-tooltip-trigger"
             onClick={onAddWorkspace}
             data-tauri-drag-region="false"
             aria-label="Add project"
             data-tooltip="Add project"
-            data-tooltip-align="start"
+            data-tooltip-align="end"
             data-tooltip-placement="bottom"
             type="button"
           >
             <FolderPlus aria-hidden />
           </button>
-        </div>
-      </div>
-      <div className="sidebar-header-actions">
+        )}
         <div className="sidebar-sort-menu" ref={sortMenuRef}>
           <MenuTrigger
             isOpen={sortMenuOpen}

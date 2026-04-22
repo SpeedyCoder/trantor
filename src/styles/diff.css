@@ -703,21 +703,22 @@
 }
 
 .diff-row-actions--key {
-  width: 47px;
-  max-width: none;
-  flex: 0 0 47px;
+  max-width: 0;
+  flex: 0 0 0;
   margin-left: 0;
-  margin-right: 4px;
+  margin-right: 0;
   opacity: 0;
   pointer-events: none;
-  overflow: visible;
+  overflow: hidden;
   transform: none;
-  transition: none;
+  transition: max-width 180ms ease, flex-basis 180ms ease, opacity 140ms ease,
+    margin-right 180ms ease;
 }
 
 .diff-row:hover .diff-row-actions--key,
 .diff-row:focus-within .diff-row-actions--key {
-  max-width: none;
+  max-width: 47px;
+  flex-basis: 47px;
   margin-left: 0;
   margin-right: 4px;
   opacity: 1;
