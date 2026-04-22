@@ -366,7 +366,7 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
       {
         ...workspaceOne,
         id: "existing-win",
-        path: "I:\\gpt-projects\\CodexMonitor",
+        path: "I:\\gpt-projects\\Trantor",
       },
     ]);
     isWorkspacePathDirMock.mockResolvedValue(true);
@@ -380,16 +380,16 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
     let addResult: Awaited<ReturnType<typeof result.current.addWorkspacesFromPaths>>;
     await act(async () => {
       addResult = await result.current.addWorkspacesFromPaths([
-        "\\\\?\\I:\\gpt-projects\\CodexMonitor",
+        "\\\\?\\I:\\gpt-projects\\Trantor",
       ]);
     });
 
     expect(isWorkspacePathDirMock).toHaveBeenCalledWith(
-      "\\\\?\\I:\\gpt-projects\\CodexMonitor",
+      "\\\\?\\I:\\gpt-projects\\Trantor",
     );
     expect(addWorkspaceMock).not.toHaveBeenCalled();
     expect(addResult!.added).toHaveLength(0);
-    expect(addResult!.skippedExisting).toEqual(["\\\\?\\I:\\gpt-projects\\CodexMonitor"]);
+    expect(addResult!.skippedExisting).toEqual(["\\\\?\\I:\\gpt-projects\\Trantor"]);
     expect(addResult!.skippedInvalid).toHaveLength(0);
     expect(addResult!.failures).toHaveLength(0);
   });
@@ -403,7 +403,7 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
       {
         ...workspaceOne,
         id: "existing-unc",
-        path: "\\\\SERVER\\Share\\CodexMonitor",
+        path: "\\\\SERVER\\Share\\Trantor",
       },
     ]);
     isWorkspacePathDirMock.mockResolvedValue(true);
@@ -417,17 +417,17 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
     let addResult: Awaited<ReturnType<typeof result.current.addWorkspacesFromPaths>>;
     await act(async () => {
       addResult = await result.current.addWorkspacesFromPaths([
-        "\\\\?\\UNC\\SERVER\\Share\\CodexMonitor",
+        "\\\\?\\UNC\\SERVER\\Share\\Trantor",
       ]);
     });
 
     expect(isWorkspacePathDirMock).toHaveBeenCalledWith(
-      "\\\\?\\UNC\\SERVER\\Share\\CodexMonitor",
+      "\\\\?\\UNC\\SERVER\\Share\\Trantor",
     );
     expect(addWorkspaceMock).not.toHaveBeenCalled();
     expect(addResult!.added).toHaveLength(0);
     expect(addResult!.skippedExisting).toEqual([
-      "\\\\?\\UNC\\SERVER\\Share\\CodexMonitor",
+      "\\\\?\\UNC\\SERVER\\Share\\Trantor",
     ]);
     expect(addResult!.skippedInvalid).toHaveLength(0);
     expect(addResult!.failures).toHaveLength(0);
@@ -553,7 +553,7 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
       {
         ...workspaceOne,
         id: "existing-srv",
-        path: "/srv/codex-monitor/project",
+        path: "/srv/trantor/project",
       },
       {
         ...workspaceTwo,
@@ -565,7 +565,7 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
       if (path === "~/project") {
         return false;
       }
-      if (path === "/srv/codex-monitor/project") {
+      if (path === "/srv/trantor/project") {
         return true;
       }
       return path === "/Users/vlad/project";
@@ -588,7 +588,7 @@ describe("useWorkspaces.addWorkspacesFromPaths", () => {
     });
 
     expect(isWorkspacePathDirMock).toHaveBeenNthCalledWith(1, "~/project");
-    expect(isWorkspacePathDirMock).toHaveBeenNthCalledWith(2, "/srv/codex-monitor/project");
+    expect(isWorkspacePathDirMock).toHaveBeenNthCalledWith(2, "/srv/trantor/project");
     expect(isWorkspacePathDirMock).toHaveBeenNthCalledWith(3, "/Users/vlad/project");
     expect(addWorkspaceMock).toHaveBeenCalledWith("/Users/vlad/project");
     expect(addResult!.added).toHaveLength(1);

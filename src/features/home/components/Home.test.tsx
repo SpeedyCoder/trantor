@@ -26,7 +26,7 @@ describe("Home", () => {
           {
             message: "Ship the dashboard refresh",
             timestamp: Date.now(),
-            projectName: "CodexMonitor",
+            projectName: "Dashboard",
             groupName: "Frontend",
             workspaceId: "workspace-1",
             threadId: "thread-1",
@@ -38,7 +38,7 @@ describe("Home", () => {
     );
 
     expect(screen.getByText("Latest agents")).toBeTruthy();
-    expect(screen.getByText("CodexMonitor")).toBeTruthy();
+    expect(screen.getByText("Dashboard")).toBeTruthy();
     expect(screen.getByText("Frontend")).toBeTruthy();
     const message = screen.getByText("Ship the dashboard refresh");
     const card = message.closest("button");

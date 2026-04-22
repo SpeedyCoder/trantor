@@ -10,7 +10,7 @@ function makeToolItem(
     kind: "tool",
     toolType: "webSearch",
     title: "Web search",
-    detail: "codex monitor",
+    detail: "trantor",
     status: "completed",
     output: "",
     ...overrides,
@@ -21,7 +21,7 @@ describe("messageRenderUtils", () => {
   it("renders web search as searching while in progress", () => {
     const summary = buildToolSummary(makeToolItem({ status: "inProgress" }), "");
     expect(summary.label).toBe("searching");
-    expect(summary.value).toBe("codex monitor");
+    expect(summary.value).toBe("trantor");
   });
 
   it("renders mcp search calls as searching while in progress", () => {
@@ -29,13 +29,13 @@ describe("messageRenderUtils", () => {
       makeToolItem({
         toolType: "mcpToolCall",
         title: "Tool: web / search_query",
-        detail: '{\n  "query": "codex monitor"\n}',
+        detail: '{\n  "query": "trantor"\n}',
         status: "inProgress",
       }),
       "",
     );
     expect(summary.label).toBe("searching");
-    expect(summary.value).toBe("codex monitor");
+    expect(summary.value).toBe("trantor");
   });
 
   it("classifies camelCase inProgress as processing", () => {

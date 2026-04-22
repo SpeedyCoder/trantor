@@ -59,6 +59,7 @@ describe("useThreadCodexParams", () => {
     const { result } = renderHook(() => useThreadCodexParams());
 
     expect(result.current.getThreadCodexParams("ws-1", "thread-1")).toEqual({
+      harness: null,
       modelId: "gpt-4.1",
       effort: "medium",
       serviceTier: null,
@@ -127,6 +128,7 @@ describe("useThreadCodexParams", () => {
     });
 
     expect(result.current.getThreadCodexParams("ws-1", "thread-2")).toEqual({
+      harness: null,
       modelId: "gpt-5",
       effort: "low",
       serviceTier: "fast",

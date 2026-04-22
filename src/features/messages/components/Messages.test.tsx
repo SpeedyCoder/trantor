@@ -318,7 +318,7 @@ describe("Messages", () => {
 
   it("routes markdown href file paths through the file opener", () => {
     const linkedPath =
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx:244";
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx:244";
     const items: ConversationItem[] = [
       {
         id: "msg-file-href-link",
@@ -342,7 +342,7 @@ describe("Messages", () => {
     fireEvent.click(screen.getByText("this file"));
     expectOpenedFileTarget(
       openFileLinkMock,
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx",
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx",
       244,
     );
   });
@@ -400,7 +400,7 @@ describe("Messages", () => {
 
   it("routes absolute href file paths with #L anchors through the file opener", () => {
     const linkedPath =
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx#L244";
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx#L244";
     const items: ConversationItem[] = [
       {
         id: "msg-file-href-anchor-link",
@@ -424,14 +424,14 @@ describe("Messages", () => {
     fireEvent.click(screen.getByText("this file"));
     expectOpenedFileTarget(
       openFileLinkMock,
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx",
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx",
       244,
     );
   });
 
   it("routes Windows absolute href file paths with #L anchors through the file opener", () => {
     const linkedPath =
-      "I:\\gpt-projects\\CodexMonitor\\src\\features\\settings\\components\\sections\\SettingsDisplaySection.tsx#L422";
+      "I:\\gpt-projects\\Trantor\\src\\features\\settings\\components\\sections\\SettingsDisplaySection.tsx#L422";
     const items: ConversationItem[] = [
       {
         id: "msg-file-href-windows-anchor-link",
@@ -455,13 +455,13 @@ describe("Messages", () => {
     fireEvent.click(screen.getByText("settings display"));
     expectOpenedFileTarget(
       openFileLinkMock,
-      "I:\\gpt-projects\\CodexMonitor\\src\\features\\settings\\components\\sections\\SettingsDisplaySection.tsx",
+      "I:\\gpt-projects\\Trantor\\src\\features\\settings\\components\\sections\\SettingsDisplaySection.tsx",
       422,
     );
   });
 
   it("routes dotless workspace href file paths through the file opener", () => {
-    const linkedPath = "/workspace/CodexMonitor/LICENSE";
+    const linkedPath = "/workspace/Trantor/LICENSE";
     const items: ConversationItem[] = [
       {
         id: "msg-file-href-workspace-dotless-link",
@@ -649,9 +649,9 @@ describe("Messages", () => {
   });
 
   it("renders absolute file references as workspace-relative paths", () => {
-    const workspacePath = "/Users/dimillian/Documents/Dev/CodexMonitor";
+    const workspacePath = "/Users/dimillian/Documents/Dev/Trantor";
     const absolutePath =
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx:244";
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx:244";
     const items: ConversationItem[] = [
       {
         id: "msg-file-link-absolute-inside",
@@ -682,13 +682,13 @@ describe("Messages", () => {
     fireEvent.click(fileLink as Element);
     expectOpenedFileTarget(
       openFileLinkMock,
-      "/Users/dimillian/Documents/Dev/CodexMonitor/src/features/messages/components/Markdown.tsx",
+      "/Users/dimillian/Documents/Dev/Trantor/src/features/messages/components/Markdown.tsx",
       244,
     );
   });
 
   it("renders absolute file references outside workspace using dotdot-relative paths", () => {
-    const workspacePath = "/Users/dimillian/Documents/Dev/CodexMonitor";
+    const workspacePath = "/Users/dimillian/Documents/Dev/Trantor";
     const absolutePath = "/Users/dimillian/Documents/Other/IceCubesApp/file.rs:123";
     const items: ConversationItem[] = [
       {
