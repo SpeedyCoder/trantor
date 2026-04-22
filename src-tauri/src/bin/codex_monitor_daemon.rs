@@ -680,8 +680,13 @@ impl DaemonState {
         files_core::file_write_core(&self.workspaces, scope, kind, workspace_id, content).await
     }
 
-    async fn start_thread(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::start_thread_core(&self.sessions, &self.workspaces, workspace_id).await
+    async fn start_thread(
+        &self,
+        workspace_id: String,
+        model_id: Option<String>,
+    ) -> Result<Value, String> {
+        codex_core::start_thread_core(&self.sessions, &self.workspaces, workspace_id, model_id)
+            .await
     }
 
     async fn resume_thread(

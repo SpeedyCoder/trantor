@@ -1,5 +1,5 @@
 import { createPortal } from "react-dom";
-import type { MouseEvent, MutableRefObject, ReactNode } from "react";
+import type { MouseEvent, MutableRefObject } from "react";
 import Copy from "lucide-react/dist/esm/icons/copy";
 import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import Plus from "lucide-react/dist/esm/icons/plus";
@@ -15,7 +15,6 @@ import { ThreadLoading } from "./ThreadLoading";
 import { WorkspaceCard } from "./WorkspaceCard";
 import { WorkspaceGroup } from "./WorkspaceGroup";
 import { WorktreeSection } from "./WorktreeSection";
-import { getVisibleThreadListState } from "./threadSearchUtils";
 import type {
   SidebarWorkspaceAddMenuAnchor,
   ThreadRowsResult,
@@ -31,18 +30,12 @@ type SidebarWorkspaceGroupsProps = {
   cloneChildIds: Set<string>;
   clonesBySource: Map<string, WorkspaceInfo[]>;
   worktreesByParent: Map<string, WorkspaceInfo[]>;
-  workspaceVisibleDuringSearchById: Map<string, boolean>;
-  isSearchActive: boolean;
-  normalizedQuery: string;
-  renderHighlightedName: (name: string) => ReactNode;
-  isWorkspaceMatch: (workspace: WorkspaceInfo) => boolean;
   deletingWorktreeIds: Set<string>;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   threadStatusById: ThreadStatusById;
   threadListLoadingByWorkspace: Record<string, boolean>;
   threadListPagingByWorkspace: Record<string, boolean>;
   threadListCursorByWorkspace: Record<string, string | null>;
-  expandedWorkspaces: Set<string>;
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
   pendingUserInputKeys?: Set<string>;
@@ -79,7 +72,6 @@ type SidebarWorkspaceGroupsProps = {
   onShowWorkspaceMenu: (event: MouseEvent, workspaceId: string) => void;
   onShowWorktreeMenu: (event: MouseEvent, worktree: WorkspaceInfo) => void;
   onShowCloneMenu: (event: MouseEvent, worktree: WorkspaceInfo) => void;
-  onToggleExpanded: (workspaceId: string) => void;
   onLoadOlderThreads: (workspaceId: string) => void;
   onToggleAddMenu: (anchor: SidebarWorkspaceAddMenuAnchor | null) => void;
 };
@@ -100,18 +92,12 @@ function SidebarWorkspaceEntry({
   cloneChildIds,
   clonesBySource,
   worktreesByParent,
-  workspaceVisibleDuringSearchById,
-  isSearchActive,
-  normalizedQuery,
-  renderHighlightedName,
-  isWorkspaceMatch,
   deletingWorktreeIds,
   threadsByWorkspace,
   threadStatusById,
   threadListLoadingByWorkspace,
   threadListPagingByWorkspace,
   threadListCursorByWorkspace,
-  expandedWorkspaces,
   activeWorkspaceId,
   activeThreadId,
   pendingUserInputKeys,
@@ -137,7 +123,6 @@ function SidebarWorkspaceEntry({
   onShowWorkspaceMenu,
   onShowWorktreeMenu,
   onShowCloneMenu,
-  onToggleExpanded,
   onLoadOlderThreads,
   onToggleAddMenu,
 }: SidebarWorkspaceEntryProps) {
@@ -147,45 +132,20 @@ function SidebarWorkspaceEntry({
 
   const threads = threadsByWorkspace[workspace.id] ?? [];
   const isCollapsed = workspace.settings.sidebarCollapsed;
-  const isExpanded = expandedWorkspaces.has(workspace.id);
-  const workspaceMatchesSearch = isWorkspaceMatch(workspace);
-  const searchExpanded = isExpanded || isSearchActive;
-  const {
-    unpinnedRows,
-    totalRoots: totalThreadRoots,
-  } = getThreadRows(
+  const { unpinnedRows } = getThreadRows(
     threads,
-    searchExpanded,
+    true,
     workspace.id,
     getPinTimestamp,
     pinnedThreadsVersion,
   );
   const nextCursor = threadListCursorByWorkspace[workspace.id] ?? null;
-  const {
-    visibleRows: filteredThreadRows,
-    displayRootCount: displayThreadRootCount,
-  } = getVisibleThreadListState({
-    rows: unpinnedRows,
-    totalRoots: totalThreadRoots,
-    workspaceName: workspace.name,
-    query: normalizedQuery,
-    isSearchActive,
-  });
-  const showThreadList = filteredThreadRows.length > 0 || Boolean(nextCursor);
+  const showThreadList = unpinnedRows.length > 0 || Boolean(nextCursor);
   const isLoadingThreads = threadListLoadingByWorkspace[workspace.id] ?? false;
   const showThreadLoader = isLoadingThreads && threads.length === 0;
   const isPaging = threadListPagingByWorkspace[workspace.id] ?? false;
   const clones = clonesBySource.get(workspace.id) ?? [];
-  const visibleClones =
-    isSearchActive && !workspaceMatchesSearch
-      ? clones.filter((clone) => workspaceVisibleDuringSearchById.get(clone.id))
-      : clones;
-  const worktrees =
-    isSearchActive && !workspaceMatchesSearch
-      ? (worktreesByParent.get(workspace.id) ?? []).filter((worktree) =>
-          workspaceVisibleDuringSearchById.get(worktree.id),
-        )
-      : (worktreesByParent.get(workspace.id) ?? []);
+  const worktrees = worktreesByParent.get(workspace.id) ?? [];
   const addMenuOpen = addMenuAnchor?.workspaceId === workspace.id;
   const isDraftNewAgent = newAgentDraftWorkspaceId === workspace.id;
   const isDraftRowActive =
@@ -198,19 +158,10 @@ function SidebarWorkspaceEntry({
   return (
     <WorkspaceCard
       workspace={workspace}
-      workspaceName={renderHighlightedName(workspace.name)}
-      summary={
-        displayThreadRootCount > 0
-          ? `${displayThreadRootCount} conversation${
-              displayThreadRootCount === 1 ? "" : "s"
-            }${threads[0] ? ` · Updated ${getThreadTime(threads[0])}` : ""}`
-          : "No conversations yet"
-      }
-      isActive={workspace.id === activeWorkspaceId}
+      workspaceName={workspace.name}
       isCollapsed={isCollapsed}
       addMenuOpen={addMenuOpen}
       addMenuWidth={addMenuWidth}
-      onSelectWorkspace={onSelectWorkspace}
       onShowWorkspaceMenu={onShowWorkspaceMenu}
       onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
       onConnectWorkspace={onConnectWorkspace}
@@ -284,16 +235,15 @@ function SidebarWorkspaceEntry({
           </div>
         </div>
       )}
-      {visibleClones.length > 0 && (
+      {clones.length > 0 && (
         <WorktreeSection
-          worktrees={visibleClones}
+          worktrees={clones}
           deletingWorktreeIds={deletingWorktreeIds}
           threadsByWorkspace={threadsByWorkspace}
           threadStatusById={threadStatusById}
           threadListLoadingByWorkspace={threadListLoadingByWorkspace}
           threadListPagingByWorkspace={threadListPagingByWorkspace}
           threadListCursorByWorkspace={threadListCursorByWorkspace}
-          expandedWorkspaces={expandedWorkspaces}
           activeWorkspaceId={activeWorkspaceId}
           activeThreadId={activeThreadId}
           pendingUserInputKeys={pendingUserInputKeys}
@@ -309,10 +259,7 @@ function SidebarWorkspaceEntry({
           onSelectThread={onSelectThread}
           onShowThreadMenu={onShowThreadMenu}
           onShowWorktreeMenu={onShowCloneMenu}
-          onToggleExpanded={onToggleExpanded}
           onLoadOlderThreads={onLoadOlderThreads}
-          searchQuery={normalizedQuery}
-          isSearchActive={isSearchActive}
           sectionLabel="Clone agents"
           sectionIcon={<Copy className="worktree-header-icon" aria-hidden />}
           className="clone-section"
@@ -327,7 +274,6 @@ function SidebarWorkspaceEntry({
           threadListLoadingByWorkspace={threadListLoadingByWorkspace}
           threadListPagingByWorkspace={threadListPagingByWorkspace}
           threadListCursorByWorkspace={threadListCursorByWorkspace}
-          expandedWorkspaces={expandedWorkspaces}
           activeWorkspaceId={activeWorkspaceId}
           activeThreadId={activeThreadId}
           pendingUserInputKeys={pendingUserInputKeys}
@@ -343,20 +289,14 @@ function SidebarWorkspaceEntry({
           onSelectThread={onSelectThread}
           onShowThreadMenu={onShowThreadMenu}
           onShowWorktreeMenu={onShowWorktreeMenu}
-          onToggleExpanded={onToggleExpanded}
           onLoadOlderThreads={onLoadOlderThreads}
-          searchQuery={normalizedQuery}
-          isSearchActive={isSearchActive}
         />
       )}
       {showThreadList && (
         <ThreadList
           workspaceId={workspace.id}
           pinnedRows={[]}
-          unpinnedRows={filteredThreadRows}
-          totalThreadRoots={displayThreadRootCount}
-          isExpanded={searchExpanded}
-          showExpandToggle={!isSearchActive}
+          unpinnedRows={unpinnedRows}
           nextCursor={nextCursor}
           isPaging={isPaging}
           activeWorkspaceId={activeWorkspaceId}
@@ -366,7 +306,6 @@ function SidebarWorkspaceEntry({
           getThreadTime={getThreadTime}
           getThreadArgsBadge={getThreadArgsBadge}
           isThreadPinned={isThreadPinned}
-          onToggleExpanded={onToggleExpanded}
           onLoadOlderThreads={onLoadOlderThreads}
           onSelectThread={onSelectThread}
           onShowThreadMenu={onShowThreadMenu}

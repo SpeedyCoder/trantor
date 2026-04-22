@@ -170,6 +170,58 @@ function DiffFileRow({
   const showStage = section === "unstaged" && Boolean(onStageFile);
   const showUnstage = section === "staged" && Boolean(onUnstageFile);
   const showDiscard = section === "unstaged" && Boolean(onDiscardFile);
+  const counts = (
+    <span className="diff-counts-inline" aria-label={`+${file.additions} -${file.deletions}`}>
+      <span className="diff-add">+{file.additions}</span>
+      <span className="diff-sep">/</span>
+      <span className="diff-del">-{file.deletions}</span>
+    </span>
+  );
+  const stageAction = showStage ? (
+    <button
+      type="button"
+      className="diff-row-action diff-row-action--stage ds-tooltip-trigger"
+      onClick={(event) => {
+        event.stopPropagation();
+        void onStageFile?.(file.path);
+      }}
+      data-tooltip="Stage Changes"
+      data-tooltip-align="end"
+      aria-label="Stage file"
+    >
+      <Plus size={12} aria-hidden />
+    </button>
+  ) : null;
+  const unstageAction = showUnstage ? (
+    <button
+      type="button"
+      className="diff-row-action diff-row-action--unstage ds-tooltip-trigger"
+      onClick={(event) => {
+        event.stopPropagation();
+        void onUnstageFile?.(file.path);
+      }}
+      data-tooltip="Unstage Changes"
+      data-tooltip-align="end"
+      aria-label="Unstage file"
+    >
+      <Minus size={12} aria-hidden />
+    </button>
+  ) : null;
+  const discardAction = showDiscard ? (
+    <button
+      type="button"
+      className="diff-row-action diff-row-action--discard ds-tooltip-trigger"
+      onClick={(event) => {
+        event.stopPropagation();
+        void onDiscardFile?.(file.path);
+      }}
+      data-tooltip="Discard Changes"
+      data-tooltip-align="end"
+      aria-label="Discard changes"
+    >
+      <RotateCcw size={12} aria-hidden />
+    </button>
+  ) : null;
 
   return (
     <div
@@ -198,58 +250,26 @@ function DiffFileRow({
         {dir && <div className="diff-dir">{dir}</div>}
       </div>
       <div className="diff-row-meta">
-        <span className="diff-counts-inline" aria-label={`+${file.additions} -${file.deletions}`}>
-          <span className="diff-add">+{file.additions}</span>
-          <span className="diff-sep">/</span>
-          <span className="diff-del">-{file.deletions}</span>
-        </span>
-        <div className="diff-row-actions" role="group" aria-label="File actions">
-          {showStage && (
-            <button
-              type="button"
-              className="diff-row-action diff-row-action--stage ds-tooltip-trigger"
-              onClick={(event) => {
-                event.stopPropagation();
-                void onStageFile?.(file.path);
-              }}
-              data-tooltip="Stage Changes"
-              data-tooltip-align="end"
-              aria-label="Stage file"
+        {section === "unstaged" ? (
+          <>
+            <div
+              className="diff-row-actions diff-row-actions--key"
+              role="group"
+              aria-label="File actions"
             >
-              <Plus size={12} aria-hidden />
-            </button>
-          )}
-          {showUnstage && (
-            <button
-              type="button"
-              className="diff-row-action diff-row-action--unstage ds-tooltip-trigger"
-              onClick={(event) => {
-                event.stopPropagation();
-                void onUnstageFile?.(file.path);
-              }}
-              data-tooltip="Unstage Changes"
-              data-tooltip-align="end"
-              aria-label="Unstage file"
-            >
-              <Minus size={12} aria-hidden />
-            </button>
-          )}
-          {showDiscard && (
-            <button
-              type="button"
-              className="diff-row-action diff-row-action--discard ds-tooltip-trigger"
-              onClick={(event) => {
-                event.stopPropagation();
-                void onDiscardFile?.(file.path);
-              }}
-              data-tooltip="Discard Changes"
-              data-tooltip-align="end"
-              aria-label="Discard changes"
-            >
-              <RotateCcw size={12} aria-hidden />
-            </button>
-          )}
-        </div>
+              {discardAction}
+              {stageAction}
+            </div>
+            {counts}
+          </>
+        ) : (
+          <>
+            {counts}
+            <div className="diff-row-actions" role="group" aria-label="File actions">
+              {unstageAction}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

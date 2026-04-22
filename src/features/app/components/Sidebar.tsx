@@ -1,5 +1,4 @@
 import type {
-  AccountSnapshot,
   RequestUserInputRequest,
   ThreadListOrganizeMode,
   ThreadListSortKey,
@@ -11,16 +10,10 @@ import type { MouseEvent, RefObject } from "react";
 import { FolderOpen } from "lucide-react";
 import { SidebarBottomRail } from "./SidebarBottomRail";
 import { SidebarHeader } from "./SidebarHeader";
-import { SidebarSearchBar } from "./SidebarSearchBar";
 import { SidebarThreadsOnlySection } from "./SidebarThreadsOnlySection";
 import { SidebarWorkspaceGroups } from "./SidebarWorkspaceGroups";
 import { PinnedThreadList } from "./PinnedThreadList";
-import {
-  countRootRows,
-  splitRowsByRoot,
-  threadMatchesQuery,
-  workspaceMatchesQuery,
-} from "./threadSearchUtils";
+import { countRootRows, splitRowsByRoot } from "./threadRowUtils";
 import type {
   FlatThreadRootGroup,
   FlatThreadRow,
@@ -34,7 +27,6 @@ import { useMenuController } from "../hooks/useMenuController";
 import { useSidebarMenus } from "../hooks/useSidebarMenus";
 import { useSidebarScrollFade } from "../hooks/useSidebarScrollFade";
 import { useThreadRows } from "../hooks/useThreadRows";
-import { useDebouncedValue } from "../../../hooks/useDebouncedValue";
 import { formatRelativeTimeShort } from "../../../utils/time";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 
@@ -116,10 +108,6 @@ type SidebarProps = {
   activeWorkspaceId: string | null;
   activeThreadId: string | null;
   userInputRequests?: RequestUserInputRequest[];
-  accountInfo: AccountSnapshot | null;
-  onSwitchAccount: () => void;
-  onCancelSwitchAccount: () => void;
-  accountSwitching: boolean;
   onOpenSettings: () => void;
   onOpenDebug: () => void;
   showDebugButton: boolean;
@@ -175,15 +163,10 @@ export const Sidebar = memo(function Sidebar({
   activeWorkspaceId,
   activeThreadId,
   userInputRequests = [],
-  accountInfo,
-  onSwitchAccount,
-  onCancelSwitchAccount,
-  accountSwitching,
   onOpenSettings,
   onOpenDebug,
   showDebugButton,
   onAddWorkspace,
-  onSelectHome,
   onSelectWorkspace,
   onConnectWorkspace,
   onAddAgent,
@@ -211,11 +194,6 @@ export const Sidebar = memo(function Sidebar({
   onWorkspaceDragLeave,
   onWorkspaceDrop,
 }: SidebarProps) {
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState(
-    new Set<string>(),
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [addMenuAnchor, setAddMenuAnchor] =
     useState<SidebarWorkspaceAddMenuAnchor | null>(null);
   const [allThreadsAddMenuAnchor, setAllThreadsAddMenuAnchor] =
@@ -247,9 +225,6 @@ export const Sidebar = memo(function Sidebar({
       onDeleteWorkspace,
       onDeleteWorktree,
     });
-  const debouncedQuery = useDebouncedValue(searchQuery, 150);
-  const normalizedQuery = debouncedQuery.trim().toLowerCase();
-  const isSearchActive = Boolean(normalizedQuery);
   const pendingUserInputKeys = useMemo(
     () =>
       new Set(
@@ -264,92 +239,6 @@ export const Sidebar = memo(function Sidebar({
     [userInputRequests],
   );
 
-  const isWorkspaceMatch = useCallback(
-    (workspace: WorkspaceInfo) => {
-      return workspaceMatchesQuery(workspace.name, normalizedQuery);
-    },
-    [normalizedQuery],
-  );
-  const workspaceHasMatchingThreadById = useMemo(() => {
-    if (!isSearchActive) {
-      return new Map<string, boolean>();
-    }
-
-    const result = new Map<string, boolean>();
-    workspaces.forEach((workspace) => {
-      const threads = threadsByWorkspace[workspace.id] ?? [];
-      result.set(
-        workspace.id,
-        threads.some((thread) => threadMatchesQuery(thread, workspace.name, normalizedQuery)),
-      );
-    });
-    return result;
-  }, [isSearchActive, normalizedQuery, threadsByWorkspace, workspaces]);
-  const workspaceVisibleDuringSearchById = useMemo(() => {
-    if (!isSearchActive) {
-      return new Map<string, boolean>();
-    }
-
-    const result = new Map<string, boolean>();
-    workspaces.forEach((workspace) => {
-      result.set(
-        workspace.id,
-        isWorkspaceMatch(workspace) ||
-          Boolean(workspaceHasMatchingThreadById.get(workspace.id)) ||
-          Boolean(threadListCursorByWorkspace[workspace.id]),
-      );
-    });
-    return result;
-  }, [
-    isSearchActive,
-    isWorkspaceMatch,
-    workspaceHasMatchingThreadById,
-    threadListCursorByWorkspace,
-    workspaces,
-  ]);
-
-  const renderHighlightedName = useCallback(
-    (name: string) => {
-      if (!normalizedQuery) {
-        return name;
-      }
-      const lower = name.toLowerCase();
-      const parts: React.ReactNode[] = [];
-      let cursor = 0;
-      let matchIndex = lower.indexOf(normalizedQuery, cursor);
-
-      while (matchIndex !== -1) {
-        if (matchIndex > cursor) {
-          parts.push(name.slice(cursor, matchIndex));
-        }
-        parts.push(
-          <span key={`${matchIndex}-${cursor}`} className="workspace-name-match">
-            {name.slice(matchIndex, matchIndex + normalizedQuery.length)}
-          </span>,
-        );
-        cursor = matchIndex + normalizedQuery.length;
-        matchIndex = lower.indexOf(normalizedQuery, cursor);
-      }
-
-      if (cursor < name.length) {
-        parts.push(name.slice(cursor));
-      }
-
-      return parts.length ? parts : name;
-    },
-    [normalizedQuery],
-  );
-
-  const accountEmail = accountInfo?.email?.trim() ?? "";
-  const accountButtonLabel = accountEmail
-    ? accountEmail
-    : accountInfo?.type === "apikey"
-      ? "API key"
-      : "Sign in to Codex";
-  const accountActionLabel = accountEmail ? "Switch account" : "Sign in";
-  const showAccountSwitcher = Boolean(activeWorkspaceId);
-  const accountSwitchDisabled = accountSwitching || !activeWorkspaceId;
-  const accountCancelDisabled = !accountSwitching || !activeWorkspaceId;
   const refreshDisabled = workspaces.length === 0 || workspaces.every((workspace) => !workspace.connected);
   const refreshInProgress = workspaces.some(
     (workspace) => threadListLoadingByWorkspace[workspace.id] ?? false,
@@ -365,13 +254,6 @@ export const Sidebar = memo(function Sidebar({
     }> = [];
 
     workspaces.forEach((workspace) => {
-      if (
-        isSearchActive &&
-        !isWorkspaceMatch(workspace) &&
-        !workspaceHasMatchingThreadById.get(workspace.id)
-      ) {
-        return;
-      }
       const threads = threadsByWorkspace[workspace.id] ?? [];
       if (!threads.length) {
         return;
@@ -402,13 +284,6 @@ export const Sidebar = memo(function Sidebar({
 
     return groups
       .sort((a, b) => a.pinTime - b.pinTime)
-      .filter((group) =>
-        normalizedQuery
-          ? group.rows.some((row) =>
-              threadMatchesQuery(row.thread, group.workspaceName, normalizedQuery),
-            )
-          : true,
-      )
       .flatMap((group) =>
         group.rows.map((row) => ({
           ...row,
@@ -421,66 +296,7 @@ export const Sidebar = memo(function Sidebar({
     getThreadRows,
     getPinTimestamp,
     pinnedThreadsVersion,
-    isSearchActive,
-    isWorkspaceMatch,
-    normalizedQuery,
-    workspaceHasMatchingThreadById,
   ]);
-
-  const { cloneSourceIdsMatchingQuery, worktreeParentIdsMatchingQuery } = useMemo(() => {
-    const cloneSourceIds = new Set<string>();
-    const worktreeParentIds = new Set<string>();
-    if (!isSearchActive) {
-      return {
-        cloneSourceIdsMatchingQuery: cloneSourceIds,
-        worktreeParentIdsMatchingQuery: worktreeParentIds,
-      };
-    }
-
-    workspaces.forEach((workspace) => {
-      if (!workspaceVisibleDuringSearchById.get(workspace.id)) {
-        return;
-      }
-
-      const sourceId = workspace.settings.cloneSourceWorkspaceId?.trim();
-      if (sourceId) {
-        cloneSourceIds.add(sourceId);
-      }
-
-      const parentId = workspace.parentId?.trim();
-      if ((workspace.kind ?? "main") === "worktree" && parentId) {
-        worktreeParentIds.add(parentId);
-      }
-    });
-
-    return {
-      cloneSourceIdsMatchingQuery: cloneSourceIds,
-      worktreeParentIdsMatchingQuery: worktreeParentIds,
-    };
-  }, [isSearchActive, workspaceVisibleDuringSearchById, workspaces]);
-
-  const filteredGroupedWorkspaces = useMemo(
-    () =>
-      groupedWorkspaces
-        .map((group) => ({
-          ...group,
-          workspaces: group.workspaces.filter(
-            (workspace) =>
-              !isSearchActive ||
-              workspaceVisibleDuringSearchById.get(workspace.id) ||
-              cloneSourceIdsMatchingQuery.has(workspace.id) ||
-              worktreeParentIdsMatchingQuery.has(workspace.id),
-          ),
-        }))
-        .filter((group) => group.workspaces.length > 0),
-    [
-      cloneSourceIdsMatchingQuery,
-      groupedWorkspaces,
-      isSearchActive,
-      worktreeParentIdsMatchingQuery,
-      workspaceVisibleDuringSearchById,
-    ],
-  );
 
   const getSortTimestamp = useCallback(
     (thread: ThreadSummary | undefined) => {
@@ -521,15 +337,10 @@ export const Sidebar = memo(function Sidebar({
         cloneWorkspacesBySourceId.set(sourceId, list);
       });
 
-    filteredGroupedWorkspaces.forEach((group) => {
+    groupedWorkspaces.forEach((group) => {
       group.workspaces.forEach((workspace) => {
         const rootThreads = threadsByWorkspace[workspace.id] ?? [];
-        const visibleClones =
-          normalizedQuery && !isWorkspaceMatch(workspace)
-            ? (cloneWorkspacesBySourceId.get(workspace.id) ?? []).filter((clone) =>
-                workspaceVisibleDuringSearchById.get(clone.id),
-              )
-            : (cloneWorkspacesBySourceId.get(workspace.id) ?? []);
+        const visibleClones = cloneWorkspacesBySourceId.get(workspace.id) ?? [];
         let hasThreads = rootThreads.length > 0;
         let timestamp = getSortTimestamp(rootThreads[0]);
 
@@ -550,20 +361,17 @@ export const Sidebar = memo(function Sidebar({
     });
     return activityById;
   }, [
-    filteredGroupedWorkspaces,
     getSortTimestamp,
-    isWorkspaceMatch,
-    normalizedQuery,
+    groupedWorkspaces,
     threadsByWorkspace,
-    workspaceVisibleDuringSearchById,
     workspaces,
   ]);
 
   const sortedGroupedWorkspaces = useMemo(() => {
     if (threadListOrganizeMode !== "by_project_activity") {
-      return filteredGroupedWorkspaces;
+      return groupedWorkspaces;
     }
-    return filteredGroupedWorkspaces.map((group) => ({
+    return groupedWorkspaces.map((group) => ({
       ...group,
       workspaces: group.workspaces.slice().sort((a, b) => {
         const aActivity = workspaceActivityById.get(a.id) ?? {
@@ -584,7 +392,7 @@ export const Sidebar = memo(function Sidebar({
         return a.name.localeCompare(b.name);
       }),
     }));
-  }, [filteredGroupedWorkspaces, threadListOrganizeMode, workspaceActivityById]);
+  }, [groupedWorkspaces, threadListOrganizeMode, workspaceActivityById]);
 
   const flatThreadRootGroups = useMemo(() => {
     if (threadListOrganizeMode !== "threads_only") {
@@ -593,7 +401,7 @@ export const Sidebar = memo(function Sidebar({
 
     const rootGroups: FlatThreadRootGroup[] = [];
 
-    filteredGroupedWorkspaces.forEach((group) => {
+    groupedWorkspaces.forEach((group) => {
       group.workspaces.forEach((workspace) => {
         const threads = threadsByWorkspace[workspace.id] ?? [];
         if (!threads.length) {
@@ -626,31 +434,22 @@ export const Sidebar = memo(function Sidebar({
       });
     });
 
-    return rootGroups
-      .sort((a, b) => {
-        const timestampDiff = b.rootTimestamp - a.rootTimestamp;
-        if (timestampDiff !== 0) {
-          return timestampDiff;
-        }
-        const workspaceNameDiff = a.workspaceName.localeCompare(b.workspaceName);
-        if (workspaceNameDiff !== 0) {
-          return workspaceNameDiff;
-        }
-        return a.rootIndex - b.rootIndex;
-      })
-      .filter((group) =>
-        normalizedQuery
-          ? group.rows.some((row) =>
-              threadMatchesQuery(row.thread, row.workspaceName, normalizedQuery),
-            )
-          : true,
-      );
+    return rootGroups.sort((a, b) => {
+      const timestampDiff = b.rootTimestamp - a.rootTimestamp;
+      if (timestampDiff !== 0) {
+        return timestampDiff;
+      }
+      const workspaceNameDiff = a.workspaceName.localeCompare(b.workspaceName);
+      if (workspaceNameDiff !== 0) {
+        return workspaceNameDiff;
+      }
+      return a.rootIndex - b.rootIndex;
+    });
   }, [
-    filteredGroupedWorkspaces,
+    groupedWorkspaces,
     getPinTimestamp,
     getSortTimestamp,
     getThreadRows,
-    normalizedQuery,
     pinnedThreadsVersion,
     threadListOrganizeMode,
     threadsByWorkspace,
@@ -669,16 +468,12 @@ export const Sidebar = memo(function Sidebar({
       sortedGroupedWorkspaces,
       flatThreadRows,
       threadsByWorkspace,
-      expandedWorkspaces,
-      normalizedQuery,
       threadListOrganizeMode,
     ],
     [
       sortedGroupedWorkspaces,
       flatThreadRows,
       threadsByWorkspace,
-      expandedWorkspaces,
-      normalizedQuery,
       threadListOrganizeMode,
     ],
   );
@@ -700,7 +495,7 @@ export const Sidebar = memo(function Sidebar({
   const groupedWorkspacesForRender =
     threadListOrganizeMode === "by_project_activity"
       ? sortedGroupedWorkspaces
-      : filteredGroupedWorkspaces;
+      : groupedWorkspaces;
   const isThreadsOnlyMode = threadListOrganizeMode === "threads_only";
 
   const handleAllThreadsAddMenuToggle = useCallback(
@@ -796,18 +591,6 @@ export const Sidebar = memo(function Sidebar({
     return projects;
   }, [cloneChildIds, groupedWorkspacesForRender]);
 
-  const handleToggleExpanded = useCallback((workspaceId: string) => {
-    setExpandedWorkspaces((prev) => {
-      const next = new Set(prev);
-      if (next.has(workspaceId)) {
-        next.delete(workspaceId);
-      } else {
-        next.add(workspaceId);
-      }
-      return next;
-    });
-  }, []);
-
   const getThreadTime = useCallback(
     (thread: ThreadSummary) => {
       const timestamp = thread.updatedAt ?? null;
@@ -843,15 +626,9 @@ export const Sidebar = memo(function Sidebar({
     };
   }, [allThreadsAddMenuAnchor]);
 
-  useEffect(() => {
-    if (!isSearchOpen && searchQuery) {
-      setSearchQuery("");
-    }
-  }, [isSearchOpen, searchQuery]);
-
   return (
     <aside
-      className={`sidebar${isSearchOpen ? " search-open" : ""}`}
+      className="sidebar"
       ref={workspaceDropTargetRef}
       onDragOver={onWorkspaceDragOver}
       onDragEnter={onWorkspaceDragEnter}
@@ -860,10 +637,7 @@ export const Sidebar = memo(function Sidebar({
     >
       <div className="sidebar-drag-strip" />
       <SidebarHeader
-        onSelectHome={onSelectHome}
         onAddWorkspace={onAddWorkspace}
-        onToggleSearch={() => setIsSearchOpen((prev) => !prev)}
-        isSearchOpen={isSearchOpen}
         threadListSortKey={threadListSortKey}
         onSetThreadListSortKey={onSetThreadListSortKey}
         threadListOrganizeMode={threadListOrganizeMode}
@@ -871,12 +645,6 @@ export const Sidebar = memo(function Sidebar({
         onRefreshAllThreads={onRefreshAllThreads}
         refreshDisabled={refreshDisabled || refreshInProgress}
         refreshInProgress={refreshInProgress}
-      />
-      <SidebarSearchBar
-        isSearchOpen={isSearchOpen}
-        searchQuery={searchQuery}
-        onSearchQueryChange={setSearchQuery}
-        onClearSearch={() => setSearchQuery("")}
       />
       <div
         className={`workspace-drop-overlay${
@@ -956,18 +724,12 @@ export const Sidebar = memo(function Sidebar({
                   cloneChildIds={cloneChildIds}
                   clonesBySource={clonesBySource}
                   worktreesByParent={worktreesByParent}
-                  workspaceVisibleDuringSearchById={workspaceVisibleDuringSearchById}
-                  isSearchActive={isSearchActive}
-                  normalizedQuery={normalizedQuery}
-                  renderHighlightedName={renderHighlightedName}
-                  isWorkspaceMatch={isWorkspaceMatch}
                   deletingWorktreeIds={deletingWorktreeIds}
                   threadsByWorkspace={threadsByWorkspace}
                   threadStatusById={threadStatusById}
                   threadListLoadingByWorkspace={threadListLoadingByWorkspace}
                   threadListPagingByWorkspace={threadListPagingByWorkspace}
                   threadListCursorByWorkspace={threadListCursorByWorkspace}
-                  expandedWorkspaces={expandedWorkspaces}
                   activeWorkspaceId={activeWorkspaceId}
                   activeThreadId={activeThreadId}
                   pendingUserInputKeys={pendingUserInputKeys}
@@ -993,17 +755,12 @@ export const Sidebar = memo(function Sidebar({
                   onShowWorkspaceMenu={showWorkspaceMenu}
                   onShowWorktreeMenu={showWorktreeMenu}
                   onShowCloneMenu={showCloneMenu}
-                  onToggleExpanded={handleToggleExpanded}
                   onLoadOlderThreads={onLoadOlderThreads}
                   onToggleAddMenu={setAddMenuAnchor}
                 />
               )}
           {!groupedWorkspacesForRender.length && (
-            <div className="empty">
-              {isSearchActive
-                ? "No conversations match your search."
-                : "Add a workspace to start."}
-            </div>
+            <div className="empty">Add a workspace to start.</div>
           )}
           {isThreadsOnlyMode &&
             groupedWorkspacesForRender.length > 0 &&
@@ -1017,14 +774,6 @@ export const Sidebar = memo(function Sidebar({
         onOpenSettings={onOpenSettings}
         onOpenDebug={onOpenDebug}
         showDebugButton={showDebugButton}
-        showAccountSwitcher={showAccountSwitcher}
-        accountLabel={accountButtonLabel}
-        accountActionLabel={accountActionLabel}
-        accountDisabled={accountSwitchDisabled}
-        accountSwitching={accountSwitching}
-        accountCancelDisabled={accountCancelDisabled}
-        onSwitchAccount={onSwitchAccount}
-        onCancelSwitchAccount={onCancelSwitchAccount}
       />
     </aside>
   );

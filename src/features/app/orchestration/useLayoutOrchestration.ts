@@ -64,7 +64,7 @@ export function useAppShellOrchestration({
       "--ui-font-family": appSettings.uiFontFamily,
       "--code-font-family": appSettings.codeFontFamily,
       "--code-font-size": `${appSettings.codeFontSize}px`,
-      "--sidebar-top-padding": isWindows ? "10px" : "36px",
+      "--sidebar-top-padding": "10px",
       "--right-panel-top-padding": isWindows
         ? "calc(var(--main-topbar-height, 44px) + 6px)"
         : "12px",

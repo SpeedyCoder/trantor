@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import type { WorkspaceInfo } from "@/types";
-import { useLocalUsage } from "@/features/home/hooks/useLocalUsage";
 
 type ThreadSummary = {
   id: string;
@@ -19,9 +18,7 @@ type ThreadStatus = {
 
 type UseWorkspaceInsightsOrchestrationOptions = {
   workspaces: WorkspaceInfo[];
-  workspacesById: Map<string, WorkspaceInfo>;
   hasLoaded: boolean;
-  showHome: boolean;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
   lastAgentMessageByThread: Record<string, LastAgentMessage | undefined>;
   threadStatusById: Record<string, ThreadStatus | undefined>;
@@ -40,9 +37,7 @@ type UseWorkspaceOrderingOrchestrationOptions = {
 
 export function useWorkspaceInsightsOrchestration({
   workspaces,
-  workspacesById,
   hasLoaded,
-  showHome,
   threadsByWorkspace,
   lastAgentMessageByThread,
   threadStatusById,
@@ -94,55 +89,9 @@ export function useWorkspaceInsightsOrchestration({
     [hasLoaded, threadListLoadingByWorkspace, workspaces],
   );
 
-  const [usageMetric, setUsageMetric] = useState<"tokens" | "time">("tokens");
-  const [usageWorkspaceId, setUsageWorkspaceId] = useState<string | null>(null);
-
-  const usageWorkspaceOptions = useMemo(
-    () =>
-      workspaces.map((workspace) => {
-        const groupName = getWorkspaceGroupName(workspace.id);
-        const label = groupName ? `${groupName} / ${workspace.name}` : workspace.name;
-        return { id: workspace.id, label };
-      }),
-    [getWorkspaceGroupName, workspaces],
-  );
-
-  const usageWorkspacePath = useMemo(() => {
-    if (!usageWorkspaceId) {
-      return null;
-    }
-    return workspacesById.get(usageWorkspaceId)?.path ?? null;
-  }, [usageWorkspaceId, workspacesById]);
-
-  useEffect(() => {
-    if (!usageWorkspaceId) {
-      return;
-    }
-    if (workspaces.some((workspace) => workspace.id === usageWorkspaceId)) {
-      return;
-    }
-    setUsageWorkspaceId(null);
-  }, [usageWorkspaceId, workspaces]);
-
-  const {
-    snapshot: localUsageSnapshot,
-    isLoading: isLoadingLocalUsage,
-    error: localUsageError,
-    refresh: refreshLocalUsage,
-  } = useLocalUsage(showHome, usageWorkspacePath);
-
   return {
     latestAgentRuns,
     isLoadingLatestAgents,
-    usageMetric,
-    setUsageMetric,
-    usageWorkspaceId,
-    setUsageWorkspaceId,
-    usageWorkspaceOptions,
-    localUsageSnapshot,
-    isLoadingLocalUsage,
-    localUsageError,
-    refreshLocalUsage,
   };
 }
 

@@ -17,7 +17,7 @@ export function HomeActions({
         <span className="home-icon" aria-hidden>
           +
         </span>
-        Add Workspaces
+        Add Project
       </button>
       <button
         className="home-button secondary home-add-workspace-from-url-button"
@@ -27,7 +27,7 @@ export function HomeActions({
         <span className="home-icon" aria-hidden>
           ⤓
         </span>
-        Add Workspace from URL
+        Add Project from URL
       </button>
     </div>
   );

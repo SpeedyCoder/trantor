@@ -130,7 +130,7 @@ export function useWorkspaceActions({
           label: "workspace/add-from-url error",
           payload: message,
         });
-        alert(`Failed to import workspace from URL.
+        alert(`Failed to import project from URL.
 
 ${message}`);
         throw error;

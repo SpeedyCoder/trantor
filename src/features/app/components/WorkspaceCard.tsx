@@ -1,16 +1,15 @@
 import type { MouseEvent } from "react";
+import Folder from "lucide-react/dist/esm/icons/folder";
+import FolderOpen from "lucide-react/dist/esm/icons/folder-open";
 
 import type { WorkspaceInfo } from "../../../types";
 
 type WorkspaceCardProps = {
   workspace: WorkspaceInfo;
   workspaceName?: React.ReactNode;
-  summary?: string | null;
-  isActive: boolean;
   isCollapsed: boolean;
   addMenuOpen: boolean;
   addMenuWidth: number;
-  onSelectWorkspace: (id: string) => void;
   onShowWorkspaceMenu: (event: MouseEvent, workspaceId: string) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
@@ -26,12 +25,9 @@ type WorkspaceCardProps = {
 export function WorkspaceCard({
   workspace,
   workspaceName,
-  summary = null,
-  isActive,
   isCollapsed,
   addMenuOpen,
   addMenuWidth,
-  onSelectWorkspace,
   onShowWorkspaceMenu,
   onToggleWorkspaceCollapse,
   onConnectWorkspace,
@@ -39,41 +35,36 @@ export function WorkspaceCard({
   children,
 }: WorkspaceCardProps) {
   const contentCollapsedClass = isCollapsed ? " collapsed" : "";
+  const FolderIcon = isCollapsed ? Folder : FolderOpen;
 
   return (
     <div className="workspace-card">
       <div
-        className={`workspace-row ${isActive ? "active" : ""}`}
+        className="workspace-row"
         role="button"
         tabIndex={0}
-        onClick={() => onSelectWorkspace(workspace.id)}
+        onClick={() => onToggleWorkspaceCollapse(workspace.id, !isCollapsed)}
         onContextMenu={(event) => onShowWorkspaceMenu(event, workspace.id)}
+        aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${workspace.name}`}
+        aria-expanded={!isCollapsed}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
-            onSelectWorkspace(workspace.id);
+            onToggleWorkspaceCollapse(workspace.id, !isCollapsed);
           }
         }}
       >
         <div className="workspace-copy">
           <div className="workspace-name-row">
             <div className="workspace-title">
+              <span className="workspace-folder-icon-frame" aria-hidden>
+                <FolderIcon
+                  className={`workspace-folder-icon${isCollapsed ? "" : " is-open"}`}
+                />
+              </span>
               <span className="workspace-name">{workspaceName ?? workspace.name}</span>
-              <button
-                className={`workspace-toggle ${isCollapsed ? "" : "expanded"}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleWorkspaceCollapse(workspace.id, !isCollapsed);
-                }}
-                data-tauri-drag-region="false"
-                aria-label={isCollapsed ? "Show agents" : "Hide agents"}
-                aria-expanded={!isCollapsed}
-              >
-                <span className="workspace-toggle-icon">›</span>
-              </button>
             </div>
           </div>
-          {summary && <div className="workspace-summary">{summary}</div>}
         </div>
         <div className="workspace-actions">
           <button

@@ -948,7 +948,7 @@
 .content-layer {
   position: absolute;
   inset: 0;
-  top: var(--main-topbar-height);
+  top: var(--main-content-top-offset, var(--main-topbar-height));
   display: flex;
   min-height: 0;
   min-width: 0;
@@ -956,7 +956,7 @@
 }
 
 .content-layer-split {
-  top: var(--main-topbar-height);
+  top: var(--main-content-top-offset, var(--main-topbar-height));
   bottom: 0;
 }
 
@@ -973,7 +973,7 @@
 
 .content-split-resizer {
   position: absolute;
-  top: var(--main-topbar-height);
+  top: var(--main-content-top-offset, var(--main-topbar-height));
   bottom: 0;
   left: calc(var(--chat-diff-split-position-percent, 50%) - 4px);
   width: 8px;

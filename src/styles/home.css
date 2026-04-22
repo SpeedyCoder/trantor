@@ -567,9 +567,7 @@
   position: relative;
   padding: 14px 14px 16px;
   border-radius: 16px;
-  background:
-    linear-gradient(135deg, rgba(100, 200, 255, 0.12), transparent 60%),
-    var(--surface-card);
+  background: var(--surface-card);
   border: 1px solid var(--border-subtle);
   box-shadow: none;
   overflow: hidden;
@@ -841,6 +839,12 @@
   color: inherit;
   border: 1px solid var(--border-strong);
   box-shadow: none;
+}
+
+.home-actions .home-button:hover:not(:disabled) {
+  background: var(--surface-card-strong);
+  color: var(--text-stronger);
+  border-color: var(--border-strong);
 }
 
 .home-actions .home-button:disabled {

@@ -245,7 +245,7 @@ export function GitDiffModeContent({
         </div>
       )}
       {showGenerateCommitMessage && (
-        <div className="commit-message-section">
+        <>
           <div className="commit-message-input-wrapper">
             <textarea
               className="commit-message-input"
@@ -285,7 +285,7 @@ export function GitDiffModeContent({
             commitLoading={commitLoading}
             onCommit={onCommit}
           />
-        </div>
+        </>
       )}
       {(commitsAhead > 0 || commitsBehind > 0) && !stagedFiles.length && (
         <div className="push-section">
