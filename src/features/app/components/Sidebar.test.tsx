@@ -329,7 +329,7 @@ describe("Sidebar", () => {
       />,
     );
 
-    expect(screen.getByText("Worktrees")).toBeTruthy();
+    expect(screen.queryByText("Worktrees")).toBeNull();
     expect(screen.getByText("Feature Branch")).toBeTruthy();
     expect(container.querySelectorAll(".workspace-row")).toHaveLength(1);
     expect(container.querySelectorAll(".worktree-row")).toHaveLength(1);
