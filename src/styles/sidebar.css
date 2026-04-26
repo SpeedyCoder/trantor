@@ -1192,10 +1192,11 @@
 }
 
 .worktree-section {
-  margin-top: 10px;
+  margin-top: 0;
+  margin-left: 17px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
 }
 
 .clone-section {
@@ -1203,68 +1204,17 @@
   gap: 8px;
 }
 
-.worktree-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 0 4px;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  color: var(--text-strong);
-}
-
-.worktree-header-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.worktree-header-icon-wrap {
-  width: 20px;
-  height: 20px;
-  border-radius: 999px;
-  background: var(--cm-surface-panel-quiet);
-  border: 1px solid var(--cm-border-default);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.worktree-header-icon {
-  width: 12px;
-  height: 12px;
-  color: var(--text-faint);
-}
-
-.worktree-header-count {
-  min-width: 22px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--cm-surface-panel-quiet);
-  border: 1px solid var(--cm-border-default);
-  color: var(--text-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  line-height: 1;
-}
-
 .worktree-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 3px;
 }
 
 .worktree-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 2px;
+  overflow-x: hidden;
 }
 
 .worktree-card-content {
@@ -1301,26 +1251,22 @@
 .worktree-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  background: var(--cm-surface-row);
-  border: 1px solid transparent;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
   color: inherit;
   text-align: left;
   cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
   -webkit-app-region: no-drag;
   overflow-x: hidden;
   position: relative;
-  isolation: isolate;
 }
 
 .worktree-row.active {
-  background: color-mix(in srgb, var(--surface-active) 96%, transparent);
-  border-color: color-mix(in srgb, var(--border-accent) 42%, transparent);
+  background: transparent;
 }
 
 .worktree-row.deleting {
@@ -1328,35 +1274,43 @@
 }
 
 .worktree-row:hover {
-  background: color-mix(in srgb, var(--cm-surface-panel-hover) 76%, white);
-  border-color: var(--cm-border-default);
-  color: var(--text-stronger);
-  box-shadow: none;
-  transform: none;
+  background: transparent;
 }
 
 .worktree-row.deleting:hover {
-  background: var(--surface-card-muted);
-  box-shadow: none;
-  transform: none;
+  background: transparent;
+}
+
+.worktree-row.active:hover {
+  background: transparent;
 }
 
 .worktree-copy {
   min-width: 0;
+  padding-right: 2px;
+  align-self: center;
 }
 
 .worktree-label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
-  color: var(--text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.worktree-row:hover .worktree-label,
+.worktree-row:hover .worktree-meta {
+  color: var(--text-stronger);
+}
+
+.worktree-row.active .worktree-label {
+  color: var(--text-strong);
+}
+
 .worktree-meta {
-  margin-top: 4px;
+  margin-top: 2px;
   font-size: 10px;
   line-height: 1.2;
   color: var(--text-muted);

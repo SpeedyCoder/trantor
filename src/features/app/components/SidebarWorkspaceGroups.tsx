@@ -3,10 +3,9 @@ import type { MouseEvent } from "react";
 import type { WorkspaceInfo } from "../../../types";
 import { WorkspaceCard } from "./WorkspaceCard";
 import { WorktreeSection } from "./WorktreeSection";
-import type { WorkspaceGroupSection } from "./sidebarTypes";
 
 type SidebarWorkspaceGroupsProps = {
-  groups: WorkspaceGroupSection[];
+  workspaces: WorkspaceInfo[];
   worktreesByParent: Map<string, WorkspaceInfo[]>;
   deletingWorktreeIds: Set<string>;
   activeWorkspaceId: string | null;
@@ -20,7 +19,7 @@ type SidebarWorkspaceGroupsProps = {
 
 type SidebarWorkspaceEntryProps = Omit<
   SidebarWorkspaceGroupsProps,
-  "groups"
+  "workspaces"
 > & {
   workspace: WorkspaceInfo;
 };
@@ -67,16 +66,12 @@ function SidebarWorkspaceEntry({
 }
 
 export function SidebarWorkspaceGroups({
-  groups,
+  workspaces,
   ...entryProps
 }: SidebarWorkspaceGroupsProps) {
-  const visibleWorkspaces = groups.flatMap((group) =>
-    group.workspaces.filter((workspace) => (workspace.kind ?? "main") === "main"),
-  );
-
   return (
     <>
-      {visibleWorkspaces.map((workspace) => (
+      {workspaces.map((workspace) => (
         <SidebarWorkspaceEntry key={workspace.id} workspace={workspace} {...entryProps} />
       ))}
     </>

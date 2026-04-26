@@ -1,5 +1,4 @@
-import Layers from "lucide-react/dist/esm/icons/layers";
-import type { MouseEvent, ReactNode } from "react";
+import type { MouseEvent } from "react";
 
 import type { WorkspaceInfo } from "../../../types";
 import { WorktreeCard } from "./WorktreeCard";
@@ -11,8 +10,6 @@ type WorktreeSectionProps = {
   onSelectWorkspace: (id: string) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
   onShowWorktreeMenu: (event: MouseEvent, worktree: WorkspaceInfo) => void;
-  sectionLabel?: string;
-  sectionIcon?: ReactNode;
   className?: string;
 };
 
@@ -23,8 +20,6 @@ export function WorktreeSection({
   onSelectWorkspace,
   onConnectWorkspace,
   onShowWorktreeMenu,
-  sectionLabel = "Worktrees",
-  sectionIcon,
   className,
 }: WorktreeSectionProps) {
   if (!worktrees.length) {
@@ -33,15 +28,6 @@ export function WorktreeSection({
 
   return (
     <div className={`worktree-section${className ? ` ${className}` : ""}`}>
-      <div className="worktree-header">
-        <span className="worktree-header-title">
-          <span className="worktree-header-icon-wrap">
-            {sectionIcon ?? <Layers className="worktree-header-icon" aria-hidden />}
-          </span>
-          <span>{sectionLabel}</span>
-        </span>
-        <span className="worktree-header-count">{worktrees.length}</span>
-      </div>
       <div className="worktree-list">
         {worktrees.map((worktree) => (
           <WorktreeCard

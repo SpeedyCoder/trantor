@@ -173,6 +173,13 @@ export const Sidebar = memo(function Sidebar({
   const showEmptyState = groupedWorkspacesForRender.every(
     (group) => group.workspaces.filter((workspace) => (workspace.kind ?? "main") === "main").length === 0,
   );
+  const sidebarWorkspacesForRender = useMemo(
+    () =>
+      groupedWorkspacesForRender.flatMap((group) =>
+        group.workspaces.filter((workspace) => (workspace.kind ?? "main") === "main"),
+      ),
+    [groupedWorkspacesForRender],
+  );
 
   return (
     <aside
@@ -218,7 +225,7 @@ export const Sidebar = memo(function Sidebar({
       >
         <div className="workspace-list">
           <SidebarWorkspaceGroups
-            groups={groupedWorkspacesForRender}
+            workspaces={sidebarWorkspacesForRender}
             worktreesByParent={worktreesByParent}
             deletingWorktreeIds={deletingWorktreeIds}
             activeWorkspaceId={activeWorkspaceId}
