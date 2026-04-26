@@ -248,27 +248,103 @@ export const Sidebar = memo(function Sidebar({
         ref={sidebarBodyRef}
       >
         <div className="workspace-list">
-          <SidebarWorkspaceGroups
-            groups={groupedWorkspacesForRender}
-            hasWorkspaceGroups={hasWorkspaceGroups}
-            collapsedGroups={collapsedGroups}
-            ungroupedCollapseId={UNGROUPED_COLLAPSE_ID}
-            toggleGroupCollapse={toggleGroupCollapse}
-            worktreesByParent={worktreesByParent}
-            deletingWorktreeIds={deletingWorktreeIds}
-            activeWorkspaceId={activeWorkspaceId}
-            addMenuAnchor={addMenuAnchor}
-            addMenuRef={addMenuRef}
-            addMenuWidth={ADD_MENU_WIDTH}
-            onSelectWorkspace={onSelectWorkspace}
-            onConnectWorkspace={onConnectWorkspace}
-            onAddWorktreeAgent={onAddWorktreeAgent}
-            onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
-            onShowWorkspaceMenu={showWorkspaceMenu}
-            onShowWorktreeMenu={showWorktreeMenu}
-            onToggleAddMenu={setAddMenuAnchor}
-          />
-          {showEmptyState ? <div className="empty">Add a workspace to start.</div> : null}
+          {pinnedThreadRows.length > 0 && (
+            <div className="pinned-section">
+              <div className="sidebar-section-header">
+                <div className="sidebar-section-title">Pinned conversations</div>
+                <div className="sidebar-section-count">{pinnedRootCount}</div>
+              </div>
+              <PinnedThreadList
+                rows={pinnedThreadRows}
+                activeWorkspaceId={activeWorkspaceId}
+                activeThreadId={activeThreadId}
+                threadStatusById={threadStatusById}
+                pendingUserInputKeys={pendingUserInputKeys}
+                getThreadTime={getThreadTime}
+                getThreadArgsBadge={getThreadArgsBadge}
+                isThreadPinned={isThreadPinned}
+                onSelectThread={onSelectThread}
+                onShowThreadMenu={showThreadMenu}
+                getWorkspaceLabel={getWorkspaceLabel}
+              />
+            </div>
+          )}
+          {isThreadsOnlyMode
+            ? groupedWorkspacesForRender.length > 0 && (
+                <SidebarThreadsOnlySection
+                  threadBuckets={threadBuckets}
+                  activeWorkspaceId={activeWorkspaceId}
+                  activeThreadId={activeThreadId}
+                  threadStatusById={threadStatusById}
+                  pendingUserInputKeys={pendingUserInputKeys}
+                  getThreadTime={getThreadTime}
+                  getThreadArgsBadge={getThreadArgsBadge}
+                  isThreadPinned={isThreadPinned}
+                  onSelectThread={onSelectThread}
+                  onShowThreadMenu={showThreadMenu}
+                  getWorkspaceLabel={getWorkspaceLabel}
+                  addMenuOpen={allThreadsAddMenuOpen}
+                  addMenuAnchor={allThreadsAddMenuAnchor}
+                  addMenuRef={allThreadsAddMenuRef}
+                  projectOptionsForNewThread={projectOptionsForNewThread}
+                  onToggleAddMenu={handleAllThreadsAddMenuToggle}
+                  onCreateThreadInProject={handleCreateThreadInProject}
+                />
+              )
+            : (
+                <SidebarWorkspaceGroups
+                  groups={groupedWorkspacesForRender}
+                  hasWorkspaceGroups={hasWorkspaceGroups}
+                  collapsedGroups={collapsedGroups}
+                  ungroupedCollapseId={UNGROUPED_COLLAPSE_ID}
+                  toggleGroupCollapse={toggleGroupCollapse}
+                  cloneChildIds={cloneChildIds}
+                  clonesBySource={clonesBySource}
+                  worktreesByParent={worktreesByParent}
+                  deletingWorktreeIds={deletingWorktreeIds}
+                  threadsByWorkspace={threadsByWorkspace}
+                  threadStatusById={threadStatusById}
+                  threadListLoadingByWorkspace={threadListLoadingByWorkspace}
+                  threadListPagingByWorkspace={threadListPagingByWorkspace}
+                  threadListCursorByWorkspace={threadListCursorByWorkspace}
+                  activeWorkspaceId={activeWorkspaceId}
+                  activeThreadId={activeThreadId}
+                  pendingUserInputKeys={pendingUserInputKeys}
+                  getThreadRows={getThreadRows}
+                  getThreadTime={getThreadTime}
+                  getThreadArgsBadge={getThreadArgsBadge}
+                  isThreadPinned={isThreadPinned}
+                  getPinTimestamp={getPinTimestamp}
+                  pinnedThreadsVersion={pinnedThreadsVersion}
+                  addMenuAnchor={addMenuAnchor}
+                  addMenuRef={addMenuRef}
+                  addMenuWidth={ADD_MENU_WIDTH}
+                  newAgentDraftWorkspaceId={newAgentDraftWorkspaceId}
+                  startingDraftThreadWorkspaceId={startingDraftThreadWorkspaceId}
+                  onSelectWorkspace={onSelectWorkspace}
+                  onConnectWorkspace={onConnectWorkspace}
+                  onAddAgent={onAddAgent}
+                  onAddWorktreeAgent={onAddWorktreeAgent}
+                  onAddCloneAgent={onAddCloneAgent}
+                  onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
+                  onSelectThread={onSelectThread}
+                  onShowThreadMenu={showThreadMenu}
+                  onShowWorkspaceMenu={showWorkspaceMenu}
+                  onShowWorktreeMenu={showWorktreeMenu}
+                  onShowCloneMenu={showCloneMenu}
+                  onLoadOlderThreads={onLoadOlderThreads}
+                  onToggleAddMenu={setAddMenuAnchor}
+                />
+              )}
+          {!groupedWorkspacesForRender.length && (
+            <div className="empty">Add a project to start.</div>
+          )}
+          {isThreadsOnlyMode &&
+            groupedWorkspacesForRender.length > 0 &&
+            flatThreadRows.length === 0 &&
+            pinnedThreadRows.length === 0 && (
+              <div className="empty">No conversations yet.</div>
+            )}
         </div>
       </div>
       <SidebarBottomRail
