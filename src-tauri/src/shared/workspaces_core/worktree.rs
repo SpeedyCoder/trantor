@@ -14,6 +14,7 @@ use crate::types::{
     AgentRuntime, AppSettings, WorkspaceEntry, WorkspaceInfo, WorkspaceKind, WorkspaceSettings,
     WorktreeInfo, WorktreeSetupStatus,
 };
+use crate::shared::codex_core;
 
 use super::connect::{kill_session_by_id, take_live_shared_session, workspace_session_spawn_lock};
 use super::helpers::{
@@ -298,6 +299,7 @@ where
     let parent_path = PathBuf::from(&parent.path);
     let parent_path_exists = parent_path.is_dir();
     let entry_path = PathBuf::from(&entry.path);
+    let _ = codex_core::archive_all_threads_for_workspace_core(sessions, &entry.id).await;
     kill_session_by_id(sessions, &entry.id).await;
 
     if entry_path.exists() {

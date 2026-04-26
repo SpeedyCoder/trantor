@@ -2,7 +2,6 @@ export type WorkspaceSettings = {
   sidebarCollapsed: boolean;
   sortOrder?: number | null;
   groupId?: string | null;
-  cloneSourceWorkspaceId?: string | null;
   gitRoot?: string | null;
   launchScript?: string | null;
   launchScripts?: LaunchScriptEntry[] | null;
@@ -256,7 +255,6 @@ export type AppSettings = {
   interruptShortcut: string | null;
   newAgentShortcut: string | null;
   newWorktreeAgentShortcut: string | null;
-  newCloneAgentShortcut: string | null;
   archiveThreadShortcut: string | null;
   toggleProjectsSidebarShortcut: string | null;
   toggleGitSidebarShortcut: string | null;

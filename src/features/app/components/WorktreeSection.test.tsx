@@ -20,30 +20,10 @@ describe("WorktreeSection", () => {
       <WorktreeSection
         worktrees={[worktree]}
         deletingWorktreeIds={new Set()}
-        threadsByWorkspace={{ [worktree.id]: [] }}
-        threadStatusById={{}}
-        threadListLoadingByWorkspace={{ [worktree.id]: false }}
-        threadListPagingByWorkspace={{ [worktree.id]: false }}
-        threadListCursorByWorkspace={{ [worktree.id]: "cursor" }}
         activeWorkspaceId={null}
-        activeThreadId={null}
-        getThreadRows={() => ({
-          pinnedRows: [],
-          unpinnedRows: [],
-          totalRoots: 0,
-          hasMoreRoots: false,
-        })}
-        getThreadTime={() => null}
-        isThreadPinned={() => false}
-        getPinTimestamp={() => null}
-        pinnedThreadsVersion={0}
         onSelectWorkspace={vi.fn()}
         onConnectWorkspace={vi.fn()}
-        onToggleWorkspaceCollapse={vi.fn()}
-        onSelectThread={vi.fn()}
-        onShowThreadMenu={vi.fn()}
         onShowWorktreeMenu={vi.fn()}
-        onLoadOlderThreads={vi.fn()}
       />,
     );
 

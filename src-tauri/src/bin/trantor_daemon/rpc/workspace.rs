@@ -188,18 +188,6 @@ pub(super) async fn try_handle(
                     .await,
             )
         }
-        "add_clone" => {
-            let request = parse_request_or_err!(params, workspace_rpc::AddCloneRequest);
-            Some(
-                serialize_result(state.add_clone(
-                    request.source_workspace_id,
-                    request.copies_folder,
-                    request.copy_name,
-                    client_version.to_string(),
-                ))
-                .await,
-            )
-        }
         "file_read" => {
             let request = match parse_file_read_request(params) {
                 Ok(value) => value,

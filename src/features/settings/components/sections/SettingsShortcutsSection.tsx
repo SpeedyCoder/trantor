@@ -98,12 +98,6 @@ export function SettingsShortcutsSection({
             help: `Default: ${formatShortcut("cmd+shift+n")}`,
           },
           {
-            label: "New Clone Agent",
-            draftKey: "newCloneAgent",
-            settingKey: "newCloneAgentShortcut",
-            help: `Default: ${formatShortcut("cmd+alt+n")}`,
-          },
-          {
             label: "Archive active thread",
             draftKey: "archiveThread",
             settingKey: "archiveThreadShortcut",

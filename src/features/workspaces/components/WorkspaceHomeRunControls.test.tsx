@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { ModelOption, WorkspaceInfo } from "../../../types";
 import { WorkspaceHomeRunControls } from "./WorkspaceHomeRunControls";
 
-const workspaceKind: WorkspaceInfo["kind"] = "main";
+const workspaceKind: WorkspaceInfo["kind"] = "worktree";
 
 const models: ModelOption[] = [
   {

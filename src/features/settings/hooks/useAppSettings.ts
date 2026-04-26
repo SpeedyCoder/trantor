@@ -154,7 +154,6 @@ function buildDefaultSettings(): AppSettings {
     interruptShortcut: getDefaultInterruptShortcut(),
     newAgentShortcut: isMac ? "cmd+n" : "ctrl+n",
     newWorktreeAgentShortcut: isMac ? "cmd+shift+n" : "ctrl+shift+n",
-    newCloneAgentShortcut: isMac ? "cmd+alt+n" : "ctrl+alt+n",
     archiveThreadShortcut: isMac ? "cmd+ctrl+a" : "ctrl+alt+a",
     toggleProjectsSidebarShortcut: isMac ? "cmd+shift+p" : "ctrl+shift+p",
     toggleGitSidebarShortcut: isMac ? "cmd+shift+g" : "ctrl+shift+g",

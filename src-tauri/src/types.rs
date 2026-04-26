@@ -327,8 +327,6 @@ pub(crate) struct WorkspaceSettings {
     pub(crate) sort_order: Option<u32>,
     #[serde(default, rename = "groupId")]
     pub(crate) group_id: Option<String>,
-    #[serde(default, rename = "cloneSourceWorkspaceId")]
-    pub(crate) clone_source_workspace_id: Option<String>,
     #[serde(default, rename = "gitRoot")]
     pub(crate) git_root: Option<String>,
     #[serde(default, rename = "launchScript")]
@@ -466,11 +464,6 @@ pub(crate) struct AppSettings {
         rename = "newWorktreeAgentShortcut"
     )]
     pub(crate) new_worktree_agent_shortcut: Option<String>,
-    #[serde(
-        default = "default_new_clone_agent_shortcut",
-        rename = "newCloneAgentShortcut"
-    )]
-    pub(crate) new_clone_agent_shortcut: Option<String>,
     #[serde(
         default = "default_archive_thread_shortcut",
         rename = "archiveThreadShortcut"
@@ -828,15 +821,6 @@ fn default_new_worktree_agent_shortcut() -> Option<String> {
     Some(value.to_string())
 }
 
-fn default_new_clone_agent_shortcut() -> Option<String> {
-    let value = if cfg!(target_os = "macos") {
-        "cmd+alt+n"
-    } else {
-        "ctrl+alt+n"
-    };
-    Some(value.to_string())
-}
-
 fn default_archive_thread_shortcut() -> Option<String> {
     let value = if cfg!(target_os = "macos") {
         "cmd+ctrl+a"
@@ -1178,7 +1162,6 @@ impl Default for AppSettings {
             composer_collaboration_shortcut: default_composer_collaboration_shortcut(),
             new_agent_shortcut: default_new_agent_shortcut(),
             new_worktree_agent_shortcut: default_new_worktree_agent_shortcut(),
-            new_clone_agent_shortcut: default_new_clone_agent_shortcut(),
             archive_thread_shortcut: default_archive_thread_shortcut(),
             toggle_projects_sidebar_shortcut: default_toggle_projects_sidebar_shortcut(),
             toggle_git_sidebar_shortcut: default_toggle_git_sidebar_shortcut(),

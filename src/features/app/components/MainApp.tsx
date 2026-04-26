@@ -80,6 +80,7 @@ import {
 import { useAppShellOrchestration } from "@app/orchestration/useLayoutOrchestration";
 import { normalizeCodexArgsInput } from "@/utils/codexArgsInput";
 import { subscribeTrayOpenThread } from "@services/events";
+import { WorktreeThreadTabs } from "@app/components/WorktreeThreadTabs";
 
 const SettingsView = lazy(() =>
   import("@settings/components/SettingsView").then((module) => ({
@@ -146,7 +147,6 @@ export default function MainApp() {
     appendMobileRemoteWorkspacePathFromRecent,
     cancelMobileRemoteWorkspacePathPrompt,
     submitMobileRemoteWorkspacePathPrompt,
-    addCloneAgent,
     addWorktreeAgent,
     connectWorkspace,
     markWorkspaceConnected,
@@ -890,20 +890,6 @@ export default function MainApp() {
     setSelectedDiffPath,
   });
 
-  const resolveCloneProjectContext = useCallback(
-    (workspace: WorkspaceInfo) => {
-      const groupId = workspace.settings.groupId ?? null;
-      const group = groupId
-        ? appSettings.workspaceGroups.find((entry) => entry.id === groupId)
-        : null;
-      return {
-        groupId,
-        copiesFolder: group?.copiesFolder ?? null,
-      };
-    },
-    [appSettings.workspaceGroups],
-  );
-
   const { handleMoveWorkspace } = useWorkspaceOrderingOrchestration({
     workspaces,
     workspacesById,
@@ -913,7 +899,6 @@ export default function MainApp() {
   const {
     handleSelectOpenAppId,
     handleToggleAutomaticAppUpdateChecks,
-    persistProjectCopiesFolder,
   } = useMainAppSettingsActions({
     appSettings,
     setAppSettings,
@@ -991,13 +976,10 @@ export default function MainApp() {
     },
     workspacePrompts: {
       addWorktreeAgent,
-      addCloneAgent,
       connectWorkspace,
       updateWorkspaceSettings,
       selectWorkspace,
       handleWorktreeCreated,
-      resolveCloneProjectContext,
-      persistProjectCopiesFolder,
       onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
       onWorkspacePromptError: (message, kind) => {
         addDebugEntry({
@@ -1231,7 +1213,6 @@ export default function MainApp() {
     handleAddWorkspaceFromGitUrl,
     handleAddAgent,
     handleAddWorktreeAgent,
-    handleAddCloneAgent,
     dropTargetRef: workspaceDropTargetRef,
     isDragOver: isWorkspaceDropActive,
     handleDragOver: handleWorkspaceDragOver,
@@ -1251,7 +1232,6 @@ export default function MainApp() {
       selectWorkspace,
       onStartNewAgentDraft: startNewAgentDraft,
       openWorktreePrompt: modalActions.openWorktreePrompt,
-      openClonePrompt: modalActions.openClonePrompt,
       composerInputRef,
       onDebug: addDebugEntry,
     },
@@ -1449,7 +1429,6 @@ export default function MainApp() {
       onAddWorkspaceFromUrl: openWorkspaceFromUrlPrompt,
       onAddAgent: handleAddAgent,
       onAddWorktreeAgent: handleAddWorktreeAgent,
-      onAddCloneAgent: handleAddCloneAgent,
       onToggleDebug: handleDebugClick,
       onToggleTerminal: handleToggleTerminalWithFocus,
       sidebarCollapsed,
@@ -1662,7 +1641,6 @@ export default function MainApp() {
     openWorkspaceFromUrlPrompt,
     handleAddAgent,
     handleAddWorktreeAgent,
-    handleAddCloneAgent,
     handleOpenThreadLink,
     handleSelectOpenAppId,
     handleCopyThread,
@@ -1780,6 +1758,34 @@ export default function MainApp() {
   } = useMainAppLayoutNodes(layoutSurfaces);
 
   const mainMessagesNode = showWorkspaceHome ? workspaceHomeNode : messagesNode;
+  const activeWorkspaceThreads = activeWorkspaceId
+    ? threadsByWorkspace[activeWorkspaceId] ?? []
+    : [];
+  const chatMessagesNode =
+    (activeWorkspace?.kind ?? "main") === "worktree" && !showWorkspaceHome && activeWorkspace ? (
+      <>
+        <WorktreeThreadTabs
+          workspace={activeWorkspace}
+          threads={activeWorkspaceThreads}
+          activeThreadId={activeThreadId}
+          onSelectThread={sidebarMenuOrchestration.onSelectThread}
+          onStartThread={(workspaceId) => {
+            void startThreadForWorkspace(workspaceId, {
+              modelId: resolvedModel,
+            });
+          }}
+        />
+        {activeThreadId ? (
+          mainMessagesNode
+        ) : (
+          <div className="worktree-thread-empty">
+            Start a thread to work in this worktree.
+          </div>
+        )}
+      </>
+    ) : (
+      mainMessagesNode
+    );
   const compactThreadConnectionState: "live" | "polling" | "disconnected" =
     !activeWorkspace?.connected
       ? "disconnected"
@@ -1820,7 +1826,7 @@ export default function MainApp() {
       hasActivePlan: hasActivePlan,
       activeWorkspace: Boolean(activeWorkspace),
       sidebarNode,
-      messagesNode: mainMessagesNode,
+      messagesNode: chatMessagesNode,
       composerNode,
       approvalToastsNode,
       updateToastNode,

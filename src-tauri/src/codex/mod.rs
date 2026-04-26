@@ -213,6 +213,15 @@ pub(crate) async fn start_thread(
         .await;
     }
     let runtime = runtime_for_model_id(model_id.as_deref());
+    {
+        let workspaces = state.workspaces.lock().await;
+        let entry = workspaces
+            .get(&workspace_id)
+            .ok_or_else(|| "workspace not found".to_string())?;
+        if !entry.kind.is_worktree() {
+            return Err("Threads can only be started in a worktree.".to_string());
+        }
+    }
     let session = ensure_runtime_session(&state, &app, &workspace_id, runtime.clone()).await?;
     let workspace_path = {
         let workspaces = state.workspaces.lock().await;

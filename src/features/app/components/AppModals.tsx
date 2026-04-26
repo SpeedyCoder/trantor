@@ -3,7 +3,6 @@ import type { ComponentType } from "react";
 import type { BranchInfo, WorkspaceInfo } from "../../../types";
 import type { SettingsViewProps } from "../../settings/components/SettingsView";
 import { useRenameThreadPrompt } from "../../threads/hooks/useRenameThreadPrompt";
-import { useClonePrompt } from "../../workspaces/hooks/useClonePrompt";
 import { useWorktreePrompt } from "../../workspaces/hooks/useWorktreePrompt";
 import { useWorkspaceFromUrlPrompt } from "../../workspaces/hooks/useWorkspaceFromUrlPrompt";
 import type { BranchSwitcherState } from "../../git/hooks/useBranchSwitcher";
@@ -17,11 +16,6 @@ const RenameThreadPrompt = lazy(() =>
 const WorktreePrompt = lazy(() =>
   import("../../workspaces/components/WorktreePrompt").then((module) => ({
     default: module.WorktreePrompt,
-  })),
-);
-const ClonePrompt = lazy(() =>
-  import("../../workspaces/components/ClonePrompt").then((module) => ({
-    default: module.ClonePrompt,
   })),
 );
 const WorkspaceFromUrlPrompt = lazy(() =>
@@ -48,8 +42,6 @@ const InitGitRepoPrompt = lazy(() =>
 type RenamePromptState = ReturnType<typeof useRenameThreadPrompt>["renamePrompt"];
 
 type WorktreePromptState = ReturnType<typeof useWorktreePrompt>["worktreePrompt"];
-
-type ClonePromptState = ReturnType<typeof useClonePrompt>["clonePrompt"];
 type WorkspaceFromUrlPromptState = ReturnType<
   typeof useWorkspaceFromUrlPrompt
 >["workspaceFromUrlPrompt"];
@@ -86,13 +78,6 @@ export type AppModalsProps = {
   onWorktreeSetupScriptChange: (value: string) => void;
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
-  clonePrompt: ClonePromptState;
-  onClonePromptCopyNameChange: (value: string) => void;
-  onClonePromptChooseCopiesFolder: () => void;
-  onClonePromptUseSuggestedFolder: () => void;
-  onClonePromptClearCopiesFolder: () => void;
-  onClonePromptCancel: () => void;
-  onClonePromptConfirm: () => void;
   workspaceFromUrlPrompt: WorkspaceFromUrlPromptState;
   workspaceFromUrlCanSubmit: boolean;
   onWorkspaceFromUrlPromptUrlChange: (value: string) => void;
@@ -140,13 +125,6 @@ export const AppModals = memo(function AppModals({
   onWorktreeSetupScriptChange,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
-  clonePrompt,
-  onClonePromptCopyNameChange,
-  onClonePromptChooseCopiesFolder,
-  onClonePromptUseSuggestedFolder,
-  onClonePromptClearCopiesFolder,
-  onClonePromptCancel,
-  onClonePromptConfirm,
   workspaceFromUrlPrompt,
   workspaceFromUrlCanSubmit,
   onWorkspaceFromUrlPromptUrlChange,
@@ -229,24 +207,6 @@ export const AppModals = memo(function AppModals({
             onSetupScriptChange={onWorktreeSetupScriptChange}
             onCancel={onWorktreePromptCancel}
             onConfirm={onWorktreePromptConfirm}
-          />
-        </Suspense>
-      )}
-      {clonePrompt && (
-        <Suspense fallback={null}>
-          <ClonePrompt
-            workspaceName={clonePrompt.workspace.name}
-            copyName={clonePrompt.copyName}
-            copiesFolder={clonePrompt.copiesFolder}
-            suggestedCopiesFolder={clonePrompt.suggestedCopiesFolder}
-            error={clonePrompt.error}
-            isBusy={clonePrompt.isSubmitting}
-            onCopyNameChange={onClonePromptCopyNameChange}
-            onChooseCopiesFolder={onClonePromptChooseCopiesFolder}
-            onUseSuggestedCopiesFolder={onClonePromptUseSuggestedFolder}
-            onClearCopiesFolder={onClonePromptClearCopiesFolder}
-            onCancel={onClonePromptCancel}
-            onConfirm={onClonePromptConfirm}
           />
         </Suspense>
       )}

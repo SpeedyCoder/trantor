@@ -8,9 +8,7 @@ type WorktreeCardProps = {
   isDeleting?: boolean;
   onSelectWorkspace: (id: string) => void;
   onShowWorktreeMenu: (event: MouseEvent, worktree: WorkspaceInfo) => void;
-  onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
-  children?: React.ReactNode;
 };
 
 export function WorktreeCard({
@@ -19,16 +17,12 @@ export function WorktreeCard({
   isDeleting = false,
   onSelectWorkspace,
   onShowWorktreeMenu,
-  onToggleWorkspaceCollapse,
   onConnectWorkspace,
-  children,
 }: WorktreeCardProps) {
-  const worktreeCollapsed = worktree.settings.sidebarCollapsed;
   const worktreeBranch = worktree.worktree?.branch ?? "";
   const worktreeLabel = worktree.name?.trim() || worktreeBranch;
   const worktreeMeta =
     worktreeBranch && worktreeBranch !== worktreeLabel ? worktreeBranch : null;
-  const contentCollapsedClass = worktreeCollapsed ? " collapsed" : "";
 
   return (
     <div className={`worktree-card${isDeleting ? " deleting" : ""}`}>
@@ -59,7 +53,7 @@ export function WorktreeCard({
       >
         <div className="worktree-copy">
           <div className="worktree-label">{worktreeLabel}</div>
-          {worktreeMeta && <div className="worktree-meta">{worktreeMeta}</div>}
+          {worktreeMeta ? <div className="worktree-meta">{worktreeMeta}</div> : null}
         </div>
         <div className="worktree-actions">
           {isDeleting ? (
@@ -67,42 +61,19 @@ export function WorktreeCard({
               <span className="worktree-deleting-spinner" aria-hidden />
               <span className="worktree-deleting-label">Deleting</span>
             </div>
-          ) : (
-            <>
-              <button
-                className={`worktree-toggle ${worktreeCollapsed ? "" : "expanded"}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleWorkspaceCollapse(worktree.id, !worktreeCollapsed);
-                }}
-                data-tauri-drag-region="false"
-                aria-label={worktreeCollapsed ? "Show agents" : "Hide agents"}
-                aria-expanded={!worktreeCollapsed}
-              >
-                <span className="worktree-toggle-icon">›</span>
-              </button>
-              {!worktree.connected && (
-                <span
-                  className="connect"
-                  title="Connect workspace context to the shared Codex server"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onConnectWorkspace(worktree);
-                  }}
-                >
-                  connect
-                </span>
-              )}
-            </>
-          )}
+          ) : !worktree.connected ? (
+            <span
+              className="connect"
+              title="Connect workspace context to the shared Codex server"
+              onClick={(event) => {
+                event.stopPropagation();
+                onConnectWorkspace(worktree);
+              }}
+            >
+              connect
+            </span>
+          ) : null}
         </div>
-      </div>
-      <div
-        className={`worktree-card-content${contentCollapsedClass}`}
-        aria-hidden={worktreeCollapsed}
-        inert={worktreeCollapsed ? true : undefined}
-      >
-        <div className="worktree-card-content-inner">{children}</div>
       </div>
     </div>
   );

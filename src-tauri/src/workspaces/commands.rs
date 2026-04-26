@@ -215,29 +215,6 @@ pub(crate) async fn add_workspace_from_git_url(
 }
 
 #[tauri::command]
-pub(crate) async fn add_clone(
-    source_workspace_id: String,
-    copy_name: String,
-    copies_folder: String,
-    state: State<'_, AppState>,
-    app: AppHandle,
-) -> Result<WorkspaceInfo, String> {
-    workspaces_core::add_clone_core(
-        source_workspace_id,
-        copy_name,
-        copies_folder,
-        &state.workspaces,
-        &state.sessions,
-        &state.app_settings,
-        &state.storage_path,
-        |entry, default_bin, codex_args, codex_home| {
-            spawn_with_app(&app, entry, default_bin, codex_args, codex_home)
-        },
-    )
-    .await
-}
-
-#[tauri::command]
 pub(crate) async fn add_worktree(
     parent_id: String,
     branch: String,

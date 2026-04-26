@@ -280,18 +280,6 @@ export async function isWorkspacePathDir(path: string): Promise<boolean> {
   return invoke<boolean>("is_workspace_path_dir", { path });
 }
 
-export async function addClone(
-  sourceWorkspaceId: string,
-  copiesFolder: string,
-  copyName: string,
-): Promise<WorkspaceInfo> {
-  return invoke<WorkspaceInfo>("add_clone", {
-    sourceWorkspaceId,
-    copiesFolder,
-    copyName,
-  });
-}
-
 export async function addWorktree(
   parentId: string,
   branch: string,

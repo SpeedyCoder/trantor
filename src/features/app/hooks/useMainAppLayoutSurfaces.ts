@@ -115,7 +115,6 @@ type UseMainAppLayoutSurfacesArgs = {
   openWorkspaceFromUrlPrompt: () => void;
   handleAddAgent: SidebarProps["onAddAgent"];
   handleAddWorktreeAgent: SidebarProps["onAddWorktreeAgent"];
-  handleAddCloneAgent: SidebarProps["onAddCloneAgent"];
   handleOpenThreadLink: LayoutNodesOptions["primary"]["messagesProps"]["onOpenThreadLink"];
   handleSelectOpenAppId: MainHeaderProps["onSelectOpenAppId"];
   handleCopyThread: MainHeaderProps["onCopyThread"];
@@ -272,7 +271,6 @@ function buildPrimarySurface({
   openWorkspaceFromUrlPrompt,
   handleAddAgent,
   handleAddWorktreeAgent,
-  handleAddCloneAgent,
   handleOpenThreadLink,
   handleSelectOpenAppId,
   handleCopyThread,
@@ -384,7 +382,6 @@ function buildPrimarySurface({
       onConnectWorkspace: sidebarHandlers.onConnectWorkspace,
       onAddAgent: handleAddAgent,
       onAddWorktreeAgent: handleAddWorktreeAgent,
-      onAddCloneAgent: handleAddCloneAgent,
       onToggleWorkspaceCollapse: sidebarHandlers.onToggleWorkspaceCollapse,
       onSelectThread: sidebarHandlers.onSelectThread,
       onDeleteThread: sidebarHandlers.onDeleteThread,
@@ -957,7 +954,6 @@ export function useMainAppLayoutSurfaces({
   openWorkspaceFromUrlPrompt,
   handleAddAgent,
   handleAddWorktreeAgent,
-  handleAddCloneAgent,
   handleOpenThreadLink,
   handleSelectOpenAppId,
   handleCopyThread,
@@ -1106,7 +1102,6 @@ export function useMainAppLayoutSurfaces({
     openWorkspaceFromUrlPrompt,
     handleAddAgent,
     handleAddWorktreeAgent,
-    handleAddCloneAgent,
     handleOpenThreadLink,
     handleSelectOpenAppId,
     handleCopyThread,

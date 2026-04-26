@@ -312,12 +312,27 @@ async fn resolve_workspace_path_core(
     Ok(entry.path.clone())
 }
 
+async fn ensure_thread_workspace_core(
+    workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
+    workspace_id: &str,
+) -> Result<(), String> {
+    let workspaces = workspaces.lock().await;
+    let entry = workspaces
+        .get(workspace_id)
+        .ok_or_else(|| "workspace not found".to_string())?;
+    if !entry.kind.is_worktree() {
+        return Err("Threads can only be started in a worktree.".to_string());
+    }
+    Ok(())
+}
+
 pub(crate) async fn start_thread_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
     workspace_id: String,
     model_id: Option<String>,
 ) -> Result<Value, String> {
+    ensure_thread_workspace_core(workspaces, &workspace_id).await?;
     let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
     let native_model = model_id.as_deref().map(native_model_id);
@@ -437,6 +452,51 @@ pub(crate) async fn archive_thread_core(
     session
         .send_request_for_workspace(&workspace_id, "thread/archive", params)
         .await
+}
+
+pub(crate) async fn archive_all_threads_for_workspace_core(
+    sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
+    workspace_id: &str,
+) -> Result<(), String> {
+    let session = get_session_clone(sessions, workspace_id, AgentRuntime::Codex).await?;
+    let mut cursor = None::<Value>;
+    loop {
+        let params = json!({
+            "cursor": cursor,
+            "limit": 200,
+            "sortKey": "updated_at",
+            "sourceKinds": THREAD_LIST_SOURCE_KINDS
+        });
+        let response = session
+            .send_request_for_workspace(workspace_id, "thread/list", params)
+            .await?;
+        let Some(result) = response.get("result") else {
+            return Ok(());
+        };
+        let threads = result
+            .get("data")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for thread in threads {
+            let Some(thread_id) = thread.get("id").and_then(Value::as_str) else {
+                continue;
+            };
+            let _ = session
+                .send_request_for_workspace(
+                    workspace_id,
+                    "thread/archive",
+                    json!({ "threadId": thread_id }),
+                )
+                .await;
+        }
+        let next_cursor = result.get("nextCursor").cloned().filter(|value| !value.is_null());
+        if next_cursor.is_none() {
+            break;
+        }
+        cursor = next_cursor;
+    }
+    Ok(())
 }
 
 pub(crate) async fn compact_thread_core(
