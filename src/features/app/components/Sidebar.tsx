@@ -5,27 +5,20 @@ import type {
   ThreadSummary,
   WorkspaceInfo,
 } from "../../../types";
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 import type { RefObject } from "react";
 import { FolderOpen } from "lucide-react";
 import { SidebarBottomRail } from "./SidebarBottomRail";
 import { SidebarHeader } from "./SidebarHeader";
 import { SidebarWorkspaceGroups } from "./SidebarWorkspaceGroups";
-import type { SidebarWorkspaceAddMenuAnchor, WorkspaceGroupSection } from "./sidebarTypes";
-import { useCollapsedGroups } from "../hooks/useCollapsedGroups";
-import { useMenuController } from "../hooks/useMenuController";
+import type { WorkspaceGroupSection } from "./sidebarTypes";
 import { useSidebarMenus } from "../hooks/useSidebarMenus";
 import { useSidebarScrollFade } from "../hooks/useSidebarScrollFade";
 import type { ThreadStatusById } from "../../../utils/threadStatus";
 
-const COLLAPSED_GROUPS_STORAGE_KEY = "codexmonitor.collapsedGroups";
-const UNGROUPED_COLLAPSE_ID = "__ungrouped__";
-const ADD_MENU_WIDTH = 200;
-
 type SidebarProps = {
   workspaces: WorkspaceInfo[];
   groupedWorkspaces: WorkspaceGroupSection[];
-  hasWorkspaceGroups: boolean;
   deletingWorktreeIds: Set<string>;
   newAgentDraftWorkspaceId?: string | null;
   startingDraftThreadWorkspaceId?: string | null;
@@ -79,7 +72,6 @@ type SidebarProps = {
 export const Sidebar = memo(function Sidebar({
   workspaces,
   groupedWorkspaces,
-  hasWorkspaceGroups,
   deletingWorktreeIds,
   threadListLoadingByWorkspace,
   threadListSortKey,
@@ -113,16 +105,6 @@ export const Sidebar = memo(function Sidebar({
   onWorkspaceDragLeave,
   onWorkspaceDrop,
 }: SidebarProps) {
-  const [addMenuAnchor, setAddMenuAnchor] =
-    useState<SidebarWorkspaceAddMenuAnchor | null>(null);
-  const addMenuController = useMenuController({
-    open: Boolean(addMenuAnchor),
-    onDismiss: () => setAddMenuAnchor(null),
-  });
-  const { containerRef: addMenuRef } = addMenuController;
-  const { collapsedGroups, toggleGroupCollapse } = useCollapsedGroups(
-    COLLAPSED_GROUPS_STORAGE_KEY,
-  );
   const { showWorkspaceMenu, showWorktreeMenu } = useSidebarMenus({
     onDeleteThread,
     onSyncThread,
@@ -188,19 +170,6 @@ export const Sidebar = memo(function Sidebar({
   const { sidebarBodyRef, scrollFade, updateScrollFade } =
     useSidebarScrollFade(scrollFadeDeps);
 
-  useEffect(() => {
-    if (!addMenuAnchor) {
-      return;
-    }
-    function handleScroll() {
-      setAddMenuAnchor(null);
-    }
-    window.addEventListener("scroll", handleScroll, true);
-    return () => {
-      window.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [addMenuAnchor]);
-
   const showEmptyState = groupedWorkspacesForRender.every(
     (group) => group.workspaces.filter((workspace) => (workspace.kind ?? "main") === "main").length === 0,
   );
@@ -248,103 +217,19 @@ export const Sidebar = memo(function Sidebar({
         ref={sidebarBodyRef}
       >
         <div className="workspace-list">
-          {pinnedThreadRows.length > 0 && (
-            <div className="pinned-section">
-              <div className="sidebar-section-header">
-                <div className="sidebar-section-title">Pinned conversations</div>
-                <div className="sidebar-section-count">{pinnedRootCount}</div>
-              </div>
-              <PinnedThreadList
-                rows={pinnedThreadRows}
-                activeWorkspaceId={activeWorkspaceId}
-                activeThreadId={activeThreadId}
-                threadStatusById={threadStatusById}
-                pendingUserInputKeys={pendingUserInputKeys}
-                getThreadTime={getThreadTime}
-                getThreadArgsBadge={getThreadArgsBadge}
-                isThreadPinned={isThreadPinned}
-                onSelectThread={onSelectThread}
-                onShowThreadMenu={showThreadMenu}
-                getWorkspaceLabel={getWorkspaceLabel}
-              />
-            </div>
-          )}
-          {isThreadsOnlyMode
-            ? groupedWorkspacesForRender.length > 0 && (
-                <SidebarThreadsOnlySection
-                  threadBuckets={threadBuckets}
-                  activeWorkspaceId={activeWorkspaceId}
-                  activeThreadId={activeThreadId}
-                  threadStatusById={threadStatusById}
-                  pendingUserInputKeys={pendingUserInputKeys}
-                  getThreadTime={getThreadTime}
-                  getThreadArgsBadge={getThreadArgsBadge}
-                  isThreadPinned={isThreadPinned}
-                  onSelectThread={onSelectThread}
-                  onShowThreadMenu={showThreadMenu}
-                  getWorkspaceLabel={getWorkspaceLabel}
-                  addMenuOpen={allThreadsAddMenuOpen}
-                  addMenuAnchor={allThreadsAddMenuAnchor}
-                  addMenuRef={allThreadsAddMenuRef}
-                  projectOptionsForNewThread={projectOptionsForNewThread}
-                  onToggleAddMenu={handleAllThreadsAddMenuToggle}
-                  onCreateThreadInProject={handleCreateThreadInProject}
-                />
-              )
-            : (
-                <SidebarWorkspaceGroups
-                  groups={groupedWorkspacesForRender}
-                  hasWorkspaceGroups={hasWorkspaceGroups}
-                  collapsedGroups={collapsedGroups}
-                  ungroupedCollapseId={UNGROUPED_COLLAPSE_ID}
-                  toggleGroupCollapse={toggleGroupCollapse}
-                  cloneChildIds={cloneChildIds}
-                  clonesBySource={clonesBySource}
-                  worktreesByParent={worktreesByParent}
-                  deletingWorktreeIds={deletingWorktreeIds}
-                  threadsByWorkspace={threadsByWorkspace}
-                  threadStatusById={threadStatusById}
-                  threadListLoadingByWorkspace={threadListLoadingByWorkspace}
-                  threadListPagingByWorkspace={threadListPagingByWorkspace}
-                  threadListCursorByWorkspace={threadListCursorByWorkspace}
-                  activeWorkspaceId={activeWorkspaceId}
-                  activeThreadId={activeThreadId}
-                  pendingUserInputKeys={pendingUserInputKeys}
-                  getThreadRows={getThreadRows}
-                  getThreadTime={getThreadTime}
-                  getThreadArgsBadge={getThreadArgsBadge}
-                  isThreadPinned={isThreadPinned}
-                  getPinTimestamp={getPinTimestamp}
-                  pinnedThreadsVersion={pinnedThreadsVersion}
-                  addMenuAnchor={addMenuAnchor}
-                  addMenuRef={addMenuRef}
-                  addMenuWidth={ADD_MENU_WIDTH}
-                  newAgentDraftWorkspaceId={newAgentDraftWorkspaceId}
-                  startingDraftThreadWorkspaceId={startingDraftThreadWorkspaceId}
-                  onSelectWorkspace={onSelectWorkspace}
-                  onConnectWorkspace={onConnectWorkspace}
-                  onAddAgent={onAddAgent}
-                  onAddWorktreeAgent={onAddWorktreeAgent}
-                  onAddCloneAgent={onAddCloneAgent}
-                  onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
-                  onSelectThread={onSelectThread}
-                  onShowThreadMenu={showThreadMenu}
-                  onShowWorkspaceMenu={showWorkspaceMenu}
-                  onShowWorktreeMenu={showWorktreeMenu}
-                  onShowCloneMenu={showCloneMenu}
-                  onLoadOlderThreads={onLoadOlderThreads}
-                  onToggleAddMenu={setAddMenuAnchor}
-                />
-              )}
-          {!groupedWorkspacesForRender.length && (
-            <div className="empty">Add a project to start.</div>
-          )}
-          {isThreadsOnlyMode &&
-            groupedWorkspacesForRender.length > 0 &&
-            flatThreadRows.length === 0 &&
-            pinnedThreadRows.length === 0 && (
-              <div className="empty">No conversations yet.</div>
-            )}
+          <SidebarWorkspaceGroups
+            groups={groupedWorkspacesForRender}
+            worktreesByParent={worktreesByParent}
+            deletingWorktreeIds={deletingWorktreeIds}
+            activeWorkspaceId={activeWorkspaceId}
+            onSelectWorkspace={onSelectWorkspace}
+            onConnectWorkspace={onConnectWorkspace}
+            onAddWorktreeAgent={onAddWorktreeAgent}
+            onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
+            onShowWorkspaceMenu={showWorkspaceMenu}
+            onShowWorktreeMenu={showWorktreeMenu}
+          />
+          {showEmptyState ? <div className="empty">Add a project to start.</div> : null}
         </div>
       </div>
       <SidebarBottomRail

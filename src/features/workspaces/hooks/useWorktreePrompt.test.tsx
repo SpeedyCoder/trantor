@@ -14,16 +14,14 @@ const parentWorkspace: WorkspaceInfo = {
 };
 
 describe("useWorktreePrompt", () => {
-  it("derives branch from name until branch is manually edited", () => {
+  it("opens with a new branch name by default", () => {
     const addWorktreeAgent = vi.fn().mockResolvedValue(null);
-    const updateWorkspaceSettings = vi.fn().mockResolvedValue(parentWorkspace);
     const connectWorkspace = vi.fn().mockResolvedValue(undefined);
     const onSelectWorkspace = vi.fn();
 
     const { result } = renderHook(() =>
       useWorktreePrompt({
         addWorktreeAgent,
-        updateWorkspaceSettings,
         connectWorkspace,
         onSelectWorkspace,
       }),
@@ -33,36 +31,20 @@ describe("useWorktreePrompt", () => {
       result.current.openPrompt(parentWorkspace);
     });
 
-    expect(result.current.worktreePrompt?.copyAgentsMd).toBe(true);
-
-    act(() => {
-      result.current.updateName("My New Feature!");
-    });
-
-    expect(result.current.worktreePrompt?.branch).toBe("codex/my-new-feature");
-
-    act(() => {
-      result.current.updateBranch("custom/branch-name");
-    });
-
-    act(() => {
-      result.current.updateName("Another Idea");
-    });
-
-    expect(result.current.worktreePrompt?.branch).toBe("custom/branch-name");
+    expect(result.current.worktreePrompt?.branch).toMatch(
+      /^codex\/\d{4}-\d{2}-\d{2}-[a-z0-9]{4}$/,
+    );
     expect(addWorktreeAgent).not.toHaveBeenCalled();
   });
 
-  it("does not override branch when name is cleared", () => {
+  it("updates branch from the selector input", () => {
     const addWorktreeAgent = vi.fn().mockResolvedValue(null);
-    const updateWorkspaceSettings = vi.fn().mockResolvedValue(parentWorkspace);
     const connectWorkspace = vi.fn().mockResolvedValue(undefined);
     const onSelectWorkspace = vi.fn();
 
     const { result } = renderHook(() =>
       useWorktreePrompt({
         addWorktreeAgent,
-        updateWorkspaceSettings,
         connectWorkspace,
         onSelectWorkspace,
       }),
@@ -72,40 +54,37 @@ describe("useWorktreePrompt", () => {
       result.current.openPrompt(parentWorkspace);
     });
 
-    expect(result.current.worktreePrompt?.copyAgentsMd).toBe(true);
-
-    const originalBranch = result.current.worktreePrompt?.branch;
-
     act(() => {
-      result.current.updateName("  ");
+      result.current.updateBranch("feature/existing");
     });
 
-    expect(result.current.worktreePrompt?.branch).toBe(originalBranch);
+    expect(result.current.worktreePrompt?.branch).toBe("feature/existing");
+    expect(result.current.worktreePrompt?.branchWasEdited).toBe(true);
     expect(addWorktreeAgent).not.toHaveBeenCalled();
   });
 
-  it("passes copyAgentsMd to addWorktreeAgent", async () => {
+  it("creates a worktree named from the selected branch and runs creation hooks", async () => {
     const worktreeWorkspace: WorkspaceInfo = {
       id: "wt-1",
-      name: "Worktree",
+      name: "feature/existing",
       path: "/tmp/wt-1",
       connected: true,
       kind: "worktree",
       parentId: parentWorkspace.id,
-      worktree: { branch: "codex/example" },
+      worktree: { branch: "feature/existing" },
       settings: { sidebarCollapsed: false },
     };
     const addWorktreeAgent = vi.fn().mockResolvedValue(worktreeWorkspace);
-    const updateWorkspaceSettings = vi.fn().mockResolvedValue(parentWorkspace);
     const connectWorkspace = vi.fn().mockResolvedValue(undefined);
     const onSelectWorkspace = vi.fn();
+    const onWorktreeCreated = vi.fn().mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
       useWorktreePrompt({
         addWorktreeAgent,
-        updateWorkspaceSettings,
         connectWorkspace,
         onSelectWorkspace,
+        onWorktreeCreated,
       }),
     );
 
@@ -117,16 +96,18 @@ describe("useWorktreePrompt", () => {
     expect(branch).toBeTruthy();
 
     act(() => {
-      result.current.updateCopyAgentsMd(false);
+      result.current.updateBranch("feature/existing");
     });
 
     await act(async () => {
       await result.current.confirmPrompt();
     });
 
-    expect(addWorktreeAgent).toHaveBeenCalledWith(parentWorkspace, branch, {
+    expect(addWorktreeAgent).toHaveBeenCalledWith(parentWorkspace, "feature/existing", {
       displayName: null,
-      copyAgentsMd: false,
+      copyAgentsMd: true,
     });
+    expect(onSelectWorkspace).toHaveBeenCalledWith(worktreeWorkspace.id);
+    expect(onWorktreeCreated).toHaveBeenCalledWith(worktreeWorkspace, parentWorkspace);
   });
 });

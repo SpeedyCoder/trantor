@@ -1,5 +1,6 @@
 import type { MouseEvent as ReactMouseEvent, ReactNode } from "react";
 import type { TerminalTab } from "../hooks/useTerminalTabs";
+import { TerminalTabs } from "./TerminalTabs";
 
 type TerminalDockProps = {
   isOpen: boolean;
@@ -37,44 +38,15 @@ export function TerminalDock({
           onMouseDown={onResizeStart}
         />
       )}
-      <div className="terminal-header">
-        <div className="terminal-tabs" role="tablist" aria-label="Terminal tabs">
-          {terminals.map((tab) => (
-            <button
-              key={tab.id}
-              className={`terminal-tab${
-                tab.id === activeTerminalId ? " active" : ""
-              }`}
-              type="button"
-              role="tab"
-              aria-selected={tab.id === activeTerminalId}
-              onClick={() => onSelectTerminal(tab.id)}
-            >
-              <span className="terminal-tab-label">{tab.title}</span>
-              <span
-                className="terminal-tab-close"
-                role="button"
-                aria-label={`Close ${tab.title}`}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onCloseTerminal(tab.id);
-                }}
-              >
-                ×
-              </span>
-            </button>
-          ))}
-          <button
-            className="terminal-tab-add"
-            type="button"
-            onClick={onNewTerminal}
-            aria-label="New terminal"
-            title="New terminal"
-          >
-            +
-          </button>
-        </div>
-      </div>
+      <TerminalTabs
+        tabs={terminals}
+        activeTabId={activeTerminalId}
+        ariaLabel="Terminal tabs"
+        addLabel="New terminal"
+        onSelectTab={onSelectTerminal}
+        onAddTab={onNewTerminal}
+        onCloseTab={onCloseTerminal}
+      />
       <div className="terminal-body">{terminalNode}</div>
     </section>
   );

@@ -852,7 +852,7 @@ describe("SettingsView Environments", () => {
       onUpdateWorkspaceSettings,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+    fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
     const textarea = screen.getByPlaceholderText("pnpm install");
     fireEvent.change(textarea, { target: { value: "echo updated" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Save" })[1]);
@@ -878,7 +878,7 @@ describe("SettingsView Environments", () => {
       onUpdateWorkspaceSettings,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+    fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
     fireEvent.change(screen.getByLabelText("Global worktrees root"), {
       target: { value: "I:/cm-worktrees" },
     });
@@ -1019,7 +1019,7 @@ describe("SettingsView Environments", () => {
       onUpdateWorkspaceSettings,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+    fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
     const input = screen.getByLabelText("Global worktrees root");
     const textarea = screen.getByPlaceholderText("pnpm install");
     fireEvent.change(input, { target: { value: "I:/cm-worktrees" } });
@@ -1058,7 +1058,7 @@ describe("SettingsView Environments", () => {
     renderEnvironmentsSection({ onUpdateWorkspaceSettings });
 
     expect(screen.getByText("Projects", { selector: ".settings-section-title" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+    fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
     const textarea = screen.getByPlaceholderText("pnpm install");
     await waitFor(() => {
       expect((textarea as HTMLTextAreaElement).value).toBe("echo one");
@@ -1079,7 +1079,7 @@ describe("SettingsView Environments", () => {
     const onUpdateWorkspaceSettings = vi.fn().mockResolvedValue(undefined);
     renderEnvironmentsSection({ onUpdateWorkspaceSettings });
 
-    fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+    fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
     const textarea = screen.getByPlaceholderText("pnpm install");
     fireEvent.change(textarea, { target: { value: "   \n\t" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Save" })[1]);
@@ -1102,7 +1102,7 @@ describe("SettingsView Environments", () => {
 
     try {
       renderEnvironmentsSection();
-      fireEvent.click(screen.getByRole("button", { name: "Project setup" }));
+      fireEvent.click(screen.getByRole("button", { name: /Project One/ }));
 
       fireEvent.click(screen.getByRole("button", { name: "Copy" }));
 

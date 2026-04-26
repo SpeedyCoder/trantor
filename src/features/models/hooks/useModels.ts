@@ -23,28 +23,95 @@ type UseModelsOptions = {
 const CONFIG_MODEL_DESCRIPTION = "Configured in CODEX_HOME/config.toml";
 const FALLBACK_CLAUDE_MODELS: ModelOption[] = [
   {
-    id: "claude:sonnet-4.5",
-    model: "sonnet-4.5",
+    id: "claude:default",
+    model: "default",
     runtime: "claude",
-    providerModelId: "sonnet-4.5",
-    displayName: "Sonnet 4.5 · Claude",
+    providerModelId: "default",
+    displayName: "Opus 4.7 · Claude",
     description: "Fallback Claude model while the Claude model list is unavailable.",
     supportedReasoningEfforts: [],
     defaultReasoningEffort: null,
     isDefault: true,
   },
   {
-    id: "claude:sonnet-4.6",
-    model: "sonnet-4.6",
+    id: "claude:sonnet",
+    model: "sonnet",
     runtime: "claude",
-    providerModelId: "sonnet-4.6",
+    providerModelId: "sonnet",
     displayName: "Sonnet 4.6 · Claude",
     description: "Fallback Claude model while the Claude model list is unavailable.",
     supportedReasoningEfforts: [],
     defaultReasoningEffort: null,
     isDefault: false,
   },
+  {
+    id: "claude:haiku",
+    model: "haiku",
+    runtime: "claude",
+    providerModelId: "haiku",
+    displayName: "Haiku 4.5 · Claude",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    supportedReasoningEfforts: [],
+    defaultReasoningEffort: null,
+    isDefault: false,
+  },
 ];
+
+const GENERIC_CLAUDE_MODEL_IDS = new Set(["default", "sonnet", "haiku"]);
+
+function isGenericClaudeModel(model: ModelOption) {
+  if (harnessForModelId(model.id) !== "claude" && model.runtime !== "claude") {
+    return false;
+  }
+  const providerModelId = (model.providerModelId ?? model.model ?? model.id)
+    .trim()
+    .toLowerCase();
+  return GENERIC_CLAUDE_MODEL_IDS.has(providerModelId);
+}
+
+function canonicalClaudeAliasDisplayName(model: ModelOption) {
+  if (!isGenericClaudeModel(model)) {
+    return null;
+  }
+  const description = model.description.trim();
+  const versionMatch = description.match(/^(Opus|Sonnet|Haiku)\s+(\d+(?:\.\d+)?)/i);
+  if (versionMatch) {
+    const family = versionMatch[1]
+      ? versionMatch[1][0]?.toUpperCase() + versionMatch[1].slice(1).toLowerCase()
+      : "";
+    return `${family} ${versionMatch[2]} · Claude`;
+  }
+  const displayName = model.displayName.trim();
+  if (
+    displayName.length > 0 &&
+    !["default", "sonnet", "haiku"].includes(displayName.toLowerCase()) &&
+    !displayName.toLowerCase().includes("recommended")
+  ) {
+    return displayName;
+  }
+  return null;
+}
+
+function normalizeClaudeCatalog(models: ModelOption[]) {
+  const normalized = models.map((model) => {
+    const displayName = canonicalClaudeAliasDisplayName(model);
+    return displayName ? { ...model, displayName } : model;
+  });
+  const genericClaudeModels = normalized.filter(isGenericClaudeModel);
+  if (genericClaudeModels.length === 0) {
+    return normalized;
+  }
+  const hasCanonicalGenericModels = genericClaudeModels.every(
+    (model) => canonicalClaudeAliasDisplayName(model) !== null,
+  );
+  if (hasCanonicalGenericModels) {
+    return normalized;
+  }
+  const nonClaudeModels = normalized.filter(
+    (model) => harnessForModelId(model.id) !== "claude" && model.runtime !== "claude",
+  );
+  return [...nonClaudeModels, ...FALLBACK_CLAUDE_MODELS];
+}
 
 const findModelByIdOrModel = (
   models: ModelOption[],
@@ -249,7 +316,9 @@ export function useModels({
         payload: response,
       });
       setConfigModel(configModelFromConfig);
-      const dataFromServer: ModelOption[] = parseModelListResponse(response);
+      const dataFromServer: ModelOption[] = normalizeClaudeCatalog(
+        parseModelListResponse(response),
+      );
       const data = (() => {
         if (!configModelFromConfig) {
           return dataFromServer;

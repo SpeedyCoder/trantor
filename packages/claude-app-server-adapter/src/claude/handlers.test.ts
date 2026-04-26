@@ -71,6 +71,58 @@ describe("newHandlers", () => {
     vi.clearAllMocks();
   });
 
+  it("includes Claude model metadata in thread responses", async () => {
+    const repository = createRepository();
+    const handlers = newHandlers("/tmp/workspace", repository, vi.fn());
+
+    const startResponse = await handlers["thread/start"]?.handle({
+      id: 1,
+      method: "thread/start",
+      params: {
+        cwd: "/tmp/workspace",
+        model: "sonnet-4.5",
+        experimentalRawEvents: false,
+        persistExtendedHistory: false,
+      },
+    });
+
+    expect(startResponse).toMatchObject({
+      thread: {
+        model: "sonnet-4.5",
+        modelProvider: "anthropic",
+      },
+      model: "sonnet-4.5",
+      modelProvider: "anthropic",
+    });
+
+    const threadId = (startResponse as { thread?: { id?: string } })?.thread?.id ?? "";
+    const resumeResponse = await handlers["thread/resume"]?.handle({
+      id: 2,
+      method: "thread/resume",
+      params: { threadId, persistExtendedHistory: false },
+    });
+    const listResponse = await handlers["thread/list"]?.handle({
+      id: 3,
+      method: "thread/list",
+      params: {},
+    });
+
+    expect(resumeResponse).toMatchObject({
+      thread: {
+        model: "sonnet-4.5",
+        modelProvider: "anthropic",
+      },
+    });
+    expect(listResponse).toMatchObject({
+      data: [
+        expect.objectContaining({
+          model: "sonnet-4.5",
+          modelProvider: "anthropic",
+        }),
+      ],
+    });
+  });
+
   it("emits separate Claude assistant messages and file changes during turn/start", async () => {
     vi.mocked(runClaudeTurn).mockImplementation(async ({ onDelta, onMessage }) => {
       onDelta("Let me inspect");

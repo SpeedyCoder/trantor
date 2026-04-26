@@ -72,10 +72,7 @@ export type AppModalsProps = {
   onInitGitRepoPromptCancel: () => void;
   onInitGitRepoPromptConfirm: () => void;
   worktreePrompt: WorktreePromptState;
-  onWorktreePromptNameChange: (value: string) => void;
   onWorktreePromptChange: (value: string) => void;
-  onWorktreePromptCopyAgentsMdChange: (value: boolean) => void;
-  onWorktreeSetupScriptChange: (value: string) => void;
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
   workspaceFromUrlPrompt: WorkspaceFromUrlPromptState;
@@ -119,10 +116,7 @@ export const AppModals = memo(function AppModals({
   onInitGitRepoPromptCancel,
   onInitGitRepoPromptConfirm,
   worktreePrompt,
-  onWorktreePromptNameChange,
   onWorktreePromptChange,
-  onWorktreePromptCopyAgentsMdChange,
-  onWorktreeSetupScriptChange,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
   workspaceFromUrlPrompt,
@@ -191,20 +185,12 @@ export const AppModals = memo(function AppModals({
         <Suspense fallback={null}>
           <WorktreePrompt
             workspaceName={worktreePrompt.workspace.name}
-            name={worktreePrompt.name}
             branch={worktreePrompt.branch}
             branchWasEdited={worktreePrompt.branchWasEdited}
             branchSuggestions={worktreeBranches}
-            copyAgentsMd={worktreePrompt.copyAgentsMd}
-            setupScript={worktreePrompt.setupScript}
-            scriptError={worktreePrompt.scriptError}
             error={worktreePrompt.error}
             isBusy={worktreePrompt.isSubmitting}
-            isSavingScript={worktreePrompt.isSavingScript}
-            onNameChange={onWorktreePromptNameChange}
             onChange={onWorktreePromptChange}
-            onCopyAgentsMdChange={onWorktreePromptCopyAgentsMdChange}
-            onSetupScriptChange={onWorktreeSetupScriptChange}
             onCancel={onWorktreePromptCancel}
             onConfirm={onWorktreePromptConfirm}
           />

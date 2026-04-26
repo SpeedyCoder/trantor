@@ -1,6 +1,6 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 
-import type { WorkspaceInfo, WorkspaceSettings } from "../../../types";
+import type { ThreadSummary, WorkspaceInfo, WorkspaceSettings } from "../../../types";
 
 type AppTab = "home" | "projects" | "codex" | "git" | "log";
 
@@ -13,6 +13,8 @@ type UseSidebarLayoutActionsOptions = {
   exitDiffView: () => void;
   selectWorkspace: (workspaceId: string) => void;
   setActiveThreadId: (threadId: string | null, workspaceId?: string) => void;
+  startThreadForWorkspace: (workspaceId: string) => Promise<string | null>;
+  threadsByWorkspace: Record<string, ThreadSummary[]>;
   connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
   isCompact: boolean;
   setActiveTab: (tab: AppTab) => void;
@@ -32,6 +34,19 @@ type UseSidebarLayoutActionsOptions = {
   listThreadsForWorkspace: (workspace: WorkspaceInfo) => void | Promise<unknown>;
 };
 
+function getFirstThreadTabId(threads: ThreadSummary[]): string | null {
+  if (threads.length === 0) {
+    return null;
+  }
+  return [...threads]
+    .map((thread, index) => ({ thread, index }))
+    .sort((a, b) => {
+      const aTime = a.thread.createdAt ?? a.thread.updatedAt ?? 0;
+      const bTime = b.thread.createdAt ?? b.thread.updatedAt ?? 0;
+      return aTime === bTime ? a.index - b.index : aTime - bTime;
+    })[0]?.thread.id ?? null;
+}
+
 export function useSidebarLayoutActions({
   openSettings,
   resetPullRequestSelection,
@@ -41,6 +56,8 @@ export function useSidebarLayoutActions({
   exitDiffView,
   selectWorkspace,
   setActiveThreadId,
+  startThreadForWorkspace,
+  threadsByWorkspace,
   connectWorkspace,
   isCompact,
   setActiveTab,
@@ -56,6 +73,8 @@ export function useSidebarLayoutActions({
   loadOlderThreadsForWorkspace,
   listThreadsForWorkspace,
 }: UseSidebarLayoutActionsOptions) {
+  const startingThreadByWorkspaceRef = useRef<Set<string>>(new Set());
+
   const onOpenSettings = useCallback(() => {
     openSettings();
   }, [openSettings]);
@@ -67,12 +86,25 @@ export function useSidebarLayoutActions({
   }, [resetPullRequestSelection, clearDraftState, selectHome]);
 
   const onSelectWorkspace = useCallback(
-    (workspaceId: string) => {
+    async (workspaceId: string) => {
       exitDiffView();
       resetPullRequestSelection();
       clearDraftStateIfDifferentWorkspace(workspaceId);
       selectWorkspace(workspaceId);
-      setActiveThreadId(null, workspaceId);
+      const firstThreadId = getFirstThreadTabId(threadsByWorkspace[workspaceId] ?? []);
+      if (firstThreadId) {
+        setActiveThreadId(firstThreadId, workspaceId);
+        return;
+      }
+      if (startingThreadByWorkspaceRef.current.has(workspaceId)) {
+        return;
+      }
+      startingThreadByWorkspaceRef.current.add(workspaceId);
+      try {
+        await startThreadForWorkspace(workspaceId);
+      } finally {
+        startingThreadByWorkspaceRef.current.delete(workspaceId);
+      }
     },
     [
       exitDiffView,
@@ -80,6 +112,8 @@ export function useSidebarLayoutActions({
       clearDraftStateIfDifferentWorkspace,
       selectWorkspace,
       setActiveThreadId,
+      startThreadForWorkspace,
+      threadsByWorkspace,
     ],
   );
 

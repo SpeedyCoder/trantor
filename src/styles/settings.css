@@ -30,6 +30,14 @@
   color: var(--text-strong);
 }
 
+.settings-window-windowed-mac .settings-titlebar {
+  padding-left: calc(26px + var(--titlebar-inset-left, 72px));
+}
+
+.settings-window-windowed-mac .settings-title {
+  padding-right: 32px;
+}
+
 .settings-close {
   padding: 4px;
 }
@@ -954,15 +962,36 @@
   padding-left: 4px;
 }
 
+.settings-project-card {
+  border-radius: 14px;
+  border: 1px solid var(--border-muted);
+  background: var(--surface-card);
+  overflow: hidden;
+}
+
+.settings-project-card.is-selected {
+  border-color: color-mix(in srgb, var(--border-accent) 65%, var(--border-muted));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-accent) 24%, transparent);
+}
+
 .settings-project-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--surface-card);
-  border: 1px solid var(--border-muted);
+}
+
+.settings-project-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  text-align: left;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
 }
 
 .settings-project-info {
@@ -989,6 +1018,10 @@
 .settings-project-actions {
   display: inline-flex;
   gap: 6px;
+}
+
+.settings-project-setup {
+  padding: 0 14px 14px;
 }
 
 .settings-overrides {

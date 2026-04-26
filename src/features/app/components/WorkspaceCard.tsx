@@ -8,17 +8,10 @@ type WorkspaceCardProps = {
   workspace: WorkspaceInfo;
   workspaceName?: React.ReactNode;
   isCollapsed: boolean;
-  addMenuOpen: boolean;
-  addMenuWidth: number;
   onShowWorkspaceMenu: (event: MouseEvent, workspaceId: string) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
-  onToggleAddMenu: (anchor: {
-    workspaceId: string;
-    top: number;
-    left: number;
-    width: number;
-  } | null) => void;
+  onAddWorktreeAgent: (workspace: WorkspaceInfo) => void;
   children?: React.ReactNode;
 };
 
@@ -26,12 +19,10 @@ export function WorkspaceCard({
   workspace,
   workspaceName,
   isCollapsed,
-  addMenuOpen,
-  addMenuWidth,
   onShowWorkspaceMenu,
   onToggleWorkspaceCollapse,
   onConnectWorkspace,
-  onToggleAddMenu,
+  onAddWorktreeAgent,
   children,
 }: WorkspaceCardProps) {
   const contentCollapsedClass = isCollapsed ? " collapsed" : "";
@@ -71,26 +62,10 @@ export function WorkspaceCard({
             className="ghost workspace-add"
             onClick={(event) => {
               event.stopPropagation();
-              const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-              const left = Math.min(
-                Math.max(rect.left, 12),
-                window.innerWidth - addMenuWidth - 12,
-              );
-              const top = rect.bottom + 8;
-              onToggleAddMenu(
-                addMenuOpen
-                  ? null
-                  : {
-                      workspaceId: workspace.id,
-                      top,
-                      left,
-                      width: addMenuWidth,
-                    },
-              );
+              onAddWorktreeAgent(workspace);
             }}
             data-tauri-drag-region="false"
-            aria-label="Add agent options"
-            aria-expanded={addMenuOpen}
+            aria-label="New worktree agent"
           >
             +
           </button>

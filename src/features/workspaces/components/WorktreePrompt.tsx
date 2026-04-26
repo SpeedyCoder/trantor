@@ -7,42 +7,26 @@ import { filterBranches } from "../../git/utils/branchSearch";
 
 type WorktreePromptProps = {
   workspaceName: string;
-  name: string;
   branch: string;
   branchWasEdited?: boolean;
   branchSuggestions?: BranchInfo[];
-  copyAgentsMd: boolean;
-  setupScript: string;
-  scriptError?: string | null;
   error?: string | null;
-  onNameChange: (value: string) => void;
   onChange: (value: string) => void;
-  onCopyAgentsMdChange: (value: boolean) => void;
-  onSetupScriptChange: (value: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
   isBusy?: boolean;
-  isSavingScript?: boolean;
 };
 
 export function WorktreePrompt({
   workspaceName,
-  name,
   branch,
   branchWasEdited = false,
   branchSuggestions = [],
-  copyAgentsMd,
-  setupScript,
-  scriptError = null,
   error = null,
-  onNameChange,
   onChange,
-  onCopyAgentsMdChange,
-  onSetupScriptChange,
   onCancel,
   onConfirm,
   isBusy = false,
-  isSavingScript = false,
 }: WorktreePromptProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const branchContainerRef = useRef<HTMLDivElement | null>(null);
@@ -76,7 +60,9 @@ export function WorktreePrompt({
     const itemEl = branchListRef.current?.children[selectedBranchIndex] as
       | HTMLElement
       | undefined;
-    itemEl?.scrollIntoView({ block: "nearest" });
+    if (typeof itemEl?.scrollIntoView === "function") {
+      itemEl.scrollIntoView({ block: "nearest" });
+    }
   }, [branchMenuOpen, selectedBranchIndex]);
 
   const handleBranchSelect = (branchInfo: BranchInfo) => {
@@ -116,29 +102,6 @@ export function WorktreePrompt({
       <div className="ds-modal-subtitle worktree-modal-subtitle">
         Create a worktree under project "{workspaceName}".
       </div>
-      <label className="ds-modal-label worktree-modal-label" htmlFor="worktree-name">
-        Name
-      </label>
-      <input
-        id="worktree-name"
-        ref={inputRef}
-        className="ds-modal-input worktree-modal-input"
-        value={name}
-        placeholder="(Optional)"
-        onChange={(event) => onNameChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            if (!isBusy) {
-              onCancel();
-            }
-          }
-          if (event.key === "Enter" && !isBusy) {
-            event.preventDefault();
-            onConfirm();
-          }
-        }}
-      />
       <label className="ds-modal-label worktree-modal-label" htmlFor="worktree-branch">
         Branch name
       </label>
@@ -150,6 +113,7 @@ export function WorktreePrompt({
       >
         <input
           id="worktree-branch"
+          ref={inputRef}
           className="ds-modal-input worktree-modal-input"
           value={branch}
           onChange={(event) => {
@@ -227,39 +191,11 @@ export function WorktreePrompt({
           />
         )}
       </div>
-      <div className="worktree-modal-checkbox-row">
-        <input
-          id="worktree-copy-agents"
-          type="checkbox"
-          className="worktree-modal-checkbox-input"
-          checked={copyAgentsMd}
-          disabled={isBusy}
-          onChange={(event) => onCopyAgentsMdChange(event.target.checked)}
-        />
-        <label className="worktree-modal-checkbox-label" htmlFor="worktree-copy-agents">
-          Copy <code>AGENTS.md</code> into the worktree
-        </label>
-      </div>
-      <div className="ds-modal-divider worktree-modal-divider" />
-      <div className="worktree-modal-section-title">Environment setup script</div>
-      <div className="worktree-modal-hint">
-        Stored on the project (Settings → Environments) and runs once in a dedicated
-        terminal after each new worktree is created.
-      </div>
-      <textarea
-        id="worktree-setup-script"
-        className="ds-modal-textarea worktree-modal-textarea"
-        value={setupScript}
-        onChange={(event) => onSetupScriptChange(event.target.value)}
-        placeholder="pnpm install"
-        rows={4}
-        disabled={isBusy || isSavingScript}
-      />
-      {scriptError && <div className="ds-modal-error worktree-modal-error">{scriptError}</div>}
       {error && <div className="ds-modal-error worktree-modal-error">{error}</div>}
       <div className="ds-modal-actions worktree-modal-actions">
         <button
           className="ghost ds-modal-button worktree-modal-button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={onCancel}
           type="button"
           disabled={isBusy}
@@ -268,6 +204,7 @@ export function WorktreePrompt({
         </button>
         <button
           className="primary ds-modal-button worktree-modal-button"
+          onMouseDown={(event) => event.preventDefault()}
           onClick={onConfirm}
           type="button"
           disabled={isBusy || branch.trim().length === 0}

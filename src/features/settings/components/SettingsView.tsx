@@ -1,5 +1,6 @@
 import ChevronLeft from "lucide-react/dist/esm/icons/chevron-left";
 import X from "lucide-react/dist/esm/icons/x";
+import { useEffect, useState } from "react";
 import type {
   AppSettings,
   CodexDoctorResult,
@@ -14,6 +15,7 @@ import { useSettingsViewCloseShortcuts } from "@settings/hooks/useSettingsViewCl
 import { useSettingsViewNavigation } from "@settings/hooks/useSettingsViewNavigation";
 import { useSettingsViewOrchestration } from "@settings/hooks/useSettingsViewOrchestration";
 import { ModalShell } from "@/features/design-system/components/modal/ModalShell";
+import { isMacPlatform } from "@utils/platformPaths";
 import { SettingsNav } from "./SettingsNav";
 import type { SettingsRouteSection } from "./settingsTypes";
 import { SETTINGS_SECTION_LABELS } from "./settingsViewConstants";
@@ -100,6 +102,7 @@ export function SettingsView({
   accountRateLimits,
   usageShowRemaining,
 }: SettingsViewProps) {
+  const [isWindowedMac, setIsWindowedMac] = useState(false);
   const {
     activeSection,
     showMobileDetail,
@@ -141,15 +144,44 @@ export function SettingsView({
 
   useSettingsViewCloseShortcuts(onClose);
 
+  useEffect(() => {
+    if (!isMacPlatform() || typeof window === "undefined") {
+      setIsWindowedMac(false);
+      return;
+    }
+
+    const updateWindowMode = () => {
+      const screenWidth = window.screen?.availWidth ?? 0;
+      const screenHeight = window.screen?.availHeight ?? 0;
+      if (screenWidth <= 0 || screenHeight <= 0) {
+        setIsWindowedMac(false);
+        return;
+      }
+
+      const widthGap = screenWidth - window.innerWidth;
+      const heightGap = screenHeight - window.innerHeight;
+      setIsWindowedMac(widthGap > 24 || heightGap > 24);
+    };
+
+    updateWindowMode();
+    window.addEventListener("resize", updateWindowMode);
+    return () => {
+      window.removeEventListener("resize", updateWindowMode);
+    };
+  }, []);
+
   const activeSectionLabel = SETTINGS_SECTION_LABELS[activeSection];
   const settingsBodyClassName = `settings-body${
     useMobileMasterDetail ? " settings-body-mobile-master-detail" : ""
   }${useMobileMasterDetail && showMobileDetail ? " is-detail-visible" : ""}`;
+  const settingsWindowClassName = `settings-window${
+    isWindowedMac ? " settings-window-windowed-mac" : ""
+  }`;
 
   return (
     <ModalShell
       className="settings-overlay"
-      cardClassName="settings-window"
+      cardClassName={settingsWindowClassName}
       onBackdropClick={onClose}
       ariaLabelledBy="settings-modal-title"
     >

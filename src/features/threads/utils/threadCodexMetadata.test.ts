@@ -63,4 +63,25 @@ describe("extractThreadCodexMetadata", () => {
       effort: null,
     });
   });
+
+  it("prefixes Claude provider model ids for harness detection", () => {
+    const metadata = extractThreadCodexMetadata({
+      model: "sonnet-4.5",
+      modelProvider: "anthropic",
+    });
+
+    expect(metadata).toEqual({
+      modelId: "claude:sonnet-4.5",
+      effort: null,
+    });
+  });
+
+  it("does not double-prefix Claude model ids", () => {
+    const metadata = extractThreadCodexMetadata({
+      model: "claude:sonnet-4.5",
+      modelProvider: "anthropic",
+    });
+
+    expect(metadata.modelId).toBe("claude:sonnet-4.5");
+  });
 });

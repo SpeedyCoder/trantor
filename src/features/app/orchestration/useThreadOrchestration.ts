@@ -335,14 +335,11 @@ export function useThreadSelectionHandlersOrchestration({
 
   const handleSelectHarness = useCallback(
     (harness: AgentHarness) => {
-      if (activeThreadIdRef.current) {
-        return;
-      }
       setSelectedHarness?.(harness);
       setSelectedModelId(null);
       persistThreadCodexParams({ harness, modelId: null });
     },
-    [activeThreadIdRef, persistThreadCodexParams, setSelectedHarness, setSelectedModelId],
+    [persistThreadCodexParams, setSelectedHarness, setSelectedModelId],
   );
 
   const handleSelectEffort = useCallback(

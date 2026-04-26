@@ -15,7 +15,6 @@ afterEach(() => {
 const baseProps = {
   workspaces: [],
   groupedWorkspaces: [],
-  hasWorkspaceGroups: false,
   deletingWorktreeIds: new Set<string>(),
   threadsByWorkspace: {},
   threadParentById: {},
@@ -139,6 +138,43 @@ describe("Sidebar", () => {
 
     expect(onToggleWorkspaceCollapse).toHaveBeenCalledWith("ws-1", true);
     expect(onSelectWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("lists workspaces directly without rendering a Workspaces group item", () => {
+    const { container } = render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[
+          {
+            id: "ws-1",
+            name: "Alpha Project",
+            path: "/tmp/alpha",
+            connected: true,
+            settings: { sidebarCollapsed: false },
+          },
+        ]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Workspaces",
+            workspaces: [
+              {
+                id: "ws-1",
+                name: "Alpha Project",
+                path: "/tmp/alpha",
+                connected: true,
+                settings: { sidebarCollapsed: false },
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Alpha Project")).toBeTruthy();
+    expect(screen.queryByText("Workspaces")).toBeNull();
+    expect(container.querySelectorAll(".workspace-row")).toHaveLength(1);
+    expect(container.querySelectorAll(".workspace-group-header")).toHaveLength(0);
   });
 
   it("omits the account button from the bottom rail", () => {
@@ -299,7 +335,7 @@ describe("Sidebar", () => {
     expect(container.querySelectorAll(".worktree-row")).toHaveLength(1);
   });
 
-  it("opens a project add menu with a worktree action", () => {
+  it("opens the worktree agent prompt from the project add button", () => {
     const onAddWorktreeAgent = vi.fn();
     render(
       <Sidebar
@@ -334,12 +370,12 @@ describe("Sidebar", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Add agent options" }));
-    fireEvent.click(screen.getByRole("button", { name: "New worktree" }));
+    fireEvent.click(screen.getByRole("button", { name: "New worktree agent" }));
 
     expect(onAddWorktreeAgent).toHaveBeenCalledWith(
       expect.objectContaining({ id: "ws-1" }),
     );
+    expect(screen.queryByRole("button", { name: "New worktree" })).toBeNull();
   });
 
   it("sorts projects by worktree activity when project activity mode is active", () => {

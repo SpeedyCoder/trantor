@@ -916,9 +916,27 @@
   --composer-overlay-height: 0px;
   position: relative;
   display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
   min-width: 0;
+}
+
+.chat-pane-header {
+  flex: 0 0 auto;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+
+.content:has(.has-chat-header) {
+  background:
+    linear-gradient(
+      180deg,
+      var(--surface-debug) 0px,
+      var(--surface-debug) var(--main-content-top-offset, 60px),
+      color-mix(in srgb, var(--surface-messages) 94%, transparent) var(--main-content-top-offset, 60px),
+      color-mix(in srgb, var(--surface-messages) 100%, transparent) 100%
+    );
 }
 
 .chat-pane-messages {
@@ -926,6 +944,11 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
+}
+
+.chat-pane.has-chat-header .messages-full {
+  margin-top: 0;
+  padding-top: 14px;
 }
 
 .chat-pane-composer {

@@ -9,14 +9,8 @@ afterEach(() => {
 
 const baseProps = {
   workspaceName: "Repo",
-  name: "",
   branch: "feature/new-worktree",
-  copyAgentsMd: false,
-  setupScript: "",
-  onNameChange: vi.fn(),
   onChange: vi.fn(),
-  onCopyAgentsMdChange: vi.fn(),
-  onSetupScriptChange: vi.fn(),
   onCancel: vi.fn(),
   onConfirm: vi.fn(),
 };
@@ -71,5 +65,23 @@ describe("WorktreePrompt", () => {
       expect(onCancel).toHaveBeenCalled();
       expect(onConfirm).toHaveBeenCalled();
     });
+  });
+
+  it("submits from the create button without first closing the branch menu", () => {
+    const onConfirm = vi.fn();
+    render(
+      <WorktreePrompt
+        {...baseProps}
+        onConfirm={onConfirm}
+        isBusy={false}
+        branchSuggestions={[{ name: "feature/existing", lastCommit: Date.now() }]}
+      />,
+    );
+
+    const createButton = screen.getByRole("button", { name: "Create" });
+    expect(fireEvent.mouseDown(createButton)).toBe(false);
+    fireEvent.click(createButton);
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 });

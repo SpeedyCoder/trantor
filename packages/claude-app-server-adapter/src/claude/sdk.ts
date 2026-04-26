@@ -120,6 +120,39 @@ type ListClaudeModelsArgs = {
   cwd: string;
 };
 
+const GENERIC_CLAUDE_MODEL_IDS = new Set(["default", "sonnet", "haiku"]);
+
+const FALLBACK_CLAUDE_MODELS = [
+  {
+    value: "default",
+    displayName: "Opus 4.7",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    supportedEffortLevels: ["low", "medium", "high", "xhigh"],
+    isDefault: true,
+  },
+  {
+    value: "sonnet",
+    displayName: "Sonnet 4.6",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    supportedEffortLevels: ["low", "medium", "high", "xhigh"],
+    isDefault: false,
+  },
+  {
+    value: "haiku",
+    displayName: "Haiku 4.5",
+    description: "Fallback Claude model while the Claude model list is unavailable.",
+    isDefault: false,
+  },
+] as const;
+
+type ClaudeModelLike = {
+  value: string;
+  displayName?: string;
+  description?: string;
+  supportedEffortLevels?: readonly NonNullable<ModelInfo["supportedEffortLevels"]>[number][];
+  isDefault?: boolean;
+};
+
 function toReasoningEffort(
   reasoningEffort: NonNullable<ModelInfo["supportedEffortLevels"]>[number],
 ): ReasoningEffort | null {
@@ -129,23 +162,94 @@ function toReasoningEffort(
     case "high":
     case "xhigh":
       return reasoningEffort;
+    case "max":
+      return "xhigh";
     default:
       return null;
   }
 }
 
 function toReasoningEfforts(model: {
-  supportedEffortLevels?: ModelInfo["supportedEffortLevels"];
+  supportedEffortLevels?: readonly NonNullable<ModelInfo["supportedEffortLevels"]>[number][];
 }): Model["supportedReasoningEfforts"] {
   return (model.supportedEffortLevels ?? [])
     .map((reasoningEffort) => toReasoningEffort(reasoningEffort))
     .filter((reasoningEffort): reasoningEffort is ReasoningEffort =>
       Boolean(reasoningEffort),
     )
+    .filter((reasoningEffort, index, efforts) => efforts.indexOf(reasoningEffort) === index)
     .map((reasoningEffort) => ({
       reasoningEffort,
       description: "",
     }));
+}
+
+function defaultReasoningEffortForModel(
+  supportedReasoningEfforts: Model["supportedReasoningEfforts"],
+): ReasoningEffort {
+  if (supportedReasoningEfforts.some((effort) => effort.reasoningEffort === "medium")) {
+    return "medium";
+  }
+  return supportedReasoningEfforts[0]?.reasoningEffort ?? "none";
+}
+
+function toDisplayName(modelId: string, displayName: string | undefined): string {
+  const trimmed = displayName?.trim() ?? "";
+  if (trimmed.length > 0 && !GENERIC_CLAUDE_MODEL_IDS.has(modelId.toLowerCase())) {
+    return trimmed;
+  }
+  return modelId;
+}
+
+function canonicalDisplayNameForAlias(model: ClaudeModelLike): string | null {
+  const modelId = model.value.trim().toLowerCase();
+  if (!GENERIC_CLAUDE_MODEL_IDS.has(modelId)) {
+    return null;
+  }
+  const description = model.description?.trim() ?? "";
+  const versionMatch = description.match(/^(Opus|Sonnet|Haiku)\s+(\d+(?:\.\d+)?)/i);
+  if (versionMatch) {
+    const family = versionMatch[1] ? versionMatch[1][0]?.toUpperCase() + versionMatch[1].slice(1).toLowerCase() : "";
+    return `${family} ${versionMatch[2]}`;
+  }
+  const displayName = model.displayName?.trim() ?? "";
+  if (
+    displayName.length > 0 &&
+    displayName.toLowerCase() !== modelId &&
+    !displayName.toLowerCase().includes("recommended")
+  ) {
+    return displayName;
+  }
+  if (modelId === "default") {
+    return "Opus";
+  }
+  return null;
+}
+
+function toModel(model: ClaudeModelLike): Model {
+  const modelId = model.value.trim();
+  const supportedReasoningEfforts = toReasoningEfforts(model);
+  return {
+    id: modelId,
+    model: modelId,
+    upgrade: null,
+    upgradeInfo: null,
+    availabilityNux: null,
+    displayName:
+      canonicalDisplayNameForAlias(model) ?? toDisplayName(modelId, model.displayName),
+    description: model.description ?? "",
+    hidden: false,
+    supportedReasoningEfforts,
+    defaultReasoningEffort: defaultReasoningEffortForModel(supportedReasoningEfforts),
+    inputModalities: ["text"],
+    supportsPersonality: false,
+    isDefault: Boolean(model.isDefault),
+  };
+}
+
+function normalizeClaudeModels(models: ClaudeModelLike[]): Model[] {
+  const sourceModels = models.length > 0 ? models : [...FALLBACK_CLAUDE_MODELS];
+  return sourceModels.map((model) => toModel(model));
 }
 
 export async function listClaudeModels({
@@ -164,21 +268,7 @@ export async function listClaudeModels({
   try {
     const models = await control.supportedModels();
     return {
-      data: models.map<Model>((model) => ({
-        id: model.value,
-        model: model.value,
-        upgrade: null,
-        upgradeInfo: null,
-        availabilityNux: null,
-        displayName: model.displayName ?? "",
-        description: model.description ?? "",
-        hidden: false,
-        supportedReasoningEfforts: toReasoningEfforts(model),
-        defaultReasoningEffort: "none",
-        inputModalities: ["text"],
-        supportsPersonality: false,
-        isDefault: false,
-      })),
+      data: normalizeClaudeModels(models),
       nextCursor: null,
     };
   } finally {

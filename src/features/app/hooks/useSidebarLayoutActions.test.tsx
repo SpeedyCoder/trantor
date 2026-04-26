@@ -24,6 +24,8 @@ describe("useSidebarLayoutActions", () => {
       exitDiffView: vi.fn(),
       selectWorkspace: vi.fn(),
       setActiveThreadId: vi.fn(),
+      startThreadForWorkspace: vi.fn(async () => "thread-new"),
+      threadsByWorkspace: {},
       connectWorkspace: vi.fn(async () => {}),
       isCompact: false,
       setActiveTab: vi.fn(),
@@ -65,12 +67,13 @@ describe("useSidebarLayoutActions", () => {
     expect(result.current.onLoadOlderThreads).toBe(firstRefs.onLoadOlderThreads);
   });
 
-  it("selects a workspace through the standard sidebar flow", () => {
+  it("selects the first thread tab when a workspace is selected", async () => {
     const exitDiffView = vi.fn();
     const resetPullRequestSelection = vi.fn();
     const clearDraftStateIfDifferentWorkspace = vi.fn();
     const selectWorkspace = vi.fn();
     const setActiveThreadId = vi.fn();
+    const startThreadForWorkspace = vi.fn(async () => "thread-new");
     const { result } = renderHook(() =>
       useSidebarLayoutActions({
         openSettings: vi.fn(),
@@ -81,6 +84,13 @@ describe("useSidebarLayoutActions", () => {
         exitDiffView,
         selectWorkspace,
         setActiveThreadId,
+        startThreadForWorkspace,
+        threadsByWorkspace: {
+          "ws-1": [
+            { id: "thread-2", name: "Second", updatedAt: 200, createdAt: 200 },
+            { id: "thread-1", name: "First", updatedAt: 100, createdAt: 100 },
+          ],
+        },
         connectWorkspace: vi.fn(async () => {}),
         isCompact: false,
         setActiveTab: vi.fn(),
@@ -98,15 +108,56 @@ describe("useSidebarLayoutActions", () => {
       }),
     );
 
-    act(() => {
-      result.current.onSelectWorkspace("ws-1");
+    await act(async () => {
+      await result.current.onSelectWorkspace("ws-1");
     });
 
     expect(exitDiffView).toHaveBeenCalledTimes(1);
     expect(resetPullRequestSelection).toHaveBeenCalledTimes(1);
     expect(clearDraftStateIfDifferentWorkspace).toHaveBeenCalledWith("ws-1");
     expect(selectWorkspace).toHaveBeenCalledWith("ws-1");
-    expect(setActiveThreadId).toHaveBeenCalledWith(null, "ws-1");
+    expect(setActiveThreadId).toHaveBeenCalledWith("thread-1", "ws-1");
+    expect(startThreadForWorkspace).not.toHaveBeenCalled();
+  });
+
+  it("creates a first thread tab when a selected workspace has none", async () => {
+    const startThreadForWorkspace = vi.fn(async () => "thread-new");
+    const setActiveThreadId = vi.fn();
+    const { result } = renderHook(() =>
+      useSidebarLayoutActions({
+        openSettings: vi.fn(),
+        resetPullRequestSelection: vi.fn(),
+        clearDraftState: vi.fn(),
+        clearDraftStateIfDifferentWorkspace: vi.fn(),
+        selectHome: vi.fn(),
+        exitDiffView: vi.fn(),
+        selectWorkspace: vi.fn(),
+        setActiveThreadId,
+        startThreadForWorkspace,
+        threadsByWorkspace: { "ws-1": [] },
+        connectWorkspace: vi.fn(async () => {}),
+        isCompact: false,
+        setActiveTab: vi.fn(),
+        workspacesById: new Map([[workspace.id, workspace]]),
+        updateWorkspaceSettings: vi.fn(async () => workspace),
+        removeThread: vi.fn(),
+        clearDraftForThread: vi.fn(),
+        removeImagesForThread: vi.fn(),
+        refreshThread: vi.fn(async () => {}),
+        handleRenameThread: vi.fn(),
+        removeWorkspace: vi.fn(async () => {}),
+        removeWorktree: vi.fn(async () => {}),
+        loadOlderThreadsForWorkspace: vi.fn(async () => {}),
+        listThreadsForWorkspace: vi.fn(async () => {}),
+      }),
+    );
+
+    await act(async () => {
+      await result.current.onSelectWorkspace("ws-1");
+    });
+
+    expect(setActiveThreadId).not.toHaveBeenCalled();
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("ws-1");
   });
 
   it("switches to codex tab after connecting in compact mode", async () => {
@@ -122,6 +173,8 @@ describe("useSidebarLayoutActions", () => {
         exitDiffView: vi.fn(),
         selectWorkspace: vi.fn(),
         setActiveThreadId: vi.fn(),
+        startThreadForWorkspace: vi.fn(async () => "thread-new"),
+        threadsByWorkspace: {},
         connectWorkspace,
         isCompact: true,
         setActiveTab,

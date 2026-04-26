@@ -21,18 +21,21 @@ type SyncParams = Parameters<typeof useThreadCodexSyncOrchestration>[0];
 function makeSelectionParams(): SelectionParams & {
   persistThreadCodexParams: ReturnType<typeof vi.fn>;
   setSelectedCodexArgsOverride: ReturnType<typeof vi.fn>;
+  setSelectedHarness: ReturnType<typeof vi.fn>;
 } {
   const setAppSettings = vi.fn() as unknown as Dispatch<SetStateAction<AppSettings>>;
   const setAccessMode = vi.fn() as unknown as Dispatch<SetStateAction<AccessMode>>;
   const activeThreadIdRef = { current: null } as MutableRefObject<string | null>;
   const persistThreadCodexParams = vi.fn();
   const setSelectedCodexArgsOverride = vi.fn();
+  const setSelectedHarness = vi.fn();
 
   return {
     appSettingsLoading: false,
     setAppSettings,
     queueSaveSettings: vi.fn(async () => undefined),
     activeThreadIdRef,
+    setSelectedHarness,
     setSelectedModelId: vi.fn(),
     setSelectedEffort: vi.fn(),
     setSelectedServiceTier: vi.fn(),
@@ -160,6 +163,23 @@ describe("useThreadSelectionHandlersOrchestration codex args selection", () => {
     expect(params.persistThreadCodexParams).toHaveBeenCalledWith({
       harness: "codex",
       modelId: "gpt-5.4",
+    });
+  });
+
+  it("allows harness changes while a new active thread is selected", () => {
+    const params = makeSelectionParams();
+    params.activeThreadIdRef.current = "thread-new";
+    const { result } = renderHook(() => useThreadSelectionHandlersOrchestration(params));
+
+    act(() => {
+      result.current.handleSelectHarness("claude");
+    });
+
+    expect(params.setSelectedHarness).toHaveBeenCalledWith("claude");
+    expect(params.setSelectedModelId).toHaveBeenCalledWith(null);
+    expect(params.persistThreadCodexParams).toHaveBeenCalledWith({
+      harness: "claude",
+      modelId: null,
     });
   });
 

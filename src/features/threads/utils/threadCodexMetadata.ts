@@ -45,6 +45,14 @@ const MODEL_KEYS = [
   "model_name",
 ] as const;
 
+const PROVIDER_KEYS = [
+  "modelProvider",
+  "model_provider",
+  "provider",
+  "providerName",
+  "provider_name",
+] as const;
+
 const EFFORT_KEYS = [
   "effort",
   "reasoningEffort",
@@ -52,6 +60,26 @@ const EFFORT_KEYS = [
   "modelReasoningEffort",
   "model_reasoning_effort",
 ] as const;
+
+function hasClaudeProvider(containers: readonly Record<string, unknown>[]): boolean {
+  return containers.some((container) => {
+    const provider = pickString(container, PROVIDER_KEYS)?.toLowerCase();
+    return provider === "anthropic" || provider === "claude";
+  });
+}
+
+function normalizeModelIdForProvider(
+  modelId: string | null,
+  containers: readonly Record<string, unknown>[],
+): string | null {
+  if (!modelId || !hasClaudeProvider(containers)) {
+    return modelId;
+  }
+  if (modelId.startsWith("claude:") || modelId.startsWith("codex:")) {
+    return modelId;
+  }
+  return `claude:${modelId}`;
+}
 
 function extractFromRecord(record: Record<string, unknown>): {
   modelId: string | null;
@@ -87,7 +115,7 @@ function extractFromRecord(record: Record<string, unknown>): {
     }
   }
 
-  return { modelId, effort };
+  return { modelId: normalizeModelIdForProvider(modelId, containers), effort };
 }
 
 function extractFromTurn(turn: Record<string, unknown>): {

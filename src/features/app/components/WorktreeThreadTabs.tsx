@@ -1,6 +1,5 @@
-import Plus from "lucide-react/dist/esm/icons/plus";
-
 import type { ThreadSummary, WorkspaceInfo } from "../../../types";
+import { TerminalTabs } from "../../terminal/components/TerminalTabs";
 
 type WorktreeThreadTabsProps = {
   workspace: WorkspaceInfo;
@@ -22,32 +21,25 @@ export function WorktreeThreadTabs({
   onSelectThread,
   onStartThread,
 }: WorktreeThreadTabsProps) {
+  const tabs = threads
+    .map((thread, index) => ({ thread, index }))
+    .sort((a, b) => {
+      const aTime = a.thread.createdAt ?? a.thread.updatedAt ?? 0;
+      const bTime = b.thread.createdAt ?? b.thread.updatedAt ?? 0;
+      return aTime === bTime ? a.index - b.index : aTime - bTime;
+    })
+    .map(({ thread }) => ({ id: thread.id, title: getThreadLabel(thread) }));
+
   return (
-    <div className="worktree-thread-tabs">
-      <div className="worktree-thread-tabs-scroll">
-        {threads.map((thread) => {
-          const isActive = thread.id === activeThreadId;
-          return (
-            <button
-              key={thread.id}
-              type="button"
-              className={`worktree-thread-tab${isActive ? " is-active" : ""}`}
-              onClick={() => onSelectThread(workspace.id, thread.id)}
-            >
-              <span className="worktree-thread-tab-label">{getThreadLabel(thread)}</span>
-            </button>
-          );
-        })}
-      </div>
-      <button
-        type="button"
-        className="worktree-thread-tab-add"
-        onClick={() => onStartThread(workspace.id)}
-        aria-label={`Start a new thread in ${workspace.name}`}
-        title="New thread"
-      >
-        <Plus size={14} aria-hidden />
-      </button>
-    </div>
+    <TerminalTabs
+      className="worktree-thread-tabs"
+      tabs={tabs}
+      activeTabId={activeThreadId}
+      ariaLabel="Worktree agent threads"
+      addLabel={`Start a new thread in ${workspace.name}`}
+      addTitle="New thread"
+      onSelectTab={(threadId) => onSelectThread(workspace.id, threadId)}
+      onAddTab={() => onStartThread(workspace.id)}
+    />
   );
 }
