@@ -112,7 +112,7 @@ describe("useWorkspaceHome", () => {
 
     const { result } = renderHook(() =>
       useWorkspaceHome({
-        activeWorkspace: workspace,
+        activeWorkspace: worktreeWorkspace,
         models,
         selectedModelId: "codex:gpt-5.1-max",
         seedThreadCodexParams,
@@ -128,18 +128,18 @@ describe("useWorkspaceHome", () => {
       expect(started).toBe(true);
     });
 
-    expect(startThreadForWorkspace).toHaveBeenCalledWith("ws-1", {
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("wt-1", {
       activate: false,
       modelId: "codex:gpt-5.1-max",
     });
     expect(sendUserMessageToThread).toHaveBeenCalledWith(
-      workspace,
+      worktreeWorkspace,
       "thread-1",
       "",
       ["img-1"],
       expect.objectContaining({ model: "codex:gpt-5.1-max" }),
     );
-    expect(seedThreadCodexParams).toHaveBeenCalledWith("ws-1", "thread-1", {
+    expect(seedThreadCodexParams).toHaveBeenCalledWith("wt-1", "thread-1", {
       harness: "codex",
       modelId: "codex:gpt-5.1-max",
       effort: null,
@@ -172,7 +172,7 @@ describe("useWorkspaceHome", () => {
 
     const { result } = renderHook(() =>
       useWorkspaceHome({
-        activeWorkspace: workspace,
+        activeWorkspace: worktreeWorkspace,
         models: claudeModels,
         selectedHarness: "claude",
         selectedModelId: "claude:sonnet-4.5",
@@ -192,18 +192,18 @@ describe("useWorkspaceHome", () => {
       await result.current.startRun();
     });
 
-    expect(startThreadForWorkspace).toHaveBeenCalledWith("ws-1", {
+    expect(startThreadForWorkspace).toHaveBeenCalledWith("wt-1", {
       activate: false,
       modelId: "claude:sonnet-4.5",
     });
     expect(sendUserMessageToThread).toHaveBeenCalledWith(
-      workspace,
+      worktreeWorkspace,
       "thread-claude",
       "Hello Claude",
       [],
       expect.objectContaining({ model: "claude:sonnet-4.5" }),
     );
-    expect(seedThreadCodexParams).toHaveBeenCalledWith("ws-1", "thread-claude", {
+    expect(seedThreadCodexParams).toHaveBeenCalledWith("wt-1", "thread-claude", {
       harness: "claude",
       modelId: "claude:sonnet-4.5",
       effort: null,
@@ -305,7 +305,7 @@ describe("useWorkspaceHome", () => {
 
     const { result } = renderHook(() =>
       useWorkspaceHome({
-        activeWorkspace: workspace,
+        activeWorkspace: worktreeWorkspace,
         models,
         selectedModelId: "codex:gpt-5.1-max",
         addWorktreeAgent,

@@ -20,7 +20,6 @@ import { useBranchSwitcher } from "@/features/git/hooks/useBranchSwitcher";
 import { useInitGitRepoPrompt } from "@/features/git/hooks/useInitGitRepoPrompt";
 import type { InitGitRepoOutcome } from "@/features/git/hooks/useGitActions";
 import { useWorktreePrompt } from "@/features/workspaces/hooks/useWorktreePrompt";
-import { useClonePrompt } from "@/features/workspaces/hooks/useClonePrompt";
 
 type GroupedWorkspaceInfo = SettingsViewProps["groupedWorkspaces"];
 
@@ -56,11 +55,6 @@ type UseMainAppModalsArgs = {
       branch: string,
       options?: { displayName?: string | null; copyAgentsMd?: boolean },
     ) => Promise<WorkspaceInfo | null>;
-    addCloneAgent: (
-      workspace: WorkspaceInfo,
-      copyName: string,
-      copiesFolder: string,
-    ) => Promise<WorkspaceInfo | null>;
     connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
     updateWorkspaceSettings: (
       id: string,
@@ -68,12 +62,8 @@ type UseMainAppModalsArgs = {
     ) => Promise<WorkspaceInfo>;
     selectWorkspace: (workspaceId: string) => void;
     handleWorktreeCreated: (worktree: WorkspaceInfo, parent: WorkspaceInfo) => Promise<void>;
-    resolveCloneProjectContext: (
-      workspace: WorkspaceInfo,
-    ) => { groupId: string | null; copiesFolder: string | null };
-    persistProjectCopiesFolder: (groupId: string, copiesFolder: string) => Promise<void>;
     onCompactActivate?: () => void;
-    onWorkspacePromptError: (message: string, kind: "worktree" | "clone") => void;
+    onWorkspacePromptError: (message: string, kind: "worktree") => void;
     mobileRemoteWorkspacePathPrompt: AppModalsProps["mobileRemoteWorkspacePathPrompt"];
     updateMobileRemoteWorkspacePathInput: (value: string) => void;
     appendMobileRemoteWorkspacePathFromRecent: (path: string) => void;
@@ -143,7 +133,6 @@ type UseMainAppModalsResult = {
     openRenamePrompt: (workspaceId: string, threadId: string) => void;
     openInitGitRepoPrompt: () => void;
     openWorktreePrompt: (workspace: WorkspaceInfo) => void;
-    openClonePrompt: (workspace: WorkspaceInfo) => void;
     openWorkspaceFromUrlPrompt: () => void;
     openBranchSwitcher: () => void;
     closeBranchSwitcher: () => void;
@@ -222,13 +211,6 @@ type BuildAppModalsPropsArgs = {
   onWorktreeSetupScriptChange: (value: string) => void;
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
-  clonePrompt: AppModalsProps["clonePrompt"];
-  onClonePromptCopyNameChange: (value: string) => void;
-  onClonePromptChooseCopiesFolder: () => void;
-  onClonePromptUseSuggestedFolder: () => void;
-  onClonePromptClearCopiesFolder: () => void;
-  onClonePromptCancel: () => void;
-  onClonePromptConfirm: () => void;
   workspaceFromUrl: AppModalsProps["workspaceFromUrlPrompt"] extends null
     ? never
     : Pick<
@@ -281,13 +263,6 @@ function buildAppModalsProps({
   onWorktreeSetupScriptChange,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
-  clonePrompt,
-  onClonePromptCopyNameChange,
-  onClonePromptChooseCopiesFolder,
-  onClonePromptUseSuggestedFolder,
-  onClonePromptClearCopiesFolder,
-  onClonePromptCancel,
-  onClonePromptConfirm,
   workspaceFromUrl,
   mobileRemoteWorkspacePathPrompt,
   onMobileRemoteWorkspacePathPromptChange,
@@ -327,13 +302,6 @@ function buildAppModalsProps({
     onWorktreeSetupScriptChange,
     onWorktreePromptCancel,
     onWorktreePromptConfirm,
-    clonePrompt,
-    onClonePromptCopyNameChange,
-    onClonePromptChooseCopiesFolder,
-    onClonePromptUseSuggestedFolder,
-    onClonePromptClearCopiesFolder,
-    onClonePromptCancel,
-    onClonePromptConfirm,
     ...workspaceFromUrl,
     mobileRemoteWorkspacePathPrompt,
     onMobileRemoteWorkspacePathPromptChange,
@@ -435,25 +403,6 @@ export function useMainAppModals({
     onError: (message) => workspacePrompts.onWorkspacePromptError(message, "worktree"),
   });
 
-  const {
-    clonePrompt,
-    openPrompt: openClonePrompt,
-    confirmPrompt: confirmClonePrompt,
-    cancelPrompt: cancelClonePrompt,
-    updateCopyName: updateCloneCopyName,
-    chooseCopiesFolder: chooseCloneCopiesFolder,
-    useSuggestedCopiesFolder: useSuggestedCloneCopiesFolder,
-    clearCopiesFolder: clearCloneCopiesFolder,
-  } = useClonePrompt({
-    addCloneAgent: workspacePrompts.addCloneAgent,
-    connectWorkspace: workspacePrompts.connectWorkspace,
-    onSelectWorkspace: workspacePrompts.selectWorkspace,
-    resolveProjectContext: workspacePrompts.resolveCloneProjectContext,
-    persistProjectCopiesFolder: workspacePrompts.persistProjectCopiesFolder,
-    onCompactActivate: workspacePrompts.onCompactActivate,
-    onError: (message) => workspacePrompts.onWorkspacePromptError(message, "clone"),
-  });
-
   const settingsViewProps = useMemo<Omit<SettingsViewProps, "initialSection" | "onClose">>(
     () =>
       buildSettingsViewProps({
@@ -488,13 +437,6 @@ export function useMainAppModals({
         onWorktreeSetupScriptChange: updateWorktreeSetupScript,
         onWorktreePromptCancel: cancelWorktreePrompt,
         onWorktreePromptConfirm: confirmWorktreePrompt,
-        clonePrompt,
-        onClonePromptCopyNameChange: updateCloneCopyName,
-        onClonePromptChooseCopiesFolder: chooseCloneCopiesFolder,
-        onClonePromptUseSuggestedFolder: useSuggestedCloneCopiesFolder,
-        onClonePromptClearCopiesFolder: clearCloneCopiesFolder,
-        onClonePromptCancel: cancelClonePrompt,
-        onClonePromptConfirm: confirmClonePrompt,
         workspaceFromUrl: workspacePrompts.workspaceFromUrl,
         mobileRemoteWorkspacePathPrompt:
           workspacePrompts.mobileRemoteWorkspacePathPrompt,
@@ -523,14 +465,9 @@ export function useMainAppModals({
       activeWorkspace,
       branchSwitcher,
       branches,
-      cancelClonePrompt,
       cancelWorktreePrompt,
-      chooseCloneCopiesFolder,
-      clearCloneCopiesFolder,
-      clonePrompt,
       closeBranchSwitcher,
       closeSettings,
-      confirmClonePrompt,
       confirmWorktreePrompt,
       currentBranch,
       git.createGitHubRepoLoading,
@@ -551,13 +488,11 @@ export function useMainAppModals({
       settingsSection,
       settingsViewComponent,
       settingsViewProps,
-      updateCloneCopyName,
       workspacePrompts,
       updateWorktreeBranch,
       updateWorktreeCopyAgentsMd,
       updateWorktreeName,
       updateWorktreeSetupScript,
-      useSuggestedCloneCopiesFolder,
       workspaces,
       worktreePrompt,
     ],
@@ -571,7 +506,6 @@ export function useMainAppModals({
       openRenamePrompt,
       openInitGitRepoPrompt,
       openWorktreePrompt,
-      openClonePrompt,
       openWorkspaceFromUrlPrompt: workspacePrompts.openWorkspaceFromUrlPrompt,
       openBranchSwitcher,
       closeBranchSwitcher,

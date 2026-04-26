@@ -40,7 +40,6 @@ const baseProps = {
   onConnectWorkspace: vi.fn(),
   onAddAgent: vi.fn(),
   onAddWorktreeAgent: vi.fn(),
-  onAddCloneAgent: vi.fn(),
   onToggleWorkspaceCollapse: vi.fn(),
   onSelectThread: vi.fn(),
   onDeleteThread: vi.fn(),
@@ -162,123 +161,6 @@ describe("Sidebar", () => {
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
   });
 
-  it("renders threads-only mode as a global chronological list", () => {
-    const older = Date.now() - 10_000;
-    const newer = Date.now();
-    const { container } = render(
-      <Sidebar
-        {...baseProps}
-        threadListOrganizeMode="threads_only"
-        workspaces={[
-          {
-            id: "ws-1",
-            name: "Alpha Project",
-            path: "/tmp/alpha",
-            connected: true,
-            settings: { sidebarCollapsed: false },
-          },
-          {
-            id: "ws-2",
-            name: "Beta Project",
-            path: "/tmp/beta",
-            connected: true,
-            settings: { sidebarCollapsed: false },
-          },
-        ]}
-        groupedWorkspaces={[
-          {
-            id: null,
-            name: "Workspaces",
-            workspaces: [
-              {
-                id: "ws-1",
-                name: "Alpha Project",
-                path: "/tmp/alpha",
-                connected: true,
-                settings: { sidebarCollapsed: false },
-              },
-              {
-                id: "ws-2",
-                name: "Beta Project",
-                path: "/tmp/beta",
-                connected: true,
-                settings: { sidebarCollapsed: false },
-              },
-            ],
-          },
-        ]}
-        threadsByWorkspace={{
-          "ws-1": [{ id: "thread-1", name: "Older thread", updatedAt: older }],
-          "ws-2": [{ id: "thread-2", name: "Newer thread", updatedAt: newer }],
-        }}
-      />,
-    );
-
-    const renderedNames = Array.from(container.querySelectorAll(".thread-row .thread-name")).map(
-      (node) => node.textContent?.trim(),
-    );
-    expect(screen.getByText("Recent conversations")).toBeTruthy();
-    expect(renderedNames[0]).toBe("Newer thread");
-    expect(renderedNames[1]).toBe("Older thread");
-    expect(screen.getByText("Alpha Project")).toBeTruthy();
-    expect(screen.getByText("Beta Project")).toBeTruthy();
-  });
-
-  it("creates a new thread from the all-threads project picker", () => {
-    const onAddAgent = vi.fn();
-    render(
-      <Sidebar
-        {...baseProps}
-        threadListOrganizeMode="threads_only"
-        onAddAgent={onAddAgent}
-        workspaces={[
-          {
-            id: "ws-1",
-            name: "Alpha Project",
-            path: "/tmp/alpha",
-            connected: true,
-            settings: { sidebarCollapsed: false },
-          },
-          {
-            id: "ws-2",
-            name: "Beta Project",
-            path: "/tmp/beta",
-            connected: true,
-            settings: { sidebarCollapsed: false },
-          },
-        ]}
-        groupedWorkspaces={[
-          {
-            id: null,
-            name: "Workspaces",
-            workspaces: [
-              {
-                id: "ws-1",
-                name: "Alpha Project",
-                path: "/tmp/alpha",
-                connected: true,
-                settings: { sidebarCollapsed: false },
-              },
-              {
-                id: "ws-2",
-                name: "Beta Project",
-                path: "/tmp/beta",
-                connected: true,
-                settings: { sidebarCollapsed: false },
-              },
-            ],
-          },
-        ]}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "New thread in project" }));
-    fireEvent.click(screen.getByRole("button", { name: "Alpha Project" }));
-
-    expect(onAddAgent).toHaveBeenCalledTimes(1);
-    expect(onAddAgent).toHaveBeenCalledWith(expect.objectContaining({ id: "ws-1" }));
-  });
-
   it("refreshes all workspace threads from the header button", () => {
     const onRefreshAllThreads = vi.fn();
     render(
@@ -354,52 +236,7 @@ describe("Sidebar", () => {
     expect(icon?.getAttribute("class") ?? "").toContain("spinning");
   });
 
-  it("shows a top New Agent draft row and selects workspace when clicked", () => {
-    const onSelectWorkspace = vi.fn();
-    const props = {
-      ...baseProps,
-      workspaces: [
-        {
-          id: "ws-1",
-          name: "Workspace",
-          path: "/tmp/workspace",
-          connected: true,
-          settings: { sidebarCollapsed: false },
-        },
-      ],
-      groupedWorkspaces: [
-        {
-          id: null,
-          name: "Workspaces",
-          workspaces: [
-            {
-              id: "ws-1",
-              name: "Workspace",
-              path: "/tmp/workspace",
-              connected: true,
-              settings: { sidebarCollapsed: false },
-            },
-          ],
-        },
-      ],
-      newAgentDraftWorkspaceId: "ws-1",
-      activeWorkspaceId: "ws-1",
-      activeThreadId: null,
-      onSelectWorkspace,
-    };
-
-    render(<Sidebar {...props} />);
-
-    const draftRow = screen.getByRole("button", { name: /new agent/i });
-    expect(draftRow).toBeTruthy();
-    expect(draftRow.className).toContain("thread-row-draft");
-    expect(draftRow.className).toContain("active");
-
-    fireEvent.click(draftRow);
-    expect(onSelectWorkspace).toHaveBeenCalledWith("ws-1");
-  });
-
-  it("renders clone agents nested under their source project", () => {
+  it("renders worktrees nested under their project", () => {
     const { container } = render(
       <Sidebar
         {...baseProps}
@@ -409,16 +246,19 @@ describe("Sidebar", () => {
             name: "Main Project",
             path: "/tmp/main",
             connected: true,
+            kind: "main",
             settings: { sidebarCollapsed: false },
           },
           {
-            id: "ws-2",
-            name: "Clone Agent",
-            path: "/tmp/main-copy",
+            id: "wt-1",
+            name: "Feature Branch",
+            path: "/tmp/main-feature",
             connected: true,
+            kind: "worktree",
+            parentId: "ws-1",
+            worktree: { branch: "feature/branch" },
             settings: {
               sidebarCollapsed: false,
-              cloneSourceWorkspaceId: "ws-1",
             },
           },
         ]}
@@ -432,16 +272,19 @@ describe("Sidebar", () => {
                 name: "Main Project",
                 path: "/tmp/main",
                 connected: true,
+                kind: "main",
                 settings: { sidebarCollapsed: false },
               },
               {
-                id: "ws-2",
-                name: "Clone Agent",
-                path: "/tmp/main-copy",
+                id: "wt-1",
+                name: "Feature Branch",
+                path: "/tmp/main-feature",
                 connected: true,
+                kind: "worktree",
+                parentId: "ws-1",
+                worktree: { branch: "feature/branch" },
                 settings: {
                   sidebarCollapsed: false,
-                  cloneSourceWorkspaceId: "ws-1",
                 },
               },
             ],
@@ -450,13 +293,56 @@ describe("Sidebar", () => {
       />,
     );
 
-    expect(screen.getByText("Clone agents")).toBeTruthy();
-    expect(screen.getByText("Clone Agent")).toBeTruthy();
+    expect(screen.getByText("Worktrees")).toBeTruthy();
+    expect(screen.getByText("Feature Branch")).toBeTruthy();
     expect(container.querySelectorAll(".workspace-row")).toHaveLength(1);
     expect(container.querySelectorAll(".worktree-row")).toHaveLength(1);
   });
 
-  it("sorts by project activity using clone-thread activity for the source project", () => {
+  it("opens a project add menu with a worktree action", () => {
+    const onAddWorktreeAgent = vi.fn();
+    render(
+      <Sidebar
+        {...baseProps}
+        onAddWorktreeAgent={onAddWorktreeAgent}
+        workspaces={[
+          {
+            id: "ws-1",
+            name: "Main Project",
+            path: "/tmp/main",
+            connected: true,
+            kind: "main",
+            settings: { sidebarCollapsed: false },
+          },
+        ]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Workspaces",
+            workspaces: [
+              {
+                id: "ws-1",
+                name: "Main Project",
+                path: "/tmp/main",
+                connected: true,
+                kind: "main",
+                settings: { sidebarCollapsed: false },
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add agent options" }));
+    fireEvent.click(screen.getByRole("button", { name: "New worktree" }));
+
+    expect(onAddWorktreeAgent).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "ws-1" }),
+    );
+  });
+
+  it("sorts projects by worktree activity when project activity mode is active", () => {
     const { container } = render(
       <Sidebar
         {...baseProps}
@@ -467,16 +353,19 @@ describe("Sidebar", () => {
             name: "Alpha Project",
             path: "/tmp/alpha",
             connected: true,
+            kind: "main",
             settings: { sidebarCollapsed: false },
           },
           {
-            id: "ws-a-clone",
-            name: "Alpha Clone",
-            path: "/tmp/alpha-clone",
+            id: "wt-a",
+            name: "Alpha Worktree",
+            path: "/tmp/alpha-worktree",
             connected: true,
+            kind: "worktree",
+            parentId: "ws-a",
+            worktree: { branch: "feature/a" },
             settings: {
               sidebarCollapsed: false,
-              cloneSourceWorkspaceId: "ws-a",
             },
           },
           {
@@ -484,6 +373,7 @@ describe("Sidebar", () => {
             name: "Beta Project",
             path: "/tmp/beta",
             connected: true,
+            kind: "main",
             settings: { sidebarCollapsed: false },
           },
         ]}
@@ -497,16 +387,19 @@ describe("Sidebar", () => {
                 name: "Alpha Project",
                 path: "/tmp/alpha",
                 connected: true,
+                kind: "main",
                 settings: { sidebarCollapsed: false },
               },
               {
-                id: "ws-a-clone",
-                name: "Alpha Clone",
-                path: "/tmp/alpha-clone",
+                id: "wt-a",
+                name: "Alpha Worktree",
+                path: "/tmp/alpha-worktree",
                 connected: true,
+                kind: "worktree",
+                parentId: "ws-a",
+                worktree: { branch: "feature/a" },
                 settings: {
                   sidebarCollapsed: false,
-                  cloneSourceWorkspaceId: "ws-a",
                 },
               },
               {
@@ -514,18 +407,13 @@ describe("Sidebar", () => {
                 name: "Beta Project",
                 path: "/tmp/beta",
                 connected: true,
+                kind: "main",
                 settings: { sidebarCollapsed: false },
               },
             ],
           },
         ]}
-        threadsByWorkspace={{
-          "ws-a": [{ id: "thread-a", name: "Alpha root", updatedAt: 100 }],
-          "ws-a-clone": [
-            { id: "thread-a-clone", name: "Alpha clone thread", updatedAt: 300 },
-          ],
-          "ws-b": [{ id: "thread-b", name: "Beta root", updatedAt: 200 }],
-        }}
+        threadListLoadingByWorkspace={{ "wt-a": true }}
       />,
     );
 
@@ -534,52 +422,5 @@ describe("Sidebar", () => {
     ).map((node) => node.textContent?.trim());
     expect(workspaceNames[0]).toBe("Alpha Project");
     expect(workspaceNames[1]).toBe("Beta Project");
-  });
-
-  it("does not show a workspace activity indicator when a thread is processing", () => {
-    render(
-      <Sidebar
-        {...baseProps}
-        workspaces={[
-          {
-            id: "ws-1",
-            name: "Workspace",
-            path: "/tmp/workspace",
-            connected: true,
-            settings: { sidebarCollapsed: false },
-          },
-        ]}
-        groupedWorkspaces={[
-          {
-            id: null,
-            name: "Workspaces",
-            workspaces: [
-              {
-                id: "ws-1",
-                name: "Workspace",
-                path: "/tmp/workspace",
-                connected: true,
-                settings: { sidebarCollapsed: false },
-              },
-            ],
-          },
-        ]}
-        threadsByWorkspace={{
-          "ws-1": [
-            {
-              id: "thread-1",
-              name: "Thread 1",
-              updated_at: new Date().toISOString(),
-            } as never,
-          ],
-        }}
-        threadStatusById={{
-          "thread-1": { isProcessing: true, hasUnread: false, isReviewing: false },
-        }}
-      />,
-    );
-
-    const indicator = screen.queryByTitle("Streaming updates in progress");
-    expect(indicator).toBeNull();
   });
 });

@@ -3,7 +3,6 @@ import type { Dispatch, SetStateAction } from "react";
 import * as Sentry from "@sentry/react";
 import type { DebugEntry, WorkspaceInfo } from "../../../types";
 import {
-  addClone as addCloneService,
   addWorktree as addWorktreeService,
   removeWorktree as removeWorktreeService,
   renameWorktree as renameWorktreeService,
@@ -77,52 +76,6 @@ export function useWorktreeOps({
           timestamp: Date.now(),
           source: "error",
           label: "worktree/add error",
-          payload: error instanceof Error ? error.message : String(error),
-        });
-        throw error;
-      }
-    },
-    [onDebug, setActiveWorkspaceId, setWorkspaces],
-  );
-
-  const addCloneAgent = useCallback(
-    async (source: WorkspaceInfo, copyName: string, copiesFolder: string) => {
-      const trimmedName = copyName.trim();
-      if (!trimmedName) {
-        return null;
-      }
-      const trimmedFolder = copiesFolder.trim();
-      if (!trimmedFolder) {
-        throw new Error("Copies folder is required.");
-      }
-      onDebug?.({
-        id: `${Date.now()}-client-add-clone`,
-        timestamp: Date.now(),
-        source: "client",
-        label: "clone/add",
-        payload: {
-          sourceWorkspaceId: source.id,
-          copyName: trimmedName,
-          copiesFolder: trimmedFolder,
-        },
-      });
-      try {
-        const workspace = await addCloneService(source.id, trimmedFolder, trimmedName);
-        setWorkspaces((prev) => [...prev, workspace]);
-        setActiveWorkspaceId(workspace.id);
-        Sentry.metrics.count("clone_agent_created", 1, {
-          attributes: {
-            workspace_id: workspace.id,
-            parent_id: source.id,
-          },
-        });
-        return workspace;
-      } catch (error) {
-        onDebug?.({
-          id: `${Date.now()}-client-add-clone-error`,
-          timestamp: Date.now(),
-          source: "error",
-          label: "clone/add error",
           payload: error instanceof Error ? error.message : String(error),
         });
         throw error;
@@ -250,7 +203,6 @@ export function useWorktreeOps({
   );
 
   return {
-    addCloneAgent,
     addWorktreeAgent,
     deletingWorktreeIds,
     removeWorktree,

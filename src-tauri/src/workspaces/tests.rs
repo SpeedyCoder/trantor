@@ -53,7 +53,6 @@ fn workspace_with_id_and_kind(
             sidebar_collapsed: false,
             sort_order,
             group_id: None,
-            clone_source_workspace_id: None,
             git_root: None,
             launch_script: None,
             launch_scripts: None,

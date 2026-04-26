@@ -98,7 +98,6 @@ export const buildShortcutDrafts = (appSettings: AppSettings): ShortcutDrafts =>
   interrupt: appSettings.interruptShortcut ?? "",
   newAgent: appSettings.newAgentShortcut ?? "",
   newWorktreeAgent: appSettings.newWorktreeAgentShortcut ?? "",
-  newCloneAgent: appSettings.newCloneAgentShortcut ?? "",
   archiveThread: appSettings.archiveThreadShortcut ?? "",
   projectsSidebar: appSettings.toggleProjectsSidebarShortcut ?? "",
   gitSidebar: appSettings.toggleGitSidebarShortcut ?? "",

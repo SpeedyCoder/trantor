@@ -1,0 +1,72 @@
+.worktree-thread-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--surface-panel) 92%, var(--surface-page));
+}
+
+.worktree-thread-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  padding-bottom: 12px;
+}
+
+.worktree-thread-tab,
+.worktree-thread-tab-add {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-elevated);
+  color: var(--text-primary);
+  border-radius: 999px;
+  min-height: 34px;
+}
+
+.worktree-thread-tab {
+  max-width: 220px;
+  padding: 0 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.worktree-thread-tab:hover,
+.worktree-thread-tab-add:hover,
+.worktree-thread-tab:focus-visible,
+.worktree-thread-tab-add:focus-visible {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.worktree-thread-tab.is-active {
+  background: color-mix(in srgb, var(--accent-primary) 14%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--accent-primary) 54%, var(--border-subtle));
+}
+
+.worktree-thread-tab-label {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.worktree-thread-tab-add {
+  width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.worktree-thread-empty {
+  display: grid;
+  place-items: center;
+  min-height: 100%;
+  padding: 32px 24px;
+  color: var(--text-secondary);
+}

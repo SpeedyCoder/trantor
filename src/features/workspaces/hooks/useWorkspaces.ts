@@ -45,7 +45,6 @@ export type UseWorkspacesResult = {
   ) => Promise<WorkspaceInfo | null>;
   addWorkspacesFromPaths: (paths: string[]) => Promise<AddWorkspacesFromPathsResult>;
   filterWorkspacePaths: (paths: string[]) => Promise<string[]>;
-  addCloneAgent: (source: WorkspaceInfo, copyName: string, copiesFolder: string) => Promise<WorkspaceInfo | null>;
   addWorktreeAgent: (
     parent: WorkspaceInfo,
     branch: string,
@@ -139,7 +138,6 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspaces
   );
 
   const {
-    addCloneAgent,
     addWorktreeAgent,
     deletingWorktreeIds,
     removeWorktree,
@@ -179,7 +177,6 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspaces
     addWorkspaceFromGitUrl,
     addWorkspacesFromPaths,
     filterWorkspacePaths,
-    addCloneAgent,
     addWorktreeAgent,
     connectWorkspace,
     markWorkspaceConnected,

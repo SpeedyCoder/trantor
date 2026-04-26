@@ -200,7 +200,6 @@ pub fn run() {
             workspaces::is_workspace_path_dir,
             workspaces::add_workspace,
             workspaces::add_workspace_from_git_url,
-            workspaces::add_clone,
             workspaces::add_worktree,
             workspaces::worktree_setup_status,
             workspaces::worktree_setup_mark_ran,

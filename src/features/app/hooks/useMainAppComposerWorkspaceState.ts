@@ -153,7 +153,10 @@ export function useMainAppComposerWorkspaceState({
     addDebugEntry,
   } = actions;
   const showWorkspaceHome = Boolean(
-    activeWorkspace && !activeThreadId && !isNewAgentDraftMode,
+    activeWorkspace &&
+      (activeWorkspace.kind ?? "main") !== "worktree" &&
+      !activeThreadId &&
+      !isNewAgentDraftMode,
   );
   const showComposer =
     (!isCompact

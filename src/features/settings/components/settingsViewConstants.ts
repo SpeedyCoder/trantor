@@ -101,7 +101,6 @@ export const SHORTCUT_DRAFT_KEY_BY_SETTING: Record<
   interruptShortcut: "interrupt",
   newAgentShortcut: "newAgent",
   newWorktreeAgentShortcut: "newWorktreeAgent",
-  newCloneAgentShortcut: "newCloneAgent",
   archiveThreadShortcut: "archiveThread",
   toggleProjectsSidebarShortcut: "projectsSidebar",
   toggleGitSidebarShortcut: "gitSidebar",

@@ -2,16 +2,11 @@ import { useCallback } from "react";
 import type { AgentHarness } from "@/features/models/utils/modelRuntime";
 import type { ModelOption, WorkspaceInfo } from "../../../types";
 import type { WorkspaceRunMode } from "../hooks/useWorkspaceHome";
-import Laptop from "lucide-react/dist/esm/icons/laptop";
-import GitBranch from "lucide-react/dist/esm/icons/git-branch";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import ChevronRight from "lucide-react/dist/esm/icons/chevron-right";
 import Cpu from "lucide-react/dist/esm/icons/cpu";
 import Feather from "lucide-react/dist/esm/icons/feather";
-import {
-  PopoverMenuItem,
-  SplitActionMenu,
-} from "../../design-system/components/popover/PopoverPrimitives";
+import { PopoverMenuItem, SplitActionMenu } from "../../design-system/components/popover/PopoverPrimitives";
 import { useMenuController } from "../../app/hooks/useMenuController";
 import {
   buildModelSummary,
@@ -44,8 +39,6 @@ type WorkspaceHomeRunControlsProps = {
 
 export function WorkspaceHomeRunControls({
   workspaceKind,
-  runMode,
-  onRunModeChange,
   selectedHarness = "codex",
   onSelectHarness,
   models,
@@ -63,14 +56,7 @@ export function WorkspaceHomeRunControls({
   reasoningSupported,
   isSubmitting,
 }: WorkspaceHomeRunControlsProps) {
-  const runModeMenu = useMenuController();
   const modelsMenu = useMenuController();
-  const {
-    isOpen: runModeOpen,
-    containerRef: runModeRef,
-    toggle: toggleRunModeOpen,
-    close: closeRunMode,
-  } = runModeMenu;
   const {
     isOpen: modelsOpen,
     containerRef: modelsRef,
@@ -83,78 +69,16 @@ export function WorkspaceHomeRunControls({
     : null;
   const selectedModelLabel = resolveModelLabel(selectedModel);
   const modelSummary = buildModelSummary(models, modelSelections);
-  const showRunMode = (workspaceKind ?? "main") !== "worktree";
-  const runModeLabel = runMode === "local" ? "Local" : "Worktree";
-  const RunModeIcon = runMode === "local" ? Laptop : GitBranch;
   const HarnessIcon = selectedHarness === "claude" ? Feather : Cpu;
   const SelectedModelIcon = selectedModel && harnessForModelId(selectedModel.id) === "claude"
     ? Feather
     : Cpu;
-  const toggleRunModeMenu = useCallback(() => {
-    toggleRunModeOpen();
-    closeModels();
-  }, [closeModels, toggleRunModeOpen]);
   const toggleModelsMenu = useCallback(() => {
     toggleModelsOpen();
-    closeRunMode();
-  }, [closeRunMode, toggleModelsOpen]);
+  }, [toggleModelsOpen]);
 
   return (
     <div className="workspace-home-controls">
-      {showRunMode && (
-        <SplitActionMenu
-          containerRef={runModeRef}
-          className="open-app-menu workspace-home-control"
-          buttonGroupClassName="open-app-button"
-          actionButton={
-            <button
-              type="button"
-              className="ghost open-app-action"
-              onClick={toggleRunModeMenu}
-              aria-label="Select run mode"
-              data-tauri-drag-region="false"
-            >
-              <span className="open-app-label">
-                <RunModeIcon className="workspace-home-mode-icon" aria-hidden />
-                {runModeLabel}
-              </span>
-            </button>
-          }
-          isOpen={runModeOpen}
-          onToggle={toggleRunModeMenu}
-          toggleClassName="ghost open-app-toggle"
-          toggleAriaLabel="Toggle run mode menu"
-          toggleIcon={<ChevronDown size={14} aria-hidden />}
-          popoverClassName="open-app-dropdown workspace-home-dropdown"
-          popoverRole="menu"
-        >
-          <PopoverMenuItem
-            className="open-app-option"
-            onClick={() => {
-              onRunModeChange("local");
-              closeRunMode();
-              closeModels();
-            }}
-            icon={<Laptop className="workspace-home-mode-icon" aria-hidden />}
-            active={runMode === "local"}
-          >
-            Local
-          </PopoverMenuItem>
-          <PopoverMenuItem
-            className="open-app-option"
-            onClick={() => {
-              onRunModeChange("worktree");
-              closeRunMode();
-              closeModels();
-            }}
-            icon={<GitBranch className="workspace-home-mode-icon" aria-hidden />}
-            active={runMode === "worktree"}
-          >
-            Worktree
-          </PopoverMenuItem>
-        </SplitActionMenu>
-      )}
-
       <div className="composer-select-wrap workspace-home-control workspace-home-harness-control">
         <div className="open-app-button">
           <span className="composer-icon" aria-hidden>
@@ -187,7 +111,7 @@ export function WorkspaceHomeRunControls({
           >
             <span className="open-app-label">
               <SelectedModelIcon className="workspace-home-mode-icon" aria-hidden />
-              {runMode === "local" ? selectedModelLabel : modelSummary}
+              {(workspaceKind ?? "main") === "worktree" ? selectedModelLabel : modelSummary}
             </span>
           </button>
         }
@@ -206,7 +130,7 @@ export function WorkspaceHomeRunControls({
         )}
         {models.map((model) => {
           const isSelected =
-            runMode === "local"
+            (workspaceKind ?? "main") === "worktree"
               ? model.id === selectedModelId
               : Boolean(modelSelections[model.id]);
           const count = modelSelections[model.id] ?? 1;
@@ -218,7 +142,7 @@ export function WorkspaceHomeRunControls({
               <PopoverMenuItem
                 className="open-app-option workspace-home-model-toggle"
                 onClick={() => {
-                  if (runMode === "local") {
+                  if ((workspaceKind ?? "main") === "worktree") {
                     onSelectModel(model.id);
                     closeModels();
                     return;
@@ -236,7 +160,7 @@ export function WorkspaceHomeRunControls({
               >
                 {resolveModelLabel(model)}
               </PopoverMenuItem>
-              {runMode === "worktree" && (
+              {(workspaceKind ?? "main") !== "worktree" && (
                 <>
                   <div className="workspace-home-model-meta" aria-hidden>
                     <span>{count}x</span>

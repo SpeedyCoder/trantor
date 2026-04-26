@@ -30,6 +30,7 @@ import "./styles/plan.css";
 import "./styles/about.css";
 import "./styles/tabbar.css";
 import "./styles/worktree-modal.css";
+import "./styles/worktree-thread-tabs.css";
 import "./styles/clone-modal.css";
 import "./styles/workspace-from-url-modal.css";
 import "./styles/mobile-remote-workspace-modal.css";

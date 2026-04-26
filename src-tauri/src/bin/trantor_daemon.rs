@@ -956,35 +956,6 @@ impl DaemonState {
         codex_core::get_config_model_core(&self.workspaces, workspace_id).await
     }
 
-    async fn add_clone(
-        &self,
-        source_workspace_id: String,
-        copies_folder: String,
-        copy_name: String,
-        client_version: String,
-    ) -> Result<WorkspaceInfo, String> {
-        workspaces_core::add_clone_core(
-            source_workspace_id,
-            copy_name,
-            copies_folder,
-            &self.workspaces,
-            &self.sessions,
-            &self.app_settings,
-            &self.storage_path,
-            |entry, default_bin, codex_args, codex_home| {
-                spawn_with_client(
-                    self.event_sink.clone(),
-                    client_version.clone(),
-                    entry,
-                    default_bin,
-                    codex_args,
-                    codex_home,
-                )
-            },
-        )
-        .await
-    }
-
     async fn apply_worktree_changes(&self, workspace_id: String) -> Result<(), String> {
         workspaces_core::apply_worktree_changes_core(&self.workspaces, workspace_id).await
     }
@@ -1688,30 +1659,6 @@ mod tests {
             workspace_roots: Mutex::new(HashMap::new()),
             owner_workspace_id,
         })
-    }
-
-    #[test]
-    fn rpc_add_clone_uses_workspace_core_validation() {
-        run_async_test(async {
-            let tmp = make_temp_dir("rpc-add-clone");
-            let state = test_state(&tmp);
-
-            let err = rpc::handle_rpc_request(
-                &state,
-                "add_clone",
-                json!({
-                    "sourceWorkspaceId": "source",
-                    "copiesFolder": tmp.to_string_lossy().to_string(),
-                    "copyName": "   "
-                }),
-                "daemon-test".to_string(),
-            )
-            .await
-            .expect_err("expected validation error");
-
-            assert_eq!(err, "Copy name is required.");
-            let _ = std::fs::remove_dir_all(&tmp);
-        });
     }
 
     #[test]

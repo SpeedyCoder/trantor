@@ -93,8 +93,6 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
     let new_agent_item = MenuItemBuilder::with_id("file_new_agent", "New Agent").build(handle)?;
     let new_worktree_agent_item =
         MenuItemBuilder::with_id("file_new_worktree_agent", "New Worktree Agent").build(handle)?;
-    let new_clone_agent_item =
-        MenuItemBuilder::with_id("file_new_clone_agent", "New Clone Agent").build(handle)?;
     let add_workspace_item =
         MenuItemBuilder::with_id("file_add_workspace", "Add Workspaces...").build(handle)?;
     let add_workspace_from_url_item =
@@ -103,7 +101,6 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
 
     registry.register("file_new_agent", &new_agent_item);
     registry.register("file_new_worktree_agent", &new_worktree_agent_item);
-    registry.register("file_new_clone_agent", &new_clone_agent_item);
 
     #[cfg(target_os = "linux")]
     let file_menu = {
@@ -117,7 +114,6 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
             &[
                 &new_agent_item,
                 &new_worktree_agent_item,
-                &new_clone_agent_item,
                 &PredefinedMenuItem::separator(handle)?,
                 &add_workspace_item,
                 &add_workspace_from_url_item,
@@ -135,7 +131,6 @@ pub(crate) fn build_menu<R: tauri::Runtime>(
         &[
             &new_agent_item,
             &new_worktree_agent_item,
-            &new_clone_agent_item,
             &PredefinedMenuItem::separator(handle)?,
             &add_workspace_item,
             &add_workspace_from_url_item,
@@ -347,7 +342,6 @@ pub(crate) fn handle_menu_event<R: tauri::Runtime>(
         }
         "file_new_agent" => emit_menu_event(app, "menu-new-agent"),
         "file_new_worktree_agent" => emit_menu_event(app, "menu-new-worktree-agent"),
-        "file_new_clone_agent" => emit_menu_event(app, "menu-new-clone-agent"),
         "file_add_workspace" => emit_menu_event(app, "menu-add-workspace"),
         "file_add_workspace_from_url" => emit_menu_event(app, "menu-add-workspace-from-url"),
         "file_open_settings" => emit_menu_event(app, "menu-open-settings"),

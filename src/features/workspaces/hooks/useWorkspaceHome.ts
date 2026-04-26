@@ -84,7 +84,7 @@ type WorkspaceHomeState = {
   submittingByWorkspace: Record<string, boolean>;
 };
 
-const DEFAULT_MODE: WorkspaceRunMode = "local";
+const DEFAULT_MODE: WorkspaceRunMode = "worktree";
 const EMPTY_SELECTIONS: Record<string, number> = {};
 const MAX_TITLE_LENGTH = 56;
 

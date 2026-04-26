@@ -19,7 +19,6 @@ type Params = {
   selectWorkspace: (workspaceId: string) => void;
   onStartNewAgentDraft: (workspaceId: string) => void;
   openWorktreePrompt: (workspace: WorkspaceInfo) => void;
-  openClonePrompt: (workspace: WorkspaceInfo) => void;
   composerInputRef: RefObject<HTMLTextAreaElement | null>;
   onDebug: (entry: DebugEntry) => void;
 };
@@ -36,7 +35,6 @@ export function useWorkspaceActions({
   selectWorkspace,
   onStartNewAgentDraft,
   openWorktreePrompt,
-  openClonePrompt,
   composerInputRef,
   onDebug,
 }: Params) {
@@ -141,6 +139,11 @@ ${message}`);
 
   const handleAddAgent = useCallback(
     async (workspace: WorkspaceInfo) => {
+      if ((workspace.kind ?? "main") !== "worktree") {
+        exitDiffView();
+        openWorktreePrompt(workspace);
+        return;
+      }
       exitDiffView();
       selectWorkspace(workspace.id);
       setActiveThreadId(null, workspace.id);
@@ -161,6 +164,7 @@ ${message}`);
       exitDiffView,
       isCompact,
       onStartNewAgentDraft,
+      openWorktreePrompt,
       selectWorkspace,
       setActiveThreadId,
       setActiveTab,
@@ -175,14 +179,6 @@ ${message}`);
     [exitDiffView, openWorktreePrompt],
   );
 
-  const handleAddCloneAgent = useCallback(
-    async (workspace: WorkspaceInfo) => {
-      exitDiffView();
-      openClonePrompt(workspace);
-    },
-    [exitDiffView, openClonePrompt],
-  );
-
   return {
     handleAddWorkspace,
     handleAddWorkspacesFromPaths,
@@ -190,6 +186,5 @@ ${message}`);
     handleAddWorkspaceFromGitUrl,
     handleAddAgent,
     handleAddWorktreeAgent,
-    handleAddCloneAgent,
   };
 }
