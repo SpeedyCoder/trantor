@@ -296,9 +296,79 @@ describe("useModels", () => {
 
     await waitFor(() =>
       expect(result.current.models.map((model) => model.id)).toEqual([
-        "claude:sonnet-4.5",
-        "claude:sonnet-4.6",
+        "claude:default",
+        "claude:sonnet",
+        "claude:haiku",
       ]),
     );
+  });
+
+  it("shows versioned names while keeping Claude alias provider ids", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "claude:default",
+            model: "default",
+            runtime: "claude",
+            providerModelId: "default",
+            displayName: "Default (recommended) · Claude",
+            description: "Opus 4.7 with 1M context · Most capable for complex work",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+          {
+            id: "claude:sonnet",
+            model: "sonnet",
+            runtime: "claude",
+            providerModelId: "sonnet",
+            displayName: "Sonnet · Claude",
+            description: "Sonnet 4.6 · Best for everyday tasks",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+          {
+            id: "claude:haiku",
+            model: "haiku",
+            runtime: "claude",
+            providerModelId: "haiku",
+            displayName: "Haiku · Claude",
+            description: "Haiku 4.5 · Fastest for quick answers",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: false,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce(null);
+
+    const { result } = renderHook(() =>
+      useModels({
+        activeWorkspace: workspace,
+        allowedHarness: "claude",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(result.current.models.map((model) => model.id)).toEqual([
+        "claude:default",
+        "claude:sonnet",
+        "claude:haiku",
+      ]),
+    );
+    expect(result.current.models.map((model) => model.displayName)).toEqual([
+      "Opus 4.7 · Claude",
+      "Sonnet 4.6 · Claude",
+      "Haiku 4.5 · Claude",
+    ]);
+    expect(result.current.models.map((model) => model.providerModelId)).toEqual([
+      "default",
+      "sonnet",
+      "haiku",
+    ]);
+    expect(result.current.selectedModelId).toBe("claude:default");
   });
 });

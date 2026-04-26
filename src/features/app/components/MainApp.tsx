@@ -525,7 +525,8 @@ export default function MainApp() {
     threadSortKey: threadListSortKey,
     onThreadCodexMetadataDetected: handleThreadCodexMetadataDetected,
   });
-  const harnessLocked = Boolean(activeThreadId) && isThreadScopedSelection;
+  const harnessLocked =
+    Boolean(activeThreadId) && isThreadScopedSelection && activeItems.length > 0;
   const { connectionState: remoteThreadConnectionState, reconnectLive } =
     useRemoteThreadLiveConnection({
       backendMode: appSettings.backendMode,
@@ -977,7 +978,6 @@ export default function MainApp() {
     workspacePrompts: {
       addWorktreeAgent,
       connectWorkspace,
-      updateWorkspaceSettings,
       selectWorkspace,
       handleWorktreeCreated,
       onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
@@ -1393,6 +1393,8 @@ export default function MainApp() {
       exitDiffView,
       selectWorkspace,
       setActiveThreadId,
+      startThreadForWorkspace,
+      threadsByWorkspace,
       connectWorkspace,
       isCompact,
       setActiveTab,
@@ -1559,7 +1561,6 @@ export default function MainApp() {
     },
     workspaces,
     groupedWorkspaces,
-    workspaceGroupsCount: workspaceGroups.length,
     deletingWorktreeIds,
     newAgentDraftWorkspaceId,
     startingDraftThreadWorkspaceId,
@@ -1761,28 +1762,33 @@ export default function MainApp() {
   const activeWorkspaceThreads = activeWorkspaceId
     ? threadsByWorkspace[activeWorkspaceId] ?? []
     : [];
-  const chatMessagesNode =
-    (activeWorkspace?.kind ?? "main") === "worktree" && !showWorkspaceHome && activeWorkspace ? (
-      <>
-        <WorktreeThreadTabs
-          workspace={activeWorkspace}
-          threads={activeWorkspaceThreads}
-          activeThreadId={activeThreadId}
-          onSelectThread={sidebarMenuOrchestration.onSelectThread}
-          onStartThread={(workspaceId) => {
-            void startThreadForWorkspace(workspaceId, {
-              modelId: resolvedModel,
+  const showWorktreeThreadTabs =
+    (activeWorkspace?.kind ?? "main") === "worktree" && !showWorkspaceHome;
+  const chatHeaderNode = showWorktreeThreadTabs && activeWorkspace ? (
+    <WorktreeThreadTabs
+      workspace={activeWorkspace}
+      threads={activeWorkspaceThreads}
+      activeThreadId={activeThreadId}
+      onSelectThread={sidebarMenuOrchestration.onSelectThread}
+      onStartThread={(workspaceId) => {
+        void (async () => {
+          const threadId = await startThreadForWorkspace(workspaceId, {
+            modelId: resolvedModel,
+          });
+          if (threadId) {
+            patchThreadCodexParams(workspaceId, threadId, {
+              harness: selectedHarness,
             });
-          }}
-        />
-        {activeThreadId ? (
-          mainMessagesNode
-        ) : (
-          <div className="worktree-thread-empty">
-            Start a thread to work in this worktree.
-          </div>
-        )}
-      </>
+          }
+        })();
+      }}
+    />
+  ) : null;
+  const chatMessagesNode =
+    showWorktreeThreadTabs && !activeThreadId ? (
+      <div className="worktree-thread-empty">
+        Start a thread to work in this worktree.
+      </div>
     ) : (
       mainMessagesNode
     );
@@ -1828,6 +1834,7 @@ export default function MainApp() {
       sidebarNode,
       messagesNode: chatMessagesNode,
       composerNode,
+      chatHeaderNode,
       approvalToastsNode,
       updateToastNode,
       errorToastsNode,

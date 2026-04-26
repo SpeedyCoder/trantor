@@ -37,7 +37,6 @@ type UseMainAppLayoutSurfacesArgs = {
   >;
   workspaces: WorkspaceInfo[];
   groupedWorkspaces: Array<{ id: string | null; name: string; workspaces: WorkspaceInfo[] }>;
-  workspaceGroupsCount: number;
   deletingWorktreeIds: Set<string>;
   newAgentDraftWorkspaceId: string | null;
   startingDraftThreadWorkspaceId: string | null;
@@ -225,7 +224,6 @@ function buildPrimarySurface({
   appSettings,
   workspaces,
   groupedWorkspaces,
-  workspaceGroupsCount,
   deletingWorktreeIds,
   newAgentDraftWorkspaceId,
   startingDraftThreadWorkspaceId,
@@ -354,7 +352,6 @@ function buildPrimarySurface({
     sidebarProps: {
       workspaces,
       groupedWorkspaces,
-      hasWorkspaceGroups: workspaceGroupsCount > 0,
       deletingWorktreeIds,
       newAgentDraftWorkspaceId,
       startingDraftThreadWorkspaceId,
@@ -902,7 +899,6 @@ export function useMainAppLayoutSurfaces({
   appSettings,
   workspaces,
   groupedWorkspaces,
-  workspaceGroupsCount,
   deletingWorktreeIds,
   newAgentDraftWorkspaceId,
   startingDraftThreadWorkspaceId,
@@ -1050,7 +1046,6 @@ export function useMainAppLayoutSurfaces({
     appSettings,
     workspaces,
     groupedWorkspaces,
-    workspaceGroupsCount,
     deletingWorktreeIds,
     newAgentDraftWorkspaceId,
     startingDraftThreadWorkspaceId,

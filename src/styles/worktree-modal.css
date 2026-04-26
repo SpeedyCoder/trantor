@@ -59,31 +59,3 @@
   white-space: nowrap;
   font-family: var(--code-font-family, Menlo, Monaco, "Courier New", monospace);
 }
-
-.worktree-modal-checkbox-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 12px;
-  color: var(--ds-text-subtle);
-}
-
-.worktree-modal-checkbox-input {
-  margin-top: 2px;
-}
-
-.worktree-modal-checkbox-label code {
-  font-family: var(--code-font-family, Menlo, Monaco, "Courier New", monospace);
-  color: var(--ds-text-strong);
-}
-
-.worktree-modal-section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ds-text-strong);
-}
-
-.worktree-modal-hint {
-  font-size: 12px;
-  color: var(--ds-text-subtle);
-}

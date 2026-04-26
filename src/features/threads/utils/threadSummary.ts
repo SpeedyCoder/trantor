@@ -33,7 +33,30 @@ export function extractThreadFromResponse(
   const thread =
     (result?.thread as Record<string, unknown> | undefined) ??
     (response.thread as Record<string, unknown> | undefined);
-  return thread ?? null;
+  if (!thread) {
+    return null;
+  }
+  const model = thread.model ?? result?.model ?? response.model;
+  const modelProvider =
+    thread.modelProvider ??
+    thread.model_provider ??
+    result?.modelProvider ??
+    result?.model_provider ??
+    response.modelProvider ??
+    response.model_provider;
+  const reasoningEffort =
+    thread.reasoningEffort ??
+    thread.reasoning_effort ??
+    result?.reasoningEffort ??
+    result?.reasoning_effort ??
+    response.reasoningEffort ??
+    response.reasoning_effort;
+  return {
+    ...thread,
+    ...(model !== undefined ? { model } : {}),
+    ...(modelProvider !== undefined ? { modelProvider } : {}),
+    ...(reasoningEffort !== undefined ? { reasoningEffort } : {}),
+  };
 }
 
 export function buildThreadSummaryFromThread({

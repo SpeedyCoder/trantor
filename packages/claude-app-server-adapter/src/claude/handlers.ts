@@ -31,7 +31,12 @@ function buildThreadResponse(
   thread: Awaited<ReturnType<ClaudeRepository["getThread"]>>,
   turns: Awaited<ReturnType<ClaudeRepository["getThreadTurns"]>>,
 ) {
-  return { ...thread.data, turns: turns.map((turn) => turn.data) };
+  return {
+    ...thread.data,
+    model: thread.metadata.model ?? "",
+    modelProvider: "anthropic",
+    turns: turns.map((turn) => turn.data),
+  };
 }
 
 function buildResumeResponse(
@@ -956,7 +961,12 @@ export function newHandlers(
       handle: async () => {
         const threads = await repository.listThreads();
         const response: ThreadListResponse = {
-          data: threads.map((thread) => ({ ...thread.data, turns: [] })),
+          data: threads.map((thread) => ({
+            ...thread.data,
+            model: thread.metadata.model ?? "",
+            modelProvider: "anthropic",
+            turns: [],
+          })),
           nextCursor: null,
         };
         return response;

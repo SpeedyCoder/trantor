@@ -19,6 +19,7 @@ type PhoneLayoutProps = {
   topbarActionsNode?: ReactNode;
   messagesNode: ReactNode;
   composerNode: ReactNode;
+  chatHeaderNode?: ReactNode;
   gitDiffPanelNode: ReactNode;
   gitDiffViewerNode: ReactNode;
   debugPanelNode: ReactNode;
@@ -41,6 +42,7 @@ export function PhoneLayout({
   topbarActionsNode,
   messagesNode,
   composerNode,
+  chatHeaderNode,
   gitDiffPanelNode,
   gitDiffViewerNode,
   debugPanelNode,
@@ -62,7 +64,11 @@ export function PhoneLayout({
                 className="compact-topbar"
               />
               <div className="content compact-content">
-                <ChatPane messagesNode={messagesNode} composerNode={composerNode} />
+                <ChatPane
+                  messagesNode={messagesNode}
+                  composerNode={composerNode}
+                  headerNode={chatHeaderNode}
+                />
               </div>
             </>
           ) : (

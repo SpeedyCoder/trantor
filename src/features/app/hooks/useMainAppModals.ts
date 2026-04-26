@@ -56,10 +56,6 @@ type UseMainAppModalsArgs = {
       options?: { displayName?: string | null; copyAgentsMd?: boolean },
     ) => Promise<WorkspaceInfo | null>;
     connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
-    updateWorkspaceSettings: (
-      id: string,
-      settings: Partial<WorkspaceSettings>,
-    ) => Promise<WorkspaceInfo>;
     selectWorkspace: (workspaceId: string) => void;
     handleWorktreeCreated: (worktree: WorkspaceInfo, parent: WorkspaceInfo) => Promise<void>;
     onCompactActivate?: () => void;
@@ -205,10 +201,7 @@ type BuildAppModalsPropsArgs = {
   onInitGitRepoPromptCancel: () => void;
   onInitGitRepoPromptConfirm: () => void;
   worktreePrompt: AppModalsProps["worktreePrompt"];
-  onWorktreePromptNameChange: (value: string) => void;
   onWorktreePromptChange: (value: string) => void;
-  onWorktreePromptCopyAgentsMdChange: (value: boolean) => void;
-  onWorktreeSetupScriptChange: (value: string) => void;
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
   workspaceFromUrl: AppModalsProps["workspaceFromUrlPrompt"] extends null
@@ -257,10 +250,7 @@ function buildAppModalsProps({
   onInitGitRepoPromptCancel,
   onInitGitRepoPromptConfirm,
   worktreePrompt,
-  onWorktreePromptNameChange,
   onWorktreePromptChange,
-  onWorktreePromptCopyAgentsMdChange,
-  onWorktreeSetupScriptChange,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
   workspaceFromUrl,
@@ -296,10 +286,7 @@ function buildAppModalsProps({
     onInitGitRepoPromptCancel,
     onInitGitRepoPromptConfirm,
     worktreePrompt,
-    onWorktreePromptNameChange,
     onWorktreePromptChange,
-    onWorktreePromptCopyAgentsMdChange,
-    onWorktreeSetupScriptChange,
     onWorktreePromptCancel,
     onWorktreePromptConfirm,
     ...workspaceFromUrl,
@@ -389,13 +376,9 @@ export function useMainAppModals({
     openPrompt: openWorktreePrompt,
     confirmPrompt: confirmWorktreePrompt,
     cancelPrompt: cancelWorktreePrompt,
-    updateName: updateWorktreeName,
     updateBranch: updateWorktreeBranch,
-    updateCopyAgentsMd: updateWorktreeCopyAgentsMd,
-    updateSetupScript: updateWorktreeSetupScript,
   } = useWorktreePrompt({
     addWorktreeAgent: workspacePrompts.addWorktreeAgent,
-    updateWorkspaceSettings: workspacePrompts.updateWorkspaceSettings,
     connectWorkspace: workspacePrompts.connectWorkspace,
     onSelectWorkspace: workspacePrompts.selectWorkspace,
     onWorktreeCreated: workspacePrompts.handleWorktreeCreated,
@@ -431,10 +414,7 @@ export function useMainAppModals({
         onInitGitRepoPromptCancel: handleInitGitRepoPromptCancel,
         onInitGitRepoPromptConfirm: handleInitGitRepoPromptConfirm,
         worktreePrompt,
-        onWorktreePromptNameChange: updateWorktreeName,
         onWorktreePromptChange: updateWorktreeBranch,
-        onWorktreePromptCopyAgentsMdChange: updateWorktreeCopyAgentsMd,
-        onWorktreeSetupScriptChange: updateWorktreeSetupScript,
         onWorktreePromptCancel: cancelWorktreePrompt,
         onWorktreePromptConfirm: confirmWorktreePrompt,
         workspaceFromUrl: workspacePrompts.workspaceFromUrl,
@@ -490,9 +470,6 @@ export function useMainAppModals({
       settingsViewProps,
       workspacePrompts,
       updateWorktreeBranch,
-      updateWorktreeCopyAgentsMd,
-      updateWorktreeName,
-      updateWorktreeSetupScript,
       workspaces,
       worktreePrompt,
     ],

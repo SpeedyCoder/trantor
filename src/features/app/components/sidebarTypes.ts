@@ -34,13 +34,6 @@ export type ThreadRowsResult = {
   hasMoreRoots: boolean;
 };
 
-export type SidebarWorkspaceAddMenuAnchor = {
-  workspaceId: string;
-  top: number;
-  left: number;
-  width: number;
-};
-
 export type SidebarOverlayMenuAnchor = {
   top: number;
   left: number;

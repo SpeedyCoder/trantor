@@ -325,28 +325,30 @@ export function SettingsProjectsSection({
               const setupOpen = currentProjectSetupId === workspace.id;
               const isEnvironmentProject = environmentWorkspace?.id === workspace.id;
               return (
-                <div key={workspace.id} className="settings-project-card">
+                <div
+                  key={workspace.id}
+                  className={`settings-project-card${setupOpen ? " is-selected" : ""}`}
+                >
                   <div className="settings-project-row">
-                    <div className="settings-project-info">
-                      <div className="settings-project-name">{workspace.name}</div>
-                      <div className="settings-project-path">{workspace.path}</div>
-                    </div>
+                    <button
+                      type="button"
+                      className="settings-project-summary"
+                      onClick={() => {
+                        if (setupOpen) {
+                          setExpandedProjectId(null);
+                          return;
+                        }
+                        setExpandedProjectId(workspace.id);
+                        onSetEnvironmentWorkspaceId(workspace.id);
+                      }}
+                      aria-expanded={setupOpen}
+                    >
+                      <div className="settings-project-info">
+                        <div className="settings-project-name">{workspace.name}</div>
+                        <div className="settings-project-path">{workspace.path}</div>
+                      </div>
+                    </button>
                     <div className="settings-project-actions">
-                      <button
-                        type="button"
-                        className="ghost settings-button-compact"
-                        onClick={() => {
-                          if (setupOpen) {
-                            setExpandedProjectId(null);
-                            return;
-                          }
-                          setExpandedProjectId(workspace.id);
-                          onSetEnvironmentWorkspaceId(workspace.id);
-                        }}
-                        aria-expanded={setupOpen}
-                      >
-                        {setupOpen ? "Hide setup" : "Project setup"}
-                      </button>
                       <select
                         className="settings-select settings-select--compact"
                         value={groupValue}
@@ -395,7 +397,8 @@ export function SettingsProjectsSection({
                       <div className="settings-field">
                         <div className="settings-field-label">Setup script</div>
                         <div className="settings-help">
-                          Runs once in a dedicated terminal after each new worktree is created.
+                          Runs once in a dedicated terminal after each new worktree is created for
+                          this project.
                         </div>
                         {isEnvironmentProject && environmentError ? (
                           <div className="settings-agents-error">{environmentError}</div>
