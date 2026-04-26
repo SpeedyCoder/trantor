@@ -11,14 +11,15 @@ export const SETTINGS_SECTION_IDS = [
   "open-apps",
   "git",
   "server",
-  "agents",
 ] as const;
 
-export const SETTINGS_EXTRA_SECTION_IDS = ["codex", "claude", "features"] as const;
+export const SETTINGS_EXTRA_SECTION_IDS = ["codex", "claude"] as const;
+export const SETTINGS_LEGACY_ROUTE_SECTION_IDS = ["agents", "features"] as const;
 
 export const SETTINGS_ROUTE_SECTION_IDS = [
   ...SETTINGS_SECTION_IDS,
   ...SETTINGS_EXTRA_SECTION_IDS,
+  ...SETTINGS_LEGACY_ROUTE_SECTION_IDS,
   "profile",
 ] as const;
 
@@ -27,6 +28,19 @@ type SettingsSection = (typeof SETTINGS_SECTION_IDS)[number];
 export type CodexSection =
   | SettingsSection
   | (typeof SETTINGS_EXTRA_SECTION_IDS)[number];
+
+export type SettingsRouteSection =
+  | CodexSection
+  | (typeof SETTINGS_LEGACY_ROUTE_SECTION_IDS)[number];
+
+export function normalizeSettingsRouteSection(
+  section: SettingsRouteSection | undefined,
+): CodexSection | undefined {
+  if (section === "agents" || section === "features") {
+    return "codex";
+  }
+  return section;
+}
 
 export type ShortcutSettingKey =
   | "composerModelShortcut"

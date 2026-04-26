@@ -185,7 +185,7 @@ export function SettingsShortcutsSection({
       },
       {
         title: "Navigation",
-        subtitle: "Cycle between agents and workspaces.",
+        subtitle: "Cycle between agents and projects.",
         items: [
           {
             label: "Next agent",
@@ -200,13 +200,13 @@ export function SettingsShortcutsSection({
             help: `Default: ${formatShortcut(isMac ? "cmd+ctrl+up" : "ctrl+alt+up")}`,
           },
           {
-            label: "Next workspace",
+            label: "Next project",
             draftKey: "cycleWorkspaceNext",
             settingKey: "cycleWorkspaceNextShortcut",
             help: `Default: ${formatShortcut(isMac ? "cmd+shift+down" : "ctrl+alt+shift+down")}`,
           },
           {
-            label: "Previous workspace",
+            label: "Previous project",
             draftKey: "cycleWorkspacePrev",
             settingKey: "cycleWorkspacePrevShortcut",
             help: `Default: ${formatShortcut(isMac ? "cmd+shift+up" : "ctrl+alt+shift+up")}`,

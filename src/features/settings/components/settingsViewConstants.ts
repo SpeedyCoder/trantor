@@ -84,10 +84,8 @@ export const SETTINGS_SECTION_LABELS: Record<CodexSection, string> = {
   "open-apps": "Open in",
   git: "Git",
   server: "Server",
-  agents: "Agents",
   codex: "Codex",
   claude: "Claude",
-  features: "Features",
 };
 
 export const SHORTCUT_DRAFT_KEY_BY_SETTING: Record<
