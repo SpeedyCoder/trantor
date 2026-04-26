@@ -1,20 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
-import type { CodexSection } from "@settings/components/settingsTypes";
+import {
+  normalizeSettingsRouteSection,
+  type CodexSection,
+  type SettingsRouteSection,
+} from "@settings/components/settingsTypes";
 import { SETTINGS_MOBILE_BREAKPOINT_PX } from "@settings/components/settingsViewConstants";
 import { isNarrowSettingsViewport } from "@settings/components/settingsViewHelpers";
 
 type UseSettingsViewNavigationParams = {
-  initialSection?: CodexSection;
+  initialSection?: SettingsRouteSection;
 };
 
 export const useSettingsViewNavigation = ({
   initialSection,
 }: UseSettingsViewNavigationParams) => {
+  const normalizedInitialSection = normalizeSettingsRouteSection(initialSection);
   const [activeSection, setActiveSection] = useState<CodexSection>("projects");
   const [isNarrowViewport, setIsNarrowViewport] = useState(() =>
     isNarrowSettingsViewport(),
   );
-  const [showMobileDetail, setShowMobileDetail] = useState(Boolean(initialSection));
+  const [showMobileDetail, setShowMobileDetail] = useState(Boolean(normalizedInitialSection));
 
   useEffect(() => {
     if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
@@ -47,13 +52,13 @@ export const useSettingsViewNavigation = ({
   }, [useMobileMasterDetail]);
 
   useEffect(() => {
-    if (initialSection) {
-      setActiveSection(initialSection);
+    if (normalizedInitialSection) {
+      setActiveSection(normalizedInitialSection);
       if (useMobileMasterDetail) {
         setShowMobileDetail(true);
       }
     }
-  }, [initialSection, useMobileMasterDetail]);
+  }, [normalizedInitialSection, useMobileMasterDetail]);
 
   const handleSelectSection = useCallback(
     (section: CodexSection) => {

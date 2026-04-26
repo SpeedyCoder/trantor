@@ -15,7 +15,7 @@ import { useSettingsViewNavigation } from "@settings/hooks/useSettingsViewNaviga
 import { useSettingsViewOrchestration } from "@settings/hooks/useSettingsViewOrchestration";
 import { ModalShell } from "@/features/design-system/components/modal/ModalShell";
 import { SettingsNav } from "./SettingsNav";
-import type { CodexSection } from "./settingsTypes";
+import type { SettingsRouteSection } from "./settingsTypes";
 import { SETTINGS_SECTION_LABELS } from "./settingsViewConstants";
 import { SettingsSectionContainers } from "./sections/SettingsSectionContainers";
 
@@ -63,7 +63,7 @@ export type SettingsViewProps = {
   onDownloadDictationModel?: () => void;
   onCancelDictationDownload?: () => void;
   onRemoveDictationModel?: () => void;
-  initialSection?: CodexSection;
+  initialSection?: SettingsRouteSection;
   accountRateLimits: RateLimitSnapshot | null;
   usageShowRemaining: boolean;
 };
