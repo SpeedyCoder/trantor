@@ -81,14 +81,14 @@ use shared::codex_core::CodexLoginCancelState;
 use shared::process_core::kill_child_process_tree;
 use shared::prompts_core::{self, CustomPromptEntry};
 use shared::{
-    agents_config_core, codex_aux_core, codex_core, files_core, git_core, git_ui_core,
+    agents_config_core, codex_aux_core, codex_core, files_core, git_core, git_ui_core, linear_core,
     local_usage_core, settings_core, workspaces_core, worktree_core,
 };
 use storage::{read_settings, read_workspaces};
 use types::{
     AppSettings, GitCommitDiff, GitFileDiff, GitHubIssuesResponse, GitHubPullRequestComment,
-    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, LocalUsageSnapshot,
-    WorkspaceEntry, WorkspaceInfo, WorkspaceSettings, WorktreeSetupStatus,
+    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, LinearIssuesResponse,
+    LocalUsageSnapshot, WorkspaceEntry, WorkspaceInfo, WorkspaceSettings, WorktreeSetupStatus,
 };
 use workspace_settings::apply_workspace_settings_update;
 
@@ -697,11 +697,7 @@ impl DaemonState {
         codex_core::resume_thread_core(&self.sessions, workspace_id, thread_id).await
     }
 
-    async fn read_thread(
-        &self,
-        workspace_id: String,
-        thread_id: String,
-    ) -> Result<Value, String> {
+    async fn read_thread(&self, workspace_id: String, thread_id: String) -> Result<Value, String> {
         codex_core::read_thread_core(&self.sessions, workspace_id, thread_id).await
     }
 
@@ -770,8 +766,7 @@ impl DaemonState {
         limit: Option<u32>,
         sort_key: Option<String>,
     ) -> Result<Value, String> {
-        codex_core::list_threads_core(&self.sessions, workspace_id, cursor, limit, sort_key)
-            .await
+        codex_core::list_threads_core(&self.sessions, workspace_id, cursor, limit, sort_key).await
     }
 
     async fn list_mcp_server_status(
@@ -1100,6 +1095,14 @@ impl DaemonState {
         workspace_id: String,
     ) -> Result<GitHubIssuesResponse, String> {
         git_ui_core::get_github_issues_core(&self.workspaces, workspace_id).await
+    }
+
+    async fn search_linear_issues(
+        &self,
+        _workspace_id: String,
+        query: Option<String>,
+    ) -> Result<LinearIssuesResponse, String> {
+        linear_core::search_linear_issues_core(&self.app_settings, query).await
     }
 
     async fn get_github_pull_requests(
@@ -1571,10 +1574,8 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .expect("time")
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!(
-            "trantor-{prefix}-{}-{unique}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("trantor-{prefix}-{}-{unique}", std::process::id()));
         std::fs::create_dir_all(&dir).expect("create temp dir");
         dir
     }

@@ -184,6 +184,7 @@ function buildDefaultSettings(): AppSettings {
     gitDiffIgnoreWhitespaceChanges: false,
     commitMessagePrompt: DEFAULT_COMMIT_MESSAGE_PROMPT,
     commitMessageModelId: null,
+    linearApiToken: null,
     collaborationModesEnabled: true,
     steerEnabled: true,
     followUpMessageBehavior: "queue",
@@ -279,6 +280,7 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
       settings.reviewDeliveryMode === "detached" ? "detached" : "inline",
     chatHistoryScrollbackItems,
     commitMessagePrompt,
+    linearApiToken: settings.linearApiToken?.trim() ? settings.linearApiToken.trim() : null,
     openAppTargets: normalizedTargets,
     selectedOpenAppId,
   };

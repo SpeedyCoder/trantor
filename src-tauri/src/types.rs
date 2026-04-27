@@ -93,6 +93,29 @@ pub(crate) struct GitHubIssuesResponse {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct LinearIssue {
+    pub(crate) id: String,
+    pub(crate) identifier: String,
+    pub(crate) title: String,
+    pub(crate) description: Option<String>,
+    pub(crate) url: String,
+    #[serde(rename = "branchName")]
+    pub(crate) branch_name: Option<String>,
+    #[serde(rename = "updatedAt")]
+    pub(crate) updated_at: String,
+    #[serde(rename = "stateName")]
+    pub(crate) state_name: Option<String>,
+    #[serde(rename = "teamKey")]
+    pub(crate) team_key: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct LinearIssuesResponse {
+    pub(crate) total: usize,
+    pub(crate) issues: Vec<LinearIssue>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub(crate) struct GitHubPullRequestAuthor {
     pub(crate) login: String,
 }
@@ -566,6 +589,8 @@ pub(crate) struct AppSettings {
     pub(crate) commit_message_prompt: String,
     #[serde(default, rename = "commitMessageModelId")]
     pub(crate) commit_message_model_id: Option<String>,
+    #[serde(default, rename = "linearApiToken")]
+    pub(crate) linear_api_token: Option<String>,
     #[serde(
         default = "default_system_notifications_enabled",
         rename = "systemNotificationsEnabled"
@@ -1191,6 +1216,7 @@ impl Default for AppSettings {
             git_diff_ignore_whitespace_changes: default_git_diff_ignore_whitespace_changes(),
             commit_message_prompt: default_commit_message_prompt(),
             commit_message_model_id: None,
+            linear_api_token: None,
             collaboration_modes_enabled: true,
             steer_enabled: true,
             follow_up_message_behavior: default_follow_up_message_behavior(),
@@ -1249,6 +1275,7 @@ mod tests {
         ));
         assert_eq!(settings.remote_backend_host, "127.0.0.1:4732");
         assert!(settings.remote_backend_token.is_none());
+        assert!(settings.linear_api_token.is_none());
         assert!(settings.remote_backends.is_empty());
         assert!(settings.active_remote_backend_id.is_none());
         assert!(!settings.keep_daemon_running_after_app_close);

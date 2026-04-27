@@ -17,6 +17,17 @@ fn normalize_personality(value: &str) -> Option<&'static str> {
 
 pub(crate) async fn get_app_settings_core(app_settings: &Mutex<AppSettings>) -> AppSettings {
     let mut settings = app_settings.lock().await.clone();
+    if settings
+        .linear_api_token
+        .as_deref()
+        .map_or(true, |value| value.trim().is_empty())
+    {
+        settings.linear_api_token = std::env::var("LINEAR_API_KEY")
+            .ok()
+            .or_else(|| std::env::var("LINEAR_API_TOKEN").ok())
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty());
+    }
     if let Ok(Some(collaboration_modes_enabled)) = codex_config::read_collaboration_modes_enabled()
     {
         settings.collaboration_modes_enabled = collaboration_modes_enabled;

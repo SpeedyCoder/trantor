@@ -57,7 +57,8 @@ type UseMainAppModalsArgs = {
     ) => Promise<WorkspaceInfo | null>;
     connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
     selectWorkspace: (workspaceId: string) => void;
-    handleWorktreeCreated: (worktree: WorkspaceInfo, parent: WorkspaceInfo) => Promise<void>;
+    linearEnabled: boolean;
+    handleWorktreeCreated: Parameters<typeof useWorktreePrompt>[0]["onWorktreeCreated"];
     onCompactActivate?: () => void;
     onWorkspacePromptError: (message: string, kind: "worktree") => void;
     mobileRemoteWorkspacePathPrompt: AppModalsProps["mobileRemoteWorkspacePathPrompt"];
@@ -202,6 +203,9 @@ type BuildAppModalsPropsArgs = {
   onInitGitRepoPromptConfirm: () => void;
   worktreePrompt: AppModalsProps["worktreePrompt"];
   onWorktreePromptChange: (value: string) => void;
+  onWorktreePromptLinearQueryChange: AppModalsProps["onWorktreePromptLinearQueryChange"];
+  onWorktreePromptTabChange: AppModalsProps["onWorktreePromptTabChange"];
+  onWorktreePromptLinearIssueSelect: AppModalsProps["onWorktreePromptLinearIssueSelect"];
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
   workspaceFromUrl: AppModalsProps["workspaceFromUrlPrompt"] extends null
@@ -251,6 +255,9 @@ function buildAppModalsProps({
   onInitGitRepoPromptConfirm,
   worktreePrompt,
   onWorktreePromptChange,
+  onWorktreePromptLinearQueryChange,
+  onWorktreePromptTabChange,
+  onWorktreePromptLinearIssueSelect,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
   workspaceFromUrl,
@@ -287,6 +294,9 @@ function buildAppModalsProps({
     onInitGitRepoPromptConfirm,
     worktreePrompt,
     onWorktreePromptChange,
+    onWorktreePromptLinearQueryChange,
+    onWorktreePromptTabChange,
+    onWorktreePromptLinearIssueSelect,
     onWorktreePromptCancel,
     onWorktreePromptConfirm,
     ...workspaceFromUrl,
@@ -375,12 +385,16 @@ export function useMainAppModals({
     worktreePrompt,
     openPrompt: openWorktreePrompt,
     confirmPrompt: confirmWorktreePrompt,
+    selectLinearIssue: selectWorktreeLinearIssue,
     cancelPrompt: cancelWorktreePrompt,
     updateBranch: updateWorktreeBranch,
+    updateLinearQuery: updateWorktreeLinearQuery,
+    switchTab: switchWorktreePromptTab,
   } = useWorktreePrompt({
     addWorktreeAgent: workspacePrompts.addWorktreeAgent,
     connectWorkspace: workspacePrompts.connectWorkspace,
     onSelectWorkspace: workspacePrompts.selectWorkspace,
+    linearEnabled: workspacePrompts.linearEnabled,
     onWorktreeCreated: workspacePrompts.handleWorktreeCreated,
     onCompactActivate: workspacePrompts.onCompactActivate,
     onError: (message) => workspacePrompts.onWorkspacePromptError(message, "worktree"),
@@ -415,6 +429,9 @@ export function useMainAppModals({
         onInitGitRepoPromptConfirm: handleInitGitRepoPromptConfirm,
         worktreePrompt,
         onWorktreePromptChange: updateWorktreeBranch,
+        onWorktreePromptLinearQueryChange: updateWorktreeLinearQuery,
+        onWorktreePromptTabChange: switchWorktreePromptTab,
+        onWorktreePromptLinearIssueSelect: selectWorktreeLinearIssue,
         onWorktreePromptCancel: cancelWorktreePrompt,
         onWorktreePromptConfirm: confirmWorktreePrompt,
         workspaceFromUrl: workspacePrompts.workspaceFromUrl,
@@ -449,6 +466,7 @@ export function useMainAppModals({
       closeBranchSwitcher,
       closeSettings,
       confirmWorktreePrompt,
+      selectWorktreeLinearIssue,
       currentBranch,
       git.createGitHubRepoLoading,
       git.initGitRepoLoading,
@@ -470,6 +488,8 @@ export function useMainAppModals({
       settingsViewProps,
       workspacePrompts,
       updateWorktreeBranch,
+      updateWorktreeLinearQuery,
+      switchWorktreePromptTab,
       workspaces,
       worktreePrompt,
     ],

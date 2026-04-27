@@ -1,7 +1,7 @@
 .worktree-modal .ds-modal-card {
   width: min(560px, calc(100vw - 48px));
-  max-height: calc(100vh - 64px);
-  overflow: auto;
+  height: min(560px, calc(100vh - 64px));
+  overflow: hidden;
   border-radius: 16px;
   padding: 18px 20px;
   display: flex;
@@ -9,18 +9,123 @@
   gap: 12px;
 }
 
+.worktree-modal-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.worktree-modal-pane {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 10px;
+}
+
 .worktree-modal-branch {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
+  min-height: 0;
   gap: 6px;
 }
 
+.worktree-modal-tabs {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px;
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: 8px;
+  background: var(--ds-surface-muted);
+}
+
+.worktree-modal-tabs button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ds-text-muted);
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.worktree-modal-tabs button.selected {
+  background: var(--ds-surface-card);
+  color: var(--ds-text-strong);
+}
+
+.worktree-linear-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.worktree-linear-empty {
+  padding: 18px 12px;
+  text-align: center;
+  color: var(--ds-text-faint);
+  font-size: 12px;
+}
+
+.worktree-linear-issue {
+  display: flex;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-border-subtle);
+  border-radius: 8px;
+  background: var(--ds-surface-muted);
+  color: var(--ds-text-strong);
+  text-align: left;
+  cursor: pointer;
+}
+
+.worktree-linear-issue:hover {
+  background: var(--ds-surface-card);
+}
+
+.worktree-linear-issue-main,
+.worktree-linear-issue-meta {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 8px;
+}
+
+.worktree-linear-issue-id,
+.worktree-linear-issue-meta {
+  color: var(--ds-text-muted);
+  font-size: 12px;
+}
+
+.worktree-linear-issue-id {
+  flex: 0 0 auto;
+  font-family: var(--code-font-family, Menlo, Monaco, "Courier New", monospace);
+  overflow-wrap: anywhere;
+}
+
+.worktree-linear-issue-title {
+  flex: 1 1 220px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
 .worktree-modal-branch-list {
+  flex: 1 1 auto;
+  min-height: 0;
   border: 1px solid var(--ds-border-subtle);
   border-radius: 10px;
   background: var(--ds-surface-muted);
   padding: 6px;
-  max-height: 220px;
   overflow-y: auto;
 }
 
@@ -33,9 +138,11 @@
 
 .worktree-modal-branch-item {
   display: flex;
-  align-items: center;
+  box-sizing: border-box;
+  align-items: flex-start;
   justify-content: space-between;
   width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border: none;
   background: transparent;
@@ -54,8 +161,7 @@
 
 .worktree-modal-branch-item-name {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-family: var(--code-font-family, Menlo, Monaco, "Courier New", monospace);
 }

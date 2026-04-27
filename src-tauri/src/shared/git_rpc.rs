@@ -21,6 +21,7 @@ pub(crate) const METHOD_GET_GIT_LOG: &str = "get_git_log";
 pub(crate) const METHOD_GET_GIT_COMMIT_DIFF: &str = "get_git_commit_diff";
 pub(crate) const METHOD_GET_GIT_REMOTE: &str = "get_git_remote";
 pub(crate) const METHOD_GET_GITHUB_ISSUES: &str = "get_github_issues";
+pub(crate) const METHOD_SEARCH_LINEAR_ISSUES: &str = "search_linear_issues";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUESTS: &str = "get_github_pull_requests";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUEST_DIFF: &str = "get_github_pull_request_diff";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUEST_COMMENTS: &str = "get_github_pull_request_comments";
@@ -45,6 +46,13 @@ pub(crate) fn from_params<T: DeserializeOwned>(params: &Value) -> Result<T, Stri
 #[serde(rename_all = "camelCase")]
 pub(crate) struct WorkspaceIdRequest {
     pub(crate) workspace_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct LinearIssueSearchRequest {
+    pub(crate) workspace_id: String,
+    pub(crate) query: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

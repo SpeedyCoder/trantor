@@ -73,6 +73,11 @@ export type AppModalsProps = {
   onInitGitRepoPromptConfirm: () => void;
   worktreePrompt: WorktreePromptState;
   onWorktreePromptChange: (value: string) => void;
+  onWorktreePromptLinearQueryChange: (value: string) => void;
+  onWorktreePromptTabChange: (tab: NonNullable<WorktreePromptState>["activeTab"]) => void;
+  onWorktreePromptLinearIssueSelect: (
+    issue: NonNullable<WorktreePromptState>["linearIssues"][number],
+  ) => void;
   onWorktreePromptCancel: () => void;
   onWorktreePromptConfirm: () => void;
   workspaceFromUrlPrompt: WorkspaceFromUrlPromptState;
@@ -117,6 +122,9 @@ export const AppModals = memo(function AppModals({
   onInitGitRepoPromptConfirm,
   worktreePrompt,
   onWorktreePromptChange,
+  onWorktreePromptLinearQueryChange,
+  onWorktreePromptTabChange,
+  onWorktreePromptLinearIssueSelect,
   onWorktreePromptCancel,
   onWorktreePromptConfirm,
   workspaceFromUrlPrompt,
@@ -185,11 +193,19 @@ export const AppModals = memo(function AppModals({
         <Suspense fallback={null}>
           <WorktreePrompt
             workspaceName={worktreePrompt.workspace.name}
+            activeTab={worktreePrompt.activeTab}
+            linearEnabled={worktreePrompt.linearEnabled}
+            linearQuery={worktreePrompt.linearQuery}
+            linearIssues={worktreePrompt.linearIssues}
+            linearLoading={worktreePrompt.linearLoading}
             branch={worktreePrompt.branch}
             branchWasEdited={worktreePrompt.branchWasEdited}
             branchSuggestions={worktreeBranches}
             error={worktreePrompt.error}
             isBusy={worktreePrompt.isSubmitting}
+            onTabChange={onWorktreePromptTabChange}
+            onLinearQueryChange={onWorktreePromptLinearQueryChange}
+            onLinearIssueSelect={onWorktreePromptLinearIssueSelect}
             onChange={onWorktreePromptChange}
             onCancel={onWorktreePromptCancel}
             onConfirm={onWorktreePromptConfirm}

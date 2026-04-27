@@ -128,6 +128,7 @@ const baseSettings: AppSettings = {
   gitDiffIgnoreWhitespaceChanges: false,
   commitMessagePrompt: DEFAULT_COMMIT_MESSAGE_PROMPT,
   commitMessageModelId: null,
+  linearApiToken: null,
   collaborationModesEnabled: true,
   steerEnabled: true,
   followUpMessageBehavior: "queue",
@@ -227,6 +228,50 @@ const renderDisplaySection = (
 
   render(<SettingsView {...props} />);
   fireEvent.click(screen.getByRole("button", { name: "Display & Sound" }));
+
+  return { onUpdateAppSettings };
+};
+
+const renderGitSection = (
+  options: {
+    appSettings?: Partial<AppSettings>;
+    onUpdateAppSettings?: ComponentProps<typeof SettingsView>["onUpdateAppSettings"];
+  } = {},
+) => {
+  cleanup();
+  const onUpdateAppSettings =
+    options.onUpdateAppSettings ?? vi.fn().mockResolvedValue(undefined);
+  render(
+    <SettingsView
+      workspaceGroups={[]}
+      groupedWorkspaces={[]}
+      ungroupedLabel="Ungrouped"
+      onClose={vi.fn()}
+      onMoveWorkspace={vi.fn()}
+      onDeleteWorkspace={vi.fn()}
+      onCreateWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+      onRenameWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+      onMoveWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+      onDeleteWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+      onAssignWorkspaceGroup={vi.fn().mockResolvedValue(null)}
+      appSettings={{ ...baseSettings, ...options.appSettings }}
+      openAppIconById={{}}
+      onUpdateAppSettings={onUpdateAppSettings}
+      onRunDoctor={vi.fn().mockResolvedValue(createDoctorResult())}
+      onUpdateWorkspaceSettings={vi.fn().mockResolvedValue(undefined)}
+      scaleShortcutTitle="Scale shortcut"
+      scaleShortcutText="Use Command +/-"
+      onTestNotificationSound={vi.fn()}
+      onTestSystemNotification={vi.fn()}
+      dictationModelStatus={null}
+      onDownloadDictationModel={vi.fn()}
+      onCancelDictationDownload={vi.fn()}
+      onRemoveDictationModel={vi.fn()}
+      accountRateLimits={null}
+      usageShowRemaining={false}
+      initialSection="git"
+    />,
+  );
 
   return { onUpdateAppSettings };
 };
@@ -805,6 +850,23 @@ describe("SettingsView About", () => {
 
     await waitFor(() => {
       expect(onToggleAutomaticAppUpdateChecks).toHaveBeenCalledTimes(1);
+    });
+  });
+});
+
+describe("SettingsView Git", () => {
+  it("saves a trimmed Linear API token", async () => {
+    const onUpdateAppSettings = vi.fn().mockResolvedValue(undefined);
+    renderGitSection({ onUpdateAppSettings });
+
+    fireEvent.change(screen.getByLabelText("Linear API token"), {
+      target: { value: "  lin_api_token  " },
+    });
+
+    await waitFor(() => {
+      expect(onUpdateAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({ linearApiToken: "lin_api_token" }),
+      );
     });
   });
 });

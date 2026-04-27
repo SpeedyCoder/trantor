@@ -23,6 +23,7 @@ import type {
   GitFileStatus,
   GitCommitDiff,
   GitHubIssuesResponse,
+  LinearIssuesResponse,
   GitHubPullRequestComment,
   GitHubPullRequestDiff,
   GitHubPullRequestsResponse,
@@ -670,6 +671,16 @@ export async function getGitHubIssues(
   workspace_id: string,
 ): Promise<GitHubIssuesResponse> {
   return invoke("get_github_issues", { workspaceId: workspace_id });
+}
+
+export async function searchLinearIssues(
+  workspace_id: string,
+  query?: string | null,
+): Promise<LinearIssuesResponse> {
+  return invoke("search_linear_issues", {
+    workspaceId: workspace_id,
+    query: query?.trim() ? query.trim() : null,
+  });
 }
 
 export async function getGitHubPullRequests(

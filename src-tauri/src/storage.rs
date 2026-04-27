@@ -110,12 +110,20 @@ where
 fn normalize_app_settings(settings: AppSettings) -> (AppSettings, bool) {
     let (global_worktrees_folder, changed) =
         normalize_optional_windows_namespace_path(settings.global_worktrees_folder.clone());
+    let linear_api_token = settings
+        .linear_api_token
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string);
+    let token_changed = linear_api_token != settings.linear_api_token;
     (
         AppSettings {
             global_worktrees_folder,
+            linear_api_token,
             ..settings
         },
-        changed,
+        changed || token_changed,
     )
 }
 
@@ -320,7 +328,10 @@ mod tests {
         let persisted_entries: Vec<WorkspaceEntry> =
             serde_json::from_str(&persisted).expect("deserialize persisted workspaces");
         assert_eq!(persisted_entries.len(), 1);
-        assert_eq!(persisted_entries[0].path, r"\\?\I:\gpt-projects\json-composer");
+        assert_eq!(
+            persisted_entries[0].path,
+            r"\\?\I:\gpt-projects\json-composer"
+        );
     }
 
     #[test]

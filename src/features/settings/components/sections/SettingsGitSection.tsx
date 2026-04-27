@@ -62,6 +62,29 @@ export function SettingsGitSection({
         />
       </SettingsToggleRow>
       <div className="settings-field">
+        <label className="settings-field-label" htmlFor="linear-api-token">
+          Linear API token
+        </label>
+        <div className="settings-help">
+          Enables Linear issue search when creating worktree agents.
+        </div>
+        <input
+          id="linear-api-token"
+          className="settings-input"
+          type="password"
+          value={appSettings.linearApiToken ?? ""}
+          placeholder="lin_api_..."
+          autoComplete="off"
+          onChange={(event) => {
+            const value = event.target.value.trim();
+            void onUpdateAppSettings({
+              ...appSettings,
+              linearApiToken: value.length > 0 ? value : null,
+            });
+          }}
+        />
+      </div>
+      <div className="settings-field">
         <div className="settings-field-label">Commit message prompt</div>
         <div className="settings-help">
           Used when generating commit messages. Include <code>{"{diff}"}</code> to insert the

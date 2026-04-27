@@ -138,6 +138,13 @@ pub(super) async fn try_handle(
             let request = parse_request_or_err!(params, git_rpc::WorkspaceIdRequest);
             Some(serialize_result(state.get_github_issues(request.workspace_id)).await)
         }
+        git_rpc::METHOD_SEARCH_LINEAR_ISSUES => {
+            let request = parse_request_or_err!(params, git_rpc::LinearIssueSearchRequest);
+            Some(
+                serialize_result(state.search_linear_issues(request.workspace_id, request.query))
+                    .await,
+            )
+        }
         git_rpc::METHOD_GET_GITHUB_PULL_REQUESTS => {
             let request = parse_request_or_err!(params, git_rpc::WorkspaceIdRequest);
             Some(serialize_result(state.get_github_pull_requests(request.workspace_id)).await)

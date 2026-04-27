@@ -27,6 +27,7 @@ import { useMainAppGitState } from "@app/hooks/useMainAppGitState";
 import { useMainAppLayoutSurfaces } from "@app/hooks/useMainAppLayoutSurfaces";
 import { useMainAppLayoutNodes } from "@app/hooks/useMainAppLayoutNodes";
 import { useWorkspaceFromUrlPrompt } from "@/features/workspaces/hooks/useWorkspaceFromUrlPrompt";
+import type { WorktreeCreatedContext } from "@/features/workspaces/hooks/useWorktreePrompt";
 import { useWorkspaceController } from "@app/hooks/useWorkspaceController";
 import { useWorkspaceSelection } from "@/features/workspaces/hooks/useWorkspaceSelection";
 import { usePlanReadyActions } from "@app/hooks/usePlanReadyActions";
@@ -267,6 +268,11 @@ export default function MainApp() {
   const recordPendingThreadLinkRef = useRef<
     (workspaceId: string, threadId: string) => void
   >(() => {});
+  const pendingLinearWorktreeDraftRef = useRef<{
+    workspaceId: string;
+    threadId: string;
+    prompt: string;
+  } | null>(null);
 
   const { errorToasts, dismissErrorToast } = useErrorToasts();
   const queueGitStatusRefreshRef = useRef<() => void>(() => {});
@@ -874,10 +880,27 @@ export default function MainApp() {
   });
 
   const handleWorktreeCreated = useCallback(
-    async (worktree: WorkspaceInfo, _parentWorkspace?: WorkspaceInfo) => {
+    async (
+      worktree: WorkspaceInfo,
+      _parentWorkspace?: WorkspaceInfo,
+      context?: WorktreeCreatedContext,
+    ) => {
       await worktreeSetupScriptState.maybeRunWorktreeSetupScript(worktree);
+      const prompt = context?.prefillPrompt?.trim();
+      if (!prompt) {
+        return;
+      }
+      const threadId = await startThreadForWorkspace(worktree.id, { activate: true });
+      if (!threadId) {
+        return;
+      }
+      pendingLinearWorktreeDraftRef.current = {
+        workspaceId: worktree.id,
+        threadId,
+        prompt,
+      };
     },
-    [worktreeSetupScriptState],
+    [startThreadForWorkspace, worktreeSetupScriptState],
   );
 
   const { exitDiffView, selectWorkspace, selectHome } = useWorkspaceSelection({
@@ -979,6 +1002,7 @@ export default function MainApp() {
       addWorktreeAgent,
       connectWorkspace,
       selectWorkspace,
+      linearEnabled: Boolean(appSettings.linearApiToken?.trim()),
       handleWorktreeCreated,
       onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
       onWorkspacePromptError: (message, kind) => {
@@ -1164,6 +1188,19 @@ export default function MainApp() {
     refresh: refreshAgentMd,
     save: saveAgentMd,
   } = agentMdState;
+  useEffect(() => {
+    const pending = pendingLinearWorktreeDraftRef.current;
+    if (!pending || activeWorkspaceId !== pending.workspaceId || activeThreadId !== pending.threadId) {
+      return;
+    }
+    pendingLinearWorktreeDraftRef.current = null;
+    setPrefillDraft({
+      id: `linear-${pending.threadId}-${Date.now()}`,
+      text: pending.prompt,
+      createdAt: Date.now(),
+    });
+    setTimeout(() => composerInputRef.current?.focus(), 0);
+  }, [activeThreadId, activeWorkspaceId, composerInputRef, setPrefillDraft]);
   const promptActions = useMainAppPromptActions({
     activeWorkspace,
     connectWorkspace,

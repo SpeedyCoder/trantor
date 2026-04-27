@@ -47,6 +47,14 @@ export function useWorkspaceSelection({
           sidebarCollapsed: false,
         });
       }
+      if ((target?.kind ?? "main") === "worktree" && target?.parentId) {
+        const parent = workspaces.find((entry) => entry.id === target.parentId);
+        if (parent?.settings.sidebarCollapsed) {
+          void updateWorkspaceSettings(parent.id, {
+            sidebarCollapsed: false,
+          });
+        }
+      }
       setActiveWorkspaceId(workspaceId);
       if (didSwitch) {
         Sentry.metrics.count("workspace_switched", 1, {

@@ -1,8 +1,22 @@
-import { useCallback, useState } from "react";
-import type { WorkspaceInfo } from "../../../types";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { LinearIssue, WorkspaceInfo } from "../../../types";
+import { searchLinearIssues } from "../../../services/tauri";
+
+export type WorktreePromptTab = "linear" | "manual";
+
+export type WorktreeCreatedContext = {
+  linearIssue?: LinearIssue;
+  prefillPrompt?: string;
+};
 
 type WorktreePromptState = {
   workspace: WorkspaceInfo;
+  activeTab: WorktreePromptTab;
+  linearEnabled: boolean;
+  linearQuery: string;
+  linearIssues: LinearIssue[];
+  linearTotal: number;
+  linearLoading: boolean;
   branch: string;
   branchWasEdited: boolean;
   isSubmitting: boolean;
@@ -17,7 +31,12 @@ type UseWorktreePromptOptions = {
   ) => Promise<WorkspaceInfo | null>;
   connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
   onSelectWorkspace: (workspaceId: string) => void;
-  onWorktreeCreated?: (worktree: WorkspaceInfo, parent: WorkspaceInfo) => Promise<void> | void;
+  linearEnabled?: boolean;
+  onWorktreeCreated?: (
+    worktree: WorkspaceInfo,
+    parent: WorkspaceInfo,
+    context?: WorktreeCreatedContext,
+  ) => Promise<void> | void;
   onCompactActivate?: () => void;
   onError?: (message: string) => void;
 };
@@ -26,32 +45,116 @@ type UseWorktreePromptResult = {
   worktreePrompt: WorktreePromptState;
   openPrompt: (workspace: WorkspaceInfo) => void;
   confirmPrompt: () => Promise<void>;
+  selectLinearIssue: (issue: LinearIssue) => Promise<void>;
   cancelPrompt: () => void;
   updateBranch: (value: string) => void;
+  updateLinearQuery: (value: string) => void;
+  switchTab: (tab: WorktreePromptTab) => void;
 };
+
+function buildLinearIssuePrompt(issue: LinearIssue): string {
+  const description = issue.description?.trim() || "No description provided.";
+  return `Work on Linear issue ${issue.identifier}: ${issue.title}
+
+URL: ${issue.url}
+
+Description:
+${description}`;
+}
 
 export function useWorktreePrompt({
   addWorktreeAgent,
   connectWorkspace,
   onSelectWorkspace,
+  linearEnabled = false,
   onWorktreeCreated,
   onCompactActivate,
   onError,
 }: UseWorktreePromptOptions): UseWorktreePromptResult {
   const [worktreePrompt, setWorktreePrompt] = useState<WorktreePromptState>(null);
+  const linearRequestIdRef = useRef(0);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   const openPrompt = useCallback((workspace: WorkspaceInfo) => {
     const defaultBranch = `codex/${new Date().toISOString().slice(0, 10)}-${Math.random()
       .toString(36)
       .slice(2, 6)}`;
+    const hasLinear = linearEnabled;
     setWorktreePrompt({
       workspace,
+      activeTab: hasLinear ? "linear" : "manual",
+      linearEnabled: hasLinear,
+      linearQuery: "",
+      linearIssues: [],
+      linearTotal: 0,
+      linearLoading: false,
       branch: defaultBranch,
       branchWasEdited: false,
       isSubmitting: false,
       error: null,
     });
-  }, []);
+  }, [linearEnabled]);
+
+  useEffect(() => {
+    if (!worktreePrompt?.linearEnabled || worktreePrompt.activeTab !== "linear") {
+      return;
+    }
+    const workspaceId = worktreePrompt.workspace.id;
+    const query = worktreePrompt.linearQuery;
+    const requestId = linearRequestIdRef.current + 1;
+    linearRequestIdRef.current = requestId;
+    setWorktreePrompt((prev) =>
+      prev ? { ...prev, linearLoading: true, error: null } : prev,
+    );
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          const response = await searchLinearIssues(workspaceId, query);
+          if (linearRequestIdRef.current !== requestId) {
+            return;
+          }
+          setWorktreePrompt((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  linearIssues: response.issues,
+                  linearTotal: response.total,
+                  linearLoading: false,
+                  error: null,
+                }
+              : prev,
+          );
+        } catch (error) {
+          if (linearRequestIdRef.current !== requestId) {
+            return;
+          }
+          const message = error instanceof Error ? error.message : String(error);
+          setWorktreePrompt((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  linearIssues: [],
+                  linearTotal: 0,
+                  linearLoading: false,
+                  error: message,
+                }
+              : prev,
+          );
+          onErrorRef.current?.(message);
+        }
+      })();
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, [
+    worktreePrompt?.activeTab,
+    worktreePrompt?.linearEnabled,
+    worktreePrompt?.linearQuery,
+    worktreePrompt?.workspace.id,
+  ]);
 
   const updateBranch = useCallback((value: string) => {
     setWorktreePrompt((prev) =>
@@ -59,11 +162,24 @@ export function useWorktreePrompt({
     );
   }, []);
 
+  const updateLinearQuery = useCallback((value: string) => {
+    setWorktreePrompt((prev) =>
+      prev ? { ...prev, linearQuery: value, error: null } : prev,
+    );
+  }, []);
+
+  const switchTab = useCallback((tab: WorktreePromptTab) => {
+    setWorktreePrompt((prev) => (prev ? { ...prev, activeTab: tab, error: null } : prev));
+  }, []);
+
   const cancelPrompt = useCallback(() => {
     setWorktreePrompt(null);
   }, []);
 
-  const confirmPrompt = useCallback(async () => {
+  const createWorktree = useCallback(async (
+    branch: string,
+    context?: WorktreeCreatedContext,
+  ) => {
     if (!worktreePrompt || worktreePrompt.isSubmitting) {
       return;
     }
@@ -73,7 +189,7 @@ export function useWorktreePrompt({
     );
 
     try {
-      const worktreeWorkspace = await addWorktreeAgent(snapshot.workspace, snapshot.branch, {
+      const worktreeWorkspace = await addWorktreeAgent(snapshot.workspace, branch, {
         displayName: null,
         copyAgentsMd: true,
       });
@@ -86,7 +202,7 @@ export function useWorktreePrompt({
         await connectWorkspace(worktreeWorkspace);
       }
       try {
-        await onWorktreeCreated?.(worktreeWorkspace, snapshot.workspace);
+        await onWorktreeCreated?.(worktreeWorkspace, snapshot.workspace, context);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         onError?.(message);
@@ -110,11 +226,38 @@ export function useWorktreePrompt({
     worktreePrompt,
   ]);
 
+  const confirmPrompt = useCallback(async () => {
+    if (!worktreePrompt) {
+      return;
+    }
+    await createWorktree(worktreePrompt.branch);
+  }, [createWorktree, worktreePrompt]);
+
+  const selectLinearIssue = useCallback(
+    async (issue: LinearIssue) => {
+      const branch = issue.branchName?.trim();
+      if (!branch) {
+        const message = "Linear did not return a branch name for this issue.";
+        setWorktreePrompt((prev) => (prev ? { ...prev, error: message } : prev));
+        onError?.(message);
+        return;
+      }
+      await createWorktree(branch, {
+        linearIssue: issue,
+        prefillPrompt: buildLinearIssuePrompt(issue),
+      });
+    },
+    [createWorktree, onError],
+  );
+
   return {
     worktreePrompt,
     openPrompt,
     confirmPrompt,
+    selectLinearIssue,
     cancelPrompt,
     updateBranch,
+    updateLinearQuery,
+    switchTab,
   };
 }

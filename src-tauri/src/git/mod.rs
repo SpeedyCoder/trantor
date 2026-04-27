@@ -4,11 +4,11 @@ use serde_json::Value;
 use tauri::{AppHandle, State};
 
 use crate::remote_backend;
-use crate::shared::{git_rpc, git_ui_core};
+use crate::shared::{git_rpc, git_ui_core, linear_core};
 use crate::state::AppState;
 use crate::types::{
     GitCommitDiff, GitFileDiff, GitHubIssuesResponse, GitHubPullRequestComment,
-    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse,
+    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, LinearIssuesResponse,
 };
 
 fn git_remote_params<T: Serialize>(request: &T) -> Result<Value, String> {
@@ -469,6 +469,27 @@ pub(crate) async fn get_github_issues(
         GitHubIssuesResponse
     );
     git_ui_core::get_github_issues_core(&state.workspaces, workspace_id).await
+}
+
+#[tauri::command]
+pub(crate) async fn search_linear_issues(
+    workspace_id: String,
+    query: Option<String>,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<LinearIssuesResponse, String> {
+    let request = git_rpc::LinearIssueSearchRequest {
+        workspace_id,
+        query: query.clone(),
+    };
+    try_remote_typed!(
+        state,
+        app,
+        git_rpc::METHOD_SEARCH_LINEAR_ISSUES,
+        git_remote_params(&request)?,
+        LinearIssuesResponse
+    );
+    linear_core::search_linear_issues_core(&state.app_settings, query).await
 }
 
 #[tauri::command]

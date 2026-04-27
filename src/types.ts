@@ -285,6 +285,7 @@ export type AppSettings = {
   gitDiffIgnoreWhitespaceChanges: boolean;
   commitMessagePrompt: string;
   commitMessageModelId: string | null;
+  linearApiToken: string | null;
   collaborationModesEnabled: boolean;
   steerEnabled: boolean;
   followUpMessageBehavior: FollowUpMessageBehavior;
@@ -495,6 +496,23 @@ export type GitHubIssue = {
 export type GitHubIssuesResponse = {
   total: number;
   issues: GitHubIssue[];
+};
+
+export type LinearIssue = {
+  id: string;
+  identifier: string;
+  title: string;
+  description: string | null;
+  url: string;
+  branchName: string | null;
+  updatedAt: string;
+  stateName: string | null;
+  teamKey: string | null;
+};
+
+export type LinearIssuesResponse = {
+  total: number;
+  issues: LinearIssue[];
 };
 
 export type GitHubUser = {

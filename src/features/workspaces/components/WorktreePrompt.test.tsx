@@ -84,4 +84,67 @@ describe("WorktreePrompt", () => {
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
+
+  it("always shows existing branches in manual mode", () => {
+    render(
+      <WorktreePrompt
+        {...baseProps}
+        branchSuggestions={[{ name: "feature/existing", lastCommit: Date.now() }]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /feature\/existing/i })).toBeTruthy();
+  });
+
+  it("shows Linear issues on the Linear tab and selects an issue", () => {
+    const onLinearIssueSelect = vi.fn();
+    render(
+      <WorktreePrompt
+        {...baseProps}
+        activeTab="linear"
+        linearEnabled
+        linearQuery=""
+        linearIssues={[
+          {
+            id: "issue-1",
+            identifier: "ENG-123",
+            title: "Fix login",
+            description: "Details",
+            url: "https://linear.app/acme/issue/ENG-123/fix-login",
+            branchName: "eng-123-fix-login",
+            updatedAt: "2026-04-26T10:00:00.000Z",
+            stateName: "Todo",
+            teamKey: "ENG",
+          },
+        ]}
+        onLinearIssueSelect={onLinearIssueSelect}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /ENG-123/i }));
+
+    expect(onLinearIssueSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: "ENG-123" }),
+    );
+    expect(screen.getByRole("button", { name: "Create" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("switches from Linear to Manual tab", () => {
+    const onTabChange = vi.fn();
+    render(
+      <WorktreePrompt
+        {...baseProps}
+        activeTab="linear"
+        linearEnabled
+        onTabChange={onTabChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("tab", { name: "Manual" }));
+
+    expect(onTabChange).toHaveBeenCalledWith("manual");
+  });
 });

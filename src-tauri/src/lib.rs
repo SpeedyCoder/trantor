@@ -251,6 +251,7 @@ pub fn run() {
             git::fetch_git,
             git::sync_git,
             git::get_github_issues,
+            git::search_linear_issues,
             git::get_github_pull_requests,
             git::get_github_pull_request_diff,
             git::get_github_pull_request_comments,

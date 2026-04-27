@@ -13,6 +13,7 @@ import {
   getAgentsSettings,
   getExperimentalFeatureList,
   getGitHubIssues,
+  searchLinearIssues,
   getGitLog,
   getGitStatus,
   getOpenAppIcon,
@@ -221,6 +222,18 @@ describe("tauri invoke wrappers", () => {
 
     expect(invokeMock).toHaveBeenCalledWith("get_github_issues", {
       workspaceId: "ws-2",
+    });
+  });
+
+  it("maps workspace_id and query for Linear issue search", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({ total: 0, issues: [] });
+
+    await searchLinearIssues("ws-2", "  ENG-123  ");
+
+    expect(invokeMock).toHaveBeenCalledWith("search_linear_issues", {
+      workspaceId: "ws-2",
+      query: "ENG-123",
     });
   });
 
