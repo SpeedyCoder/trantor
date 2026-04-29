@@ -286,7 +286,15 @@ pub(super) async fn try_handle(
                 Ok(value) => value,
                 Err(err) => return Some(Err(err)),
             };
-            Some(state.collaboration_mode_list(workspace_id).await)
+            let runtime = match parse_optional_string(params, "runtime")
+                .unwrap_or_else(|| "codex".to_string())
+                .as_str()
+            {
+                "codex" => crate::types::AgentRuntime::Codex,
+                "claude" => crate::types::AgentRuntime::Claude,
+                value => return Some(Err(format!("invalid runtime `{value}`"))),
+            };
+            Some(state.collaboration_mode_list(workspace_id, runtime).await)
         }
         "set_codex_feature_flag" => {
             let feature_key = match parse_string(params, "featureKey") {

@@ -1,5 +1,6 @@
-import { memo, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
+  type DiffLineAnnotation,
   parsePatchFiles,
   type AnnotationSide,
   type FileDiffMetadata,
@@ -8,11 +9,14 @@ import {
 import { FileDiff } from "@pierre/diffs/react";
 import RotateCcw from "lucide-react/dist/esm/icons/rotate-ccw";
 import type {
+  GitHubPullRequestReviewThread,
   PullRequestReviewAction,
   PullRequestReviewIntent,
 } from "../../../types";
 import { parseDiff, type ParsedDiffLine } from "../../../utils/diff";
 import { highlightLine, languageFromPath } from "../../../utils/syntax";
+import { formatRelativeTime } from "../../../utils/time";
+import { Markdown } from "../../messages/components/Markdown";
 import {
   DIFF_VIEWER_SCROLL_CSS,
 } from "../../design-system/diff/diffViewerTheme";
@@ -23,6 +27,12 @@ import {
   normalizePatchName,
   parseRawDiffLines,
 } from "./GitDiffViewer.utils";
+
+type ReviewThreadAnnotationMetadata = {
+  thread: GitHubPullRequestReviewThread;
+};
+
+type ReviewThreadAnnotation = DiffLineAnnotation<ReviewThreadAnnotationMetadata>;
 
 type HoveredDiffLine =
   | {
@@ -96,7 +106,169 @@ export type DiffCardProps = {
   onClearSelection?: () => void;
   pullRequestReviewLaunching?: boolean;
   pullRequestReviewThreadId?: string | null;
+  reviewThreads?: GitHubPullRequestReviewThread[];
+  onReplyReviewThread?: (threadId: string, body: string) => Promise<void> | void;
+  onResolveReviewThread?: (threadId: string) => Promise<void> | void;
+  onAddReviewThreadToChat?: (thread: GitHubPullRequestReviewThread) => Promise<void> | void;
 };
+
+function ReviewThreadCard({
+  thread,
+  onReplyReviewThread,
+  onResolveReviewThread,
+  onAddReviewThreadToChat,
+}: {
+  thread: GitHubPullRequestReviewThread;
+  onReplyReviewThread?: (threadId: string, body: string) => Promise<void> | void;
+  onResolveReviewThread?: (threadId: string) => Promise<void> | void;
+  onAddReviewThreadToChat?: (thread: GitHubPullRequestReviewThread) => Promise<void> | void;
+}) {
+  const [reply, setReply] = useState("");
+  const [isReplying, setIsReplying] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(thread.isResolved);
+  const trimmedReply = reply.trim();
+  const lineLabel = thread.startLine && thread.line && thread.startLine !== thread.line
+    ? `L${thread.startLine}-L${thread.line}`
+    : thread.line || thread.startLine
+      ? `L${thread.line ?? thread.startLine}`
+      : "File";
+
+  useEffect(() => {
+    if (thread.isResolved) {
+      setIsCollapsed(true);
+    }
+  }, [thread.isResolved]);
+
+  return (
+    <div className="diff-viewer-inline-thread">
+      <div className="diff-viewer-inline-thread-header">
+        <span className="diff-viewer-inline-thread-location">{lineLabel}</span>
+        <span className="diff-viewer-inline-thread-status">
+          {thread.isResolved ? "Resolved" : "Unresolved"}
+        </span>
+        {thread.isResolved ? (
+          <button
+            type="button"
+            className="ghost diff-viewer-inline-thread-action"
+            onClick={() => setIsCollapsed((value) => !value)}
+          >
+            {isCollapsed ? "Expand" : "Collapse"}
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="ghost diff-viewer-inline-thread-action"
+          disabled={isAdding}
+          onClick={() => {
+            if (!onAddReviewThreadToChat) {
+              return;
+            }
+            setIsAdding(true);
+            Promise.resolve(onAddReviewThreadToChat(thread)).finally(() => {
+              setIsAdding(false);
+            });
+          }}
+        >
+          {isAdding ? "Adding..." : "Add to chat"}
+        </button>
+        {!thread.isResolved && onResolveReviewThread ? (
+          <button
+            type="button"
+            className="ghost diff-viewer-inline-thread-action"
+            disabled={isResolving}
+            onClick={() => {
+              setIsResolving(true);
+              Promise.resolve(onResolveReviewThread(thread.id)).finally(() => {
+                setIsResolving(false);
+              });
+            }}
+          >
+            {isResolving ? "Resolving..." : "Resolve"}
+          </button>
+        ) : null}
+      </div>
+      {isCollapsed ? null : (
+        <div className="diff-viewer-inline-thread-comments">
+          {thread.comments.map((comment) => {
+            const author = comment.author?.login ?? "unknown";
+            const createdAt = comment.createdAt
+              ? formatRelativeTime(new Date(comment.createdAt).getTime())
+              : null;
+            return (
+              <div key={comment.id} className="diff-viewer-inline-thread-comment">
+                <div className="diff-viewer-inline-thread-meta">
+                  <span>@{author}</span>
+                  {createdAt ? <span>{createdAt}</span> : null}
+                </div>
+                <Markdown
+                  value={comment.body.trim() || "_No comment body._"}
+                  className="diff-viewer-pr-comment markdown"
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {!isCollapsed && onReplyReviewThread ? (
+        <div className="diff-viewer-inline-thread-reply">
+          <textarea
+            value={reply}
+            onChange={(event) => setReply(event.target.value)}
+            placeholder="Reply to thread"
+            rows={3}
+            disabled={isReplying}
+          />
+          <button
+            type="button"
+            className="ghost diff-viewer-inline-thread-action"
+            disabled={!trimmedReply || isReplying}
+            onClick={() => {
+              if (!trimmedReply) {
+                return;
+              }
+              setIsReplying(true);
+              Promise.resolve(onReplyReviewThread(thread.id, trimmedReply))
+                .then(() => setReply(""))
+                .finally(() => {
+                  setIsReplying(false);
+                });
+            }}
+          >
+            {isReplying ? "Replying..." : "Reply"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function reviewThreadAnnotationSide(thread: GitHubPullRequestReviewThread): AnnotationSide {
+  return thread.diffSide === "LEFT" ? "deletions" : "additions";
+}
+
+function reviewThreadLineNumber(thread: GitHubPullRequestReviewThread) {
+  return thread.line ?? thread.startLine ?? null;
+}
+
+function buildReviewThreadAnnotations(
+  reviewThreads: GitHubPullRequestReviewThread[],
+): ReviewThreadAnnotation[] {
+  return reviewThreads.flatMap((thread) => {
+    const lineNumber = reviewThreadLineNumber(thread);
+    if (lineNumber === null) {
+      return [];
+    }
+    return [
+      {
+        side: reviewThreadAnnotationSide(thread),
+        lineNumber,
+        metadata: { thread },
+      },
+    ];
+  });
+}
 
 export const DiffCard = memo(function DiffCard({
   entry,
@@ -115,6 +287,10 @@ export const DiffCard = memo(function DiffCard({
   onClearSelection,
   pullRequestReviewLaunching = false,
   pullRequestReviewThreadId = null,
+  reviewThreads = [],
+  onReplyReviewThread,
+  onResolveReviewThread,
+  onAddReviewThreadToChat,
 }: DiffCardProps) {
   const displayPath = entry.displayPath ?? entry.path;
   const { name: fileName, dir } = useMemo(
@@ -174,6 +350,10 @@ export const DiffCard = memo(function DiffCard({
   const useInteractiveDiff = interactiveSelectionEnabled && hasSelectableLines;
   const lineActionEnabled =
     diffStyle === "unified" && Boolean(onLineAction) && hasSelectableLines;
+  const reviewThreadAnnotations = useMemo(
+    () => buildReviewThreadAnnotations(reviewThreads),
+    [reviewThreads],
+  );
 
   const diffOptions = useMemo(
     () => ({
@@ -257,9 +437,18 @@ export const DiffCard = memo(function DiffCard({
       ) : null}
       {entry.diff.trim().length > 0 && fileDiff ? (
         <div className="diff-viewer-output diff-viewer-output-flat">
-          <FileDiff
+          <FileDiff<ReviewThreadAnnotationMetadata>
             fileDiff={fileDiff}
             options={diffOptions}
+            lineAnnotations={reviewThreadAnnotations}
+            renderAnnotation={(annotation) => (
+              <ReviewThreadCard
+                thread={annotation.metadata.thread}
+                onReplyReviewThread={onReplyReviewThread}
+                onResolveReviewThread={onResolveReviewThread}
+                onAddReviewThreadToChat={onAddReviewThreadToChat}
+              />
+            )}
             selectedLines={useInteractiveDiff ? selectedLines : null}
             renderHoverUtility={
               lineActionEnabled
@@ -303,16 +492,40 @@ export const DiffCard = memo(function DiffCard({
                 ? fallbackLanguage
                 : null,
             );
+            const lineThreads = reviewThreads.filter((thread) => {
+              const lineNumber = reviewThreadLineNumber(thread);
+              if (lineNumber === null || !isSelectableLine(line)) {
+                return false;
+              }
+              if (reviewThreadAnnotationSide(thread) === "deletions") {
+                return line.oldLine === lineNumber;
+              }
+              return line.newLine === lineNumber;
+            });
 
             return (
-              <div
-                key={index}
-                className={`diff-viewer-raw-line diff-viewer-raw-line-${line.type}`}
-              >
-                <span
-                  className="diff-line-content"
-                  dangerouslySetInnerHTML={{ __html: highlighted }}
-                />
+              <div key={index}>
+                <div
+                  className={`diff-viewer-raw-line diff-viewer-raw-line-${line.type}`}
+                >
+                  <span
+                    className="diff-line-content"
+                    dangerouslySetInnerHTML={{ __html: highlighted }}
+                  />
+                </div>
+                {lineThreads.length > 0 ? (
+                  <div className="diff-viewer-inline-threads">
+                    {lineThreads.map((thread) => (
+                      <ReviewThreadCard
+                        key={thread.id}
+                        thread={thread}
+                        onReplyReviewThread={onReplyReviewThread}
+                        onResolveReviewThread={onResolveReviewThread}
+                        onAddReviewThreadToChat={onAddReviewThreadToChat}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
             );
           })}

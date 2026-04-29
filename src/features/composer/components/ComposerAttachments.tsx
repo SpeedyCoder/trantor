@@ -1,11 +1,14 @@
 import { convertFileSrc } from "@tauri-apps/api/core";
+import FileText from "lucide-react/dist/esm/icons/file-text";
 import Image from "lucide-react/dist/esm/icons/image";
 import X from "lucide-react/dist/esm/icons/x";
 
 type ComposerAttachmentsProps = {
   attachments: string[];
+  fileAttachments?: string[];
   disabled: boolean;
   onRemoveAttachment?: (path: string) => void;
+  onRemoveFileAttachment?: (path: string) => void;
 };
 
 function fileTitle(path: string) {
@@ -36,10 +39,12 @@ function attachmentPreviewSrc(path: string) {
 
 export function ComposerAttachments({
   attachments,
+  fileAttachments = [],
   disabled,
   onRemoveAttachment,
+  onRemoveFileAttachment,
 }: ComposerAttachmentsProps) {
-  if (attachments.length === 0) {
+  if (attachments.length === 0 && fileAttachments.length === 0) {
     return null;
   }
 
@@ -74,6 +79,26 @@ export function ComposerAttachments({
               type="button"
               className="composer-attachment-remove"
               onClick={() => onRemoveAttachment?.(path)}
+              aria-label={`Remove ${title}`}
+              disabled={disabled}
+            >
+              <X size={12} aria-hidden />
+            </button>
+          </div>
+        );
+      })}
+      {fileAttachments.map((path) => {
+        const title = fileTitle(path);
+        return (
+          <div key={path} className="composer-attachment" title={path}>
+            <span className="composer-icon" aria-hidden>
+              <FileText size={14} />
+            </span>
+            <span className="composer-attachment-name">{title}</span>
+            <button
+              type="button"
+              className="composer-attachment-remove"
+              onClick={() => onRemoveFileAttachment?.(path)}
               aria-label={`Remove ${title}`}
               disabled={disabled}
             >

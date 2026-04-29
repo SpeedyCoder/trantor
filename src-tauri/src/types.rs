@@ -105,6 +105,8 @@ pub(crate) struct LinearIssue {
     pub(crate) updated_at: String,
     #[serde(rename = "stateName")]
     pub(crate) state_name: Option<String>,
+    #[serde(rename = "stateColor")]
+    pub(crate) state_color: Option<String>,
     #[serde(rename = "teamKey")]
     pub(crate) team_key: Option<String>,
 }
@@ -165,6 +167,38 @@ pub(crate) struct GitHubPullRequestComment {
     pub(crate) url: String,
     #[serde(default)]
     pub(crate) author: Option<GitHubPullRequestAuthor>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct GitHubPullRequestReviewComment {
+    pub(crate) id: String,
+    #[serde(rename = "databaseId")]
+    pub(crate) database_id: Option<u64>,
+    #[serde(default)]
+    pub(crate) body: String,
+    #[serde(rename = "createdAt")]
+    pub(crate) created_at: String,
+    #[serde(default)]
+    pub(crate) url: String,
+    #[serde(default)]
+    pub(crate) author: Option<GitHubPullRequestAuthor>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub(crate) struct GitHubPullRequestReviewThread {
+    pub(crate) id: String,
+    #[serde(rename = "isResolved")]
+    pub(crate) is_resolved: bool,
+    pub(crate) path: String,
+    pub(crate) line: Option<u64>,
+    #[serde(rename = "startLine")]
+    pub(crate) start_line: Option<u64>,
+    #[serde(rename = "diffSide")]
+    pub(crate) diff_side: Option<String>,
+    #[serde(default)]
+    pub(crate) url: String,
+    #[serde(default)]
+    pub(crate) comments: Vec<GitHubPullRequestReviewComment>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -697,6 +731,11 @@ pub(crate) struct AppSettings {
     pub(crate) workspace_groups: Vec<WorkspaceGroup>,
     #[serde(default, rename = "globalWorktreesFolder")]
     pub(crate) global_worktrees_folder: Option<String>,
+    #[serde(
+        default = "default_worktree_branch_format",
+        rename = "defaultWorktreeBranchFormat"
+    )]
+    pub(crate) default_worktree_branch_format: String,
     #[serde(default = "default_open_app_targets", rename = "openAppTargets")]
     pub(crate) open_app_targets: Vec<OpenAppTarget>,
     #[serde(default = "default_selected_open_app_id", rename = "selectedOpenAppId")]
@@ -729,11 +768,15 @@ impl Default for RemoteBackendProvider {
 }
 
 fn default_access_mode() -> String {
-    "current".to_string()
+    "full-access".to_string()
 }
 
 fn default_review_delivery_mode() -> String {
     "inline".to_string()
+}
+
+fn default_worktree_branch_format() -> String {
+    "trantor/{date}-{random}".to_string()
 }
 
 fn default_backend_mode() -> BackendMode {
@@ -798,12 +841,7 @@ fn default_composer_model_shortcut() -> Option<String> {
 }
 
 fn default_composer_access_shortcut() -> Option<String> {
-    let value = if cfg!(target_os = "macos") {
-        "cmd+shift+a"
-    } else {
-        "ctrl+shift+a"
-    };
-    Some(value.to_string())
+    None
 }
 
 fn default_composer_reasoning_shortcut() -> Option<String> {
@@ -1178,7 +1216,7 @@ impl Default for AppSettings {
             remote_backends: default_remote_backends(),
             active_remote_backend_id: None,
             keep_daemon_running_after_app_close: false,
-            default_access_mode: "current".to_string(),
+            default_access_mode: "full-access".to_string(),
             review_delivery_mode: default_review_delivery_mode(),
             composer_model_shortcut: default_composer_model_shortcut(),
             composer_access_shortcut: default_composer_access_shortcut(),
@@ -1243,6 +1281,7 @@ impl Default for AppSettings {
             composer_code_block_copy_use_modifier: default_composer_code_block_copy_use_modifier(),
             workspace_groups: default_workspace_groups(),
             global_worktrees_folder: None,
+            default_worktree_branch_format: default_worktree_branch_format(),
             open_app_targets: default_open_app_targets(),
             selected_open_app_id: default_selected_open_app_id(),
         }
@@ -1279,7 +1318,7 @@ mod tests {
         assert!(settings.remote_backends.is_empty());
         assert!(settings.active_remote_backend_id.is_none());
         assert!(!settings.keep_daemon_running_after_app_close);
-        assert_eq!(settings.default_access_mode, "current");
+        assert_eq!(settings.default_access_mode, "full-access");
         assert_eq!(settings.review_delivery_mode, "inline");
         let expected_primary = if cfg!(target_os = "macos") {
             "cmd"
@@ -1287,7 +1326,6 @@ mod tests {
             "ctrl"
         };
         let expected_model = format!("{expected_primary}+shift+m");
-        let expected_access = format!("{expected_primary}+shift+a");
         let expected_reasoning = format!("{expected_primary}+shift+r");
         let expected_toggle_debug = format!("{expected_primary}+shift+d");
         let expected_toggle_terminal = format!("{expected_primary}+shift+t");
@@ -1295,10 +1333,7 @@ mod tests {
             settings.composer_model_shortcut.as_deref(),
             Some(expected_model.as_str())
         );
-        assert_eq!(
-            settings.composer_access_shortcut.as_deref(),
-            Some(expected_access.as_str())
-        );
+        assert_eq!(settings.composer_access_shortcut, None);
         assert_eq!(
             settings.composer_reasoning_shortcut.as_deref(),
             Some(expected_reasoning.as_str())

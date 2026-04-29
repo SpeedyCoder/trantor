@@ -8,6 +8,8 @@ type SidebarWorkspaceGroupsProps = {
   workspaces: WorkspaceInfo[];
   worktreesByParent: Map<string, WorkspaceInfo[]>;
   deletingWorktreeIds: Set<string>;
+  defaultWorktreeBranchFormat: string;
+  activeAgentWorkspaceIds: Set<string>;
   activeWorkspaceId: string | null;
   onSelectWorkspace: (workspaceId: string) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
@@ -28,6 +30,8 @@ function SidebarWorkspaceEntry({
   workspace,
   worktreesByParent,
   deletingWorktreeIds,
+  defaultWorktreeBranchFormat,
+  activeAgentWorkspaceIds,
   activeWorkspaceId,
   onSelectWorkspace,
   onConnectWorkspace,
@@ -44,6 +48,7 @@ function SidebarWorkspaceEntry({
       workspace={workspace}
       workspaceName={workspace.name}
       isCollapsed={isCollapsed}
+      hasActiveAgent={activeAgentWorkspaceIds.has(workspace.id)}
       onShowWorkspaceMenu={onShowWorkspaceMenu}
       onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
       onConnectWorkspace={onConnectWorkspace}
@@ -53,6 +58,8 @@ function SidebarWorkspaceEntry({
         <WorktreeSection
           worktrees={worktrees}
           deletingWorktreeIds={deletingWorktreeIds}
+          defaultWorktreeBranchFormat={defaultWorktreeBranchFormat}
+          activeAgentWorkspaceIds={activeAgentWorkspaceIds}
           activeWorkspaceId={activeWorkspaceId}
           onSelectWorkspace={onSelectWorkspace}
           onConnectWorkspace={onConnectWorkspace}

@@ -43,9 +43,11 @@ type ComposerInputProps = {
   dictationHint?: string | null;
   onDismissDictationHint?: () => void;
   attachments?: string[];
+  fileAttachments?: string[];
   onAddAttachment?: () => void;
   onAttachImages?: (paths: string[]) => void;
   onRemoveAttachment?: (path: string) => void;
+  onRemoveFileAttachment?: (path: string) => void;
   onTextChange: (next: string, selectionStart: number | null) => void;
   onTextPaste?: (event: ClipboardEvent<HTMLTextAreaElement>) => void;
   onSelectionChange: (selectionStart: number | null) => void;
@@ -101,9 +103,11 @@ export function ComposerInput({
   dictationHint = null,
   onDismissDictationHint,
   attachments = [],
+  fileAttachments = [],
   onAddAttachment,
   onAttachImages,
   onRemoveAttachment,
+  onRemoveFileAttachment,
   onTextChange,
   onTextPaste,
   onSelectionChange,
@@ -238,8 +242,10 @@ export function ComposerInput({
       >
         <ComposerAttachments
           attachments={attachments}
+          fileAttachments={fileAttachments}
           disabled={disabled}
           onRemoveAttachment={onRemoveAttachment}
+          onRemoveFileAttachment={onRemoveFileAttachment}
         />
         <div className="composer-input-row">
           <button

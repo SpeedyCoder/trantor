@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import type { BranchInfo, LinearIssue } from "../../../types";
 import { ModalShell } from "../../design-system/components/modal/ModalShell";
 import { BranchList } from "../../git/components/BranchList";
@@ -12,6 +13,7 @@ type WorktreePromptProps = {
   linearQuery?: string;
   linearIssues?: LinearIssue[];
   linearLoading?: boolean;
+  selectedLinearIssueId?: string | null;
   branch: string;
   branchWasEdited?: boolean;
   branchSuggestions?: BranchInfo[];
@@ -36,6 +38,39 @@ function formatIssueDate(value: string): string {
   }).format(time);
 }
 
+function getFallbackStatusColor(stateName: string): string {
+  const normalized = stateName.toLowerCase();
+  if (
+    normalized.includes("done") ||
+    normalized.includes("qa") ||
+    normalized.includes("quality")
+  ) {
+    return "var(--status-success)";
+  }
+  if (
+    normalized.includes("progress") ||
+    normalized.includes("review") ||
+    normalized.includes("doing")
+  ) {
+    return "var(--status-warning)";
+  }
+  if (normalized.includes("backlog") || normalized.includes("todo")) {
+    return "var(--border-accent)";
+  }
+  return "var(--status-unknown)";
+}
+
+function getStatusStyle(issue: LinearIssue): CSSProperties {
+  const stateName = issue.stateName?.trim();
+  const color = issue.stateColor?.trim() || (stateName ? getFallbackStatusColor(stateName) : "");
+  if (!color) {
+    return {};
+  }
+  return {
+    "--worktree-linear-status-color": color,
+  } as CSSProperties;
+}
+
 export function WorktreePrompt({
   workspaceName,
   activeTab = "manual",
@@ -43,6 +78,7 @@ export function WorktreePrompt({
   linearQuery = "",
   linearIssues = [],
   linearLoading = false,
+  selectedLinearIssueId = null,
   branch,
   branchWasEdited = false,
   branchSuggestions = [],
@@ -160,25 +196,35 @@ export function WorktreePrompt({
                 <div className="worktree-linear-empty">No assigned issues found.</div>
               )}
               {!linearLoading &&
-                linearIssues.map((issue) => (
-                  <button
-                    key={issue.id}
-                    type="button"
-                    className="worktree-linear-issue"
-                    onClick={() => onLinearIssueSelect?.(issue)}
-                    disabled={isBusy}
-                  >
-                    <span className="worktree-linear-issue-main">
-                      <span className="worktree-linear-issue-id">{issue.identifier}</span>
-                      <span className="worktree-linear-issue-title">{issue.title}</span>
-                    </span>
-                    <span className="worktree-linear-issue-meta">
-                      {issue.stateName && <span>{issue.stateName}</span>}
-                      {issue.teamKey && <span>{issue.teamKey}</span>}
-                      <span>{formatIssueDate(issue.updatedAt)}</span>
-                    </span>
-                  </button>
-                ))}
+                linearIssues.map((issue) => {
+                  const selected = issue.id === selectedLinearIssueId;
+                  return (
+                    <button
+                      key={issue.id}
+                      type="button"
+                      className={`worktree-linear-issue${selected ? " selected" : ""}`}
+                      onClick={() => onLinearIssueSelect?.(issue)}
+                      disabled={isBusy}
+                      aria-pressed={selected}
+                    >
+                      <span className="worktree-linear-issue-main">
+                        <span className="worktree-linear-issue-id">{issue.identifier}</span>
+                        <span className="worktree-linear-issue-title">{issue.title}</span>
+                      </span>
+                      <span className="worktree-linear-issue-meta">
+                        {issue.stateName && (
+                          <span
+                            className="worktree-linear-issue-status"
+                            style={getStatusStyle(issue)}
+                          >
+                            {issue.stateName}
+                          </span>
+                        )}
+                        <span>{formatIssueDate(issue.updatedAt)}</span>
+                      </span>
+                    </button>
+                  );
+                })}
             </div>
           </div>
         ) : (
@@ -283,8 +329,9 @@ export function WorktreePrompt({
           type="button"
           disabled={
             isBusy ||
-            (linearEnabled && activeTab === "linear") ||
-            branch.trim().length === 0
+            (linearEnabled && activeTab === "linear"
+              ? selectedLinearIssueId === null
+              : branch.trim().length === 0)
           }
         >
           Create

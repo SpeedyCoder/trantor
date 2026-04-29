@@ -77,6 +77,7 @@ export function useComposerController({
   const [composerInsert, setComposerInsert] = useState<QueuedMessage | null>(
     null,
   );
+  const [fileAttachmentsByThread, setFileAttachmentsByThread] = useState<Record<string, string[]>>({});
 
   const {
     activeImages,
@@ -123,6 +124,47 @@ export function useComposerController({
       activeThreadId ? composerDraftsByThread[activeThreadId] ?? "" : "",
     [activeThreadId, composerDraftsByThread],
   );
+  const draftKey = activeThreadId ?? `draft-${activeWorkspaceId ?? "none"}`;
+  const activeFileAttachments = fileAttachmentsByThread[draftKey] ?? [];
+
+  const attachFileAttachments = useCallback(
+    (paths: string[]) => {
+      if (paths.length === 0) {
+        return;
+      }
+      setFileAttachmentsByThread((prev) => {
+        const existing = prev[draftKey] ?? [];
+        const merged = Array.from(new Set([...existing, ...paths]));
+        return { ...prev, [draftKey]: merged };
+      });
+    },
+    [draftKey],
+  );
+
+  const removeFileAttachment = useCallback(
+    (path: string) => {
+      setFileAttachmentsByThread((prev) => {
+        const existing = prev[draftKey] ?? [];
+        const next = existing.filter((entry) => entry !== path);
+        if (next.length === 0) {
+          const { [draftKey]: _, ...rest } = prev;
+          return rest;
+        }
+        return { ...prev, [draftKey]: next };
+      });
+    },
+    [draftKey],
+  );
+
+  const clearActiveFileAttachments = useCallback(() => {
+    setFileAttachmentsByThread((prev) => {
+      if (!(draftKey in prev)) {
+        return prev;
+      }
+      const { [draftKey]: _, ...rest } = prev;
+      return rest;
+    });
+  }, [draftKey]);
 
   const handleDraftChange = useCallback(
     (next: string) => {
@@ -181,10 +223,14 @@ export function useComposerController({
 
   return {
     activeImages,
+    activeFileAttachments,
     attachImages,
+    attachFileAttachments,
     pickImages,
     removeImage,
+    removeFileAttachment,
     clearActiveImages,
+    clearActiveFileAttachments,
     setImagesForThread,
     removeImagesForThread,
     activeQueue,

@@ -13,6 +13,9 @@ import {
   getAgentsSettings,
   getExperimentalFeatureList,
   getGitHubIssues,
+  getGitHubPullRequestReviewThreads,
+  replyGitHubPullRequestReviewThread,
+  resolveGitHubPullRequestReviewThread,
   searchLinearIssues,
   getGitLog,
   getGitStatus,
@@ -26,6 +29,7 @@ import {
   openWorkspaceIn,
   readAgentMd,
   stageGitAll,
+  startThread,
   respondToServerRequest,
   respondToUserInputRequest,
   sendUserMessage,
@@ -223,6 +227,52 @@ describe("tauri invoke wrappers", () => {
     expect(invokeMock).toHaveBeenCalledWith("get_github_issues", {
       workspaceId: "ws-2",
     });
+  });
+
+  it("maps GitHub PR review thread fetch args", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce([]);
+
+    await getGitHubPullRequestReviewThreads("ws-2", 42);
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "get_github_pull_request_review_threads",
+      {
+        workspaceId: "ws-2",
+        prNumber: 42,
+      },
+    );
+  });
+
+  it("maps GitHub PR review thread reply args", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await replyGitHubPullRequestReviewThread("ws-2", "thread-1", "Looks fixed");
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "reply_github_pull_request_review_thread",
+      {
+        workspaceId: "ws-2",
+        threadId: "thread-1",
+        body: "Looks fixed",
+      },
+    );
+  });
+
+  it("maps GitHub PR review thread resolve args", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await resolveGitHubPullRequestReviewThread("ws-2", "thread-1");
+
+    expect(invokeMock).toHaveBeenCalledWith(
+      "resolve_github_pull_request_review_thread",
+      {
+        workspaceId: "ws-2",
+        threadId: "thread-1",
+      },
+    );
   });
 
   it("maps workspace_id and query for Linear issue search", async () => {
@@ -743,6 +793,51 @@ describe("tauri invoke wrappers", () => {
       effort: null,
       accessMode: "full-access",
       images: ["image.png"],
+    });
+  });
+
+  it("strips runtime prefixes from start_thread model payloads", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await startThread("ws-4", "codex:gpt-5.5");
+
+    expect(invokeMock).toHaveBeenCalledWith("start_thread", {
+      workspaceId: "ws-4",
+      modelId: "gpt-5.5",
+    });
+  });
+
+  it("strips runtime prefixes from turn/start model payloads", async () => {
+    const invokeMock = vi.mocked(invoke);
+    invokeMock.mockResolvedValueOnce({});
+
+    await sendUserMessage("ws-4", "thread-1", "hello", {
+      model: "codex:gpt-5.5",
+      collaborationMode: {
+        mode: "default",
+        settings: {
+          id: "default",
+          model: "codex:gpt-5.5",
+        },
+      },
+    });
+
+    expect(invokeMock).toHaveBeenLastCalledWith("send_user_message", {
+      workspaceId: "ws-4",
+      threadId: "thread-1",
+      text: "hello",
+      model: "gpt-5.5",
+      effort: null,
+      accessMode: null,
+      images: null,
+      collaborationMode: {
+        mode: "default",
+        settings: {
+          id: "default",
+          model: "gpt-5.5",
+        },
+      },
     });
   });
 

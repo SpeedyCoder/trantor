@@ -20,6 +20,7 @@ type SidebarProps = {
   workspaces: WorkspaceInfo[];
   groupedWorkspaces: WorkspaceGroupSection[];
   deletingWorktreeIds: Set<string>;
+  defaultWorktreeBranchFormat: string;
   newAgentDraftWorkspaceId?: string | null;
   startingDraftThreadWorkspaceId?: string | null;
   threadsByWorkspace: Record<string, ThreadSummary[]>;
@@ -73,6 +74,9 @@ export const Sidebar = memo(function Sidebar({
   workspaces,
   groupedWorkspaces,
   deletingWorktreeIds,
+  defaultWorktreeBranchFormat,
+  threadsByWorkspace,
+  threadStatusById,
   threadListLoadingByWorkspace,
   threadListSortKey,
   onSetThreadListSortKey,
@@ -137,6 +141,16 @@ export const Sidebar = memo(function Sidebar({
     });
     return worktrees;
   }, [workspaces]);
+
+  const activeAgentWorkspaceIds = useMemo(() => {
+    const workspaceIds = new Set<string>();
+    Object.entries(threadsByWorkspace).forEach(([workspaceId, threads]) => {
+      if (threads.some((thread) => threadStatusById[thread.id]?.isProcessing)) {
+        workspaceIds.add(workspaceId);
+      }
+    });
+    return workspaceIds;
+  }, [threadsByWorkspace, threadStatusById]);
 
   const groupedWorkspacesForRender = useMemo(() => {
     if (threadListOrganizeMode !== "by_project_activity") {
@@ -228,6 +242,8 @@ export const Sidebar = memo(function Sidebar({
             workspaces={sidebarWorkspacesForRender}
             worktreesByParent={worktreesByParent}
             deletingWorktreeIds={deletingWorktreeIds}
+            defaultWorktreeBranchFormat={defaultWorktreeBranchFormat}
+            activeAgentWorkspaceIds={activeAgentWorkspaceIds}
             activeWorkspaceId={activeWorkspaceId}
             onSelectWorkspace={onSelectWorkspace}
             onConnectWorkspace={onConnectWorkspace}

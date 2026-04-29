@@ -163,6 +163,7 @@ const baseSettings: AppSettings = {
   ],
   selectedOpenAppId: "vscode",
   globalWorktreesFolder: null,
+  defaultWorktreeBranchFormat: "trantor/{date}-{random}",
 };
 
 const createDoctorResult = () => ({
@@ -866,6 +867,38 @@ describe("SettingsView Git", () => {
     await waitFor(() => {
       expect(onUpdateAppSettings).toHaveBeenCalledWith(
         expect.objectContaining({ linearApiToken: "lin_api_token" }),
+      );
+    });
+  });
+
+  it("toggles Linear API token visibility", () => {
+    renderGitSection({ appSettings: { linearApiToken: "lin_api_token" } });
+
+    const input = screen.getByLabelText("Linear API token") as HTMLInputElement;
+    expect(input.type).toBe("password");
+
+    fireEvent.click(screen.getByRole("button", { name: "Show Linear API token" }));
+    expect(input.type).toBe("text");
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide Linear API token" }));
+    expect(input.type).toBe("password");
+  });
+
+  it("saves the default worktree branch format through app settings", async () => {
+    const onUpdateAppSettings = vi.fn().mockResolvedValue(undefined);
+    renderGitSection({ onUpdateAppSettings });
+
+    const input = screen.getByLabelText("Default worktree branch format");
+    expect((input as HTMLInputElement).value).toBe("trantor/{date}-{random}");
+
+    fireEvent.change(input, { target: { value: "user/{project}-{date}-{random}" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save format" }));
+
+    await waitFor(() => {
+      expect(onUpdateAppSettings).toHaveBeenCalledWith(
+        expect.objectContaining({
+          defaultWorktreeBranchFormat: "user/{project}-{date}-{random}",
+        }),
       );
     });
   });

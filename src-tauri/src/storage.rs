@@ -117,13 +117,22 @@ fn normalize_app_settings(settings: AppSettings) -> (AppSettings, bool) {
         .filter(|value| !value.is_empty())
         .map(str::to_string);
     let token_changed = linear_api_token != settings.linear_api_token;
+    let default_worktree_branch_format =
+        if settings.default_worktree_branch_format.trim().is_empty() {
+            "trantor/{date}-{random}".to_string()
+        } else {
+            settings.default_worktree_branch_format.trim().to_string()
+        };
+    let branch_format_changed =
+        default_worktree_branch_format != settings.default_worktree_branch_format;
     (
         AppSettings {
             global_worktrees_folder,
             linear_api_token,
+            default_worktree_branch_format,
             ..settings
         },
-        changed || token_changed,
+        changed || token_changed || branch_format_changed,
     )
 }
 

@@ -19,6 +19,10 @@ import { normalizeOpenAppTargets } from "@app/utils/openApp";
 import { getDefaultInterruptShortcut, isMacPlatform } from "@utils/shortcuts";
 import { isMobilePlatform } from "@utils/platformPaths";
 import { DEFAULT_COMMIT_MESSAGE_PROMPT } from "@utils/commitMessagePrompt";
+import {
+  DEFAULT_WORKTREE_BRANCH_FORMAT,
+  normalizeWorktreeBranchFormat,
+} from "@/features/workspaces/utils/worktreeBranchFormat";
 
 const allowedThemes = new Set(["system", "light", "dark"]);
 const allowedPersonality = new Set(["friendly", "pragmatic"]);
@@ -145,10 +149,10 @@ function buildDefaultSettings(): AppSettings {
     remoteBackends: [defaultRemote],
     activeRemoteBackendId: defaultRemote.id,
     keepDaemonRunningAfterAppClose: false,
-    defaultAccessMode: "current",
+    defaultAccessMode: "full-access",
     reviewDeliveryMode: "inline",
     composerModelShortcut: isMac ? "cmd+shift+m" : "ctrl+shift+m",
-    composerAccessShortcut: isMac ? "cmd+shift+a" : "ctrl+shift+a",
+    composerAccessShortcut: null,
     composerReasoningShortcut: isMac ? "cmd+shift+r" : "ctrl+shift+r",
     composerCollaborationShortcut: "shift+tab",
     interruptShortcut: getDefaultInterruptShortcut(),
@@ -210,6 +214,7 @@ function buildDefaultSettings(): AppSettings {
     openAppTargets: DEFAULT_OPEN_APP_TARGETS,
     selectedOpenAppId: DEFAULT_OPEN_APP_ID,
     globalWorktreesFolder: null,
+    defaultWorktreeBranchFormat: DEFAULT_WORKTREE_BRANCH_FORMAT,
   };
 }
 
@@ -281,6 +286,9 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     chatHistoryScrollbackItems,
     commitMessagePrompt,
     linearApiToken: settings.linearApiToken?.trim() ? settings.linearApiToken.trim() : null,
+    defaultWorktreeBranchFormat: normalizeWorktreeBranchFormat(
+      settings.defaultWorktreeBranchFormat,
+    ),
     openAppTargets: normalizedTargets,
     selectedOpenAppId,
   };

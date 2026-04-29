@@ -87,4 +87,36 @@ describe("parseModelListResponse", () => {
       "claude:sonnet-4.6",
     ]);
   });
+
+  it("filters hidden and upgrade-gated models", () => {
+    const response = {
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.5",
+            model: "gpt-5.5",
+            displayName: "GPT-5.5",
+            upgrade: "latest-codex",
+          },
+          {
+            id: "codex:gpt-5.4",
+            model: "gpt-5.4",
+            displayName: "GPT-5.4",
+            upgrade: null,
+            upgradeInfo: null,
+            hidden: false,
+          },
+          {
+            id: "codex:hidden",
+            model: "hidden",
+            hidden: true,
+          },
+        ],
+      },
+    };
+
+    const models = parseModelListResponse(response);
+
+    expect(models.map((model) => model.model)).toEqual(["gpt-5.4"]);
+  });
 });

@@ -16,6 +16,7 @@ const baseProps = {
   workspaces: [],
   groupedWorkspaces: [],
   deletingWorktreeIds: new Set<string>(),
+  defaultWorktreeBranchFormat: "trantor/{date}-{random}",
   threadsByWorkspace: {},
   threadParentById: {},
   threadStatusById: {},
@@ -333,6 +334,110 @@ describe("Sidebar", () => {
     expect(screen.getByText("Feature Branch")).toBeTruthy();
     expect(container.querySelectorAll(".workspace-row")).toHaveLength(1);
     expect(container.querySelectorAll(".worktree-row")).toHaveLength(1);
+  });
+
+  it("shows an activity indicator on projects with a processing thread", () => {
+    const { container } = render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[
+          {
+            id: "ws-1",
+            name: "Main Project",
+            path: "/tmp/main",
+            connected: true,
+            kind: "main",
+            settings: { sidebarCollapsed: false },
+          },
+        ]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Workspaces",
+            workspaces: [
+              {
+                id: "ws-1",
+                name: "Main Project",
+                path: "/tmp/main",
+                connected: true,
+                kind: "main",
+                settings: { sidebarCollapsed: false },
+              },
+            ],
+          },
+        ]}
+        threadsByWorkspace={{
+          "ws-1": [{ id: "thread-1", name: "Running thread", updatedAt: 1 }],
+        }}
+        threadStatusById={{ "thread-1": { isProcessing: true } }}
+      />,
+    );
+
+    const indicator = container.querySelector(".workspace-row .workspace-activity-indicator");
+    expect(indicator).toBeTruthy();
+    expect(indicator?.getAttribute("aria-label")).toBe("Agent running in project");
+  });
+
+  it("shows an activity indicator on worktrees with a processing thread", () => {
+    const { container } = render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[
+          {
+            id: "ws-1",
+            name: "Main Project",
+            path: "/tmp/main",
+            connected: true,
+            kind: "main",
+            settings: { sidebarCollapsed: false },
+          },
+          {
+            id: "wt-1",
+            name: "Feature Branch",
+            path: "/tmp/main-feature",
+            connected: true,
+            kind: "worktree",
+            parentId: "ws-1",
+            worktree: { branch: "feature/branch" },
+            settings: { sidebarCollapsed: false },
+          },
+        ]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Workspaces",
+            workspaces: [
+              {
+                id: "ws-1",
+                name: "Main Project",
+                path: "/tmp/main",
+                connected: true,
+                kind: "main",
+                settings: { sidebarCollapsed: false },
+              },
+              {
+                id: "wt-1",
+                name: "Feature Branch",
+                path: "/tmp/main-feature",
+                connected: true,
+                kind: "worktree",
+                parentId: "ws-1",
+                worktree: { branch: "feature/branch" },
+                settings: { sidebarCollapsed: false },
+              },
+            ],
+          },
+        ]}
+        threadsByWorkspace={{
+          "wt-1": [{ id: "thread-1", name: "Running thread", updatedAt: 1 }],
+        }}
+        threadStatusById={{ "thread-1": { isProcessing: true } }}
+      />,
+    );
+
+    const indicator = container.querySelector(".worktree-row .workspace-activity-indicator");
+    expect(indicator).toBeTruthy();
+    expect(indicator?.getAttribute("aria-label")).toBe("Agent running in worktree");
   });
 
   it("opens the worktree agent prompt from the project add button", () => {

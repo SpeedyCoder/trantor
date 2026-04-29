@@ -55,10 +55,6 @@ export function useMenuAcceleratorController({ appSettings, onDebug }: Params) {
         shortcut: appSettings.composerModelShortcut,
       },
       {
-        id: "composer_cycle_access",
-        shortcut: appSettings.composerAccessShortcut,
-      },
-      {
         id: "composer_cycle_reasoning",
         shortcut: appSettings.composerReasoningShortcut,
       },
@@ -70,7 +66,6 @@ export function useMenuAcceleratorController({ appSettings, onDebug }: Params) {
       },
     ],
     [
-      appSettings.composerAccessShortcut,
       appSettings.composerCollaborationShortcut,
       appSettings.composerModelShortcut,
       appSettings.composerReasoningShortcut,

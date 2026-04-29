@@ -147,6 +147,7 @@ export function useWorkspaces(options: UseWorkspacesOptions = {}): UseWorkspaces
     onDebug,
     setWorkspaces,
     setActiveWorkspaceId,
+    updateWorkspaceSettings,
   });
 
   const {

@@ -22,7 +22,7 @@ query TrantorAssignedIssues($first: Int!) {
         url
         branchName
         updatedAt
-        state { name type }
+        state { name type color }
         team { key }
       }
     }
@@ -32,6 +32,28 @@ query TrantorAssignedIssues($first: Int!) {
 
 const ASSIGNED_ISSUES_COMPAT_QUERY: &str = r#"
 query TrantorAssignedIssuesCompat($first: Int!) {
+  viewer {
+    assignedIssues(
+      first: $first
+      orderBy: updatedAt
+    ) {
+      nodes {
+        id
+        identifier
+        title
+        description
+        url
+        updatedAt
+        state { name color }
+        team { key }
+      }
+    }
+  }
+}
+"#;
+
+const ASSIGNED_ISSUES_NO_COLOR_COMPAT_QUERY: &str = r#"
+query TrantorAssignedIssuesNoColorCompat($first: Int!) {
   viewer {
     assignedIssues(
       first: $first
@@ -99,6 +121,7 @@ struct LinearIssueState {
     name: String,
     #[serde(rename = "type")]
     state_type: Option<String>,
+    color: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -123,10 +146,21 @@ impl From<LinearIssueNode> for LinearIssue {
             url: value.url,
             branch_name,
             updated_at: value.updated_at,
-            state_name: value.state.map(|state| state.name),
+            state_name: value.state.as_ref().map(|state| state.name.clone()),
+            state_color: value
+                .state
+                .and_then(|state| normalize_state_color(state.color.as_deref())),
             team_key: value.team.map(|team| team.key),
         }
     }
+}
+
+fn normalize_state_color(color: Option<&str>) -> Option<String> {
+    let trimmed = color?.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 fn normalize_token(token: Option<&String>) -> Result<String, String> {
@@ -266,7 +300,13 @@ pub(crate) fn parse_linear_issues_response(
 
 fn should_retry_with_compat_query(message: &str) -> bool {
     let normalized = message.to_ascii_lowercase();
-    normalized.contains("branchname") || normalized.contains("state")
+    normalized.contains("branchname")
+        || normalized.contains("state")
+        || normalized.contains("color")
+}
+
+fn should_retry_without_color(message: &str) -> bool {
+    message.to_ascii_lowercase().contains("color")
 }
 
 async fn run_linear_query(
@@ -326,7 +366,20 @@ pub(crate) async fn search_linear_issues_core(
     match run_linear_query(&client, &token, ASSIGNED_ISSUES_QUERY, search_query).await {
         Ok(response) => Ok(response),
         Err(error) if should_retry_with_compat_query(&error) => {
-            run_linear_query(&client, &token, ASSIGNED_ISSUES_COMPAT_QUERY, search_query).await
+            match run_linear_query(&client, &token, ASSIGNED_ISSUES_COMPAT_QUERY, search_query)
+                .await
+            {
+                Err(compat_error) if should_retry_without_color(&compat_error) => {
+                    run_linear_query(
+                        &client,
+                        &token,
+                        ASSIGNED_ISSUES_NO_COLOR_COMPAT_QUERY,
+                        search_query,
+                    )
+                    .await
+                }
+                result => result,
+            }
         }
         Err(error) => Err(error),
     }
@@ -338,7 +391,7 @@ mod tests {
 
     #[test]
     fn parse_linear_issues_response_maps_and_filters_issues() {
-        let body = br#"{
+        let body = br##"{
           "data": {
             "viewer": {
               "assignedIssues": {
@@ -351,7 +404,7 @@ mod tests {
                     "url": "https://linear.app/acme/issue/ENG-123/fix-login",
                     "branchName": "eng-123-fix-login",
                     "updatedAt": "2026-04-26T10:00:00.000Z",
-                    "state": { "name": "Todo", "type": "unstarted" },
+                    "state": { "name": "Todo", "type": "unstarted", "color": "#1f80ff" },
                     "team": { "key": "ENG" }
                   },
                   {
@@ -362,14 +415,14 @@ mod tests {
                     "url": "https://linear.app/acme/issue/OPS-9/update-docs",
                     "branchName": "ops-9-update-docs",
                     "updatedAt": "2026-04-25T10:00:00.000Z",
-                    "state": { "name": "Backlog", "type": "backlog" },
+                    "state": { "name": "Backlog", "type": "backlog", "color": "#777777" },
                     "team": { "key": "OPS" }
                   }
                 ]
               }
             }
           }
-        }"#;
+        }"##;
 
         let parsed = parse_linear_issues_response(body, "login").expect("parse response");
 
@@ -380,6 +433,7 @@ mod tests {
             Some("eng-123-fix-login")
         );
         assert_eq!(parsed.issues[0].state_name.as_deref(), Some("Todo"));
+        assert_eq!(parsed.issues[0].state_color.as_deref(), Some("#1f80ff"));
         assert_eq!(parsed.issues[0].team_key.as_deref(), Some("ENG"));
     }
 

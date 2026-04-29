@@ -26,6 +26,7 @@ import type {
   LinearIssuesResponse,
   GitHubPullRequestComment,
   GitHubPullRequestDiff,
+  GitHubPullRequestReviewThread,
   GitHubPullRequestsResponse,
   GitLogResponse,
   ReviewTarget,
@@ -37,6 +38,46 @@ function isMissingTauriInvokeError(error: unknown) {
     (error.message.includes("reading 'invoke'") ||
       error.message.includes("reading \"invoke\""))
   );
+}
+
+function providerModelIdForRpc(modelId: string | null | undefined): string | null {
+  if (typeof modelId !== "string") {
+    return null;
+  }
+  const trimmed = modelId.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return (
+    trimmed.startsWith("codex:")
+      ? trimmed.slice("codex:".length)
+      : trimmed.startsWith("claude:")
+        ? trimmed.slice("claude:".length)
+        : trimmed
+  ).trim();
+}
+
+function normalizeCollaborationModeForRpc(
+  collaborationMode: Record<string, unknown> | null | undefined,
+): Record<string, unknown> | null | undefined {
+  if (!collaborationMode) {
+    return collaborationMode;
+  }
+  const settings = collaborationMode.settings;
+  if (!settings || typeof settings !== "object") {
+    return collaborationMode;
+  }
+  const settingsRecord = settings as Record<string, unknown>;
+  if (typeof settingsRecord.model !== "string") {
+    return collaborationMode;
+  }
+  return {
+    ...collaborationMode,
+    settings: {
+      ...settingsRecord,
+      model: providerModelIdForRpc(settingsRecord.model),
+    },
+  };
 }
 
 export async function pickWorkspacePath(): Promise<string | null> {
@@ -101,6 +142,10 @@ export async function exportMarkdownFile(
   }
   await invoke("write_text_file", { path: selection, content });
   return selection;
+}
+
+export async function writeTextFile(path: string, content: string): Promise<void> {
+  await invoke("write_text_file", { path, content });
 }
 
 export async function listWorkspaces(): Promise<WorkspaceInfo[]> {
@@ -378,7 +423,10 @@ export async function setWorkspaceRuntimeCodexArgs(
 }
 
 export async function startThread(workspaceId: string, modelId?: string | null) {
-  return invoke<any>("start_thread", { workspaceId, modelId: modelId ?? null });
+  return invoke<any>("start_thread", {
+    workspaceId,
+    modelId: providerModelIdForRpc(modelId),
+  });
 }
 
 export async function forkThread(workspaceId: string, threadId: string) {
@@ -454,7 +502,7 @@ export async function sendUserMessage(
     workspaceId,
     threadId,
     text,
-    model: options?.model ?? null,
+    model: providerModelIdForRpc(options?.model),
     effort: options?.effort ?? null,
     accessMode: options?.accessMode ?? null,
     images,
@@ -462,8 +510,9 @@ export async function sendUserMessage(
   if (options?.serviceTier !== undefined) {
     payload.serviceTier = options.serviceTier;
   }
-  if (options?.collaborationMode) {
-    payload.collaborationMode = options.collaborationMode;
+  const collaborationMode = normalizeCollaborationModeForRpc(options?.collaborationMode);
+  if (collaborationMode) {
+    payload.collaborationMode = collaborationMode;
   }
   if (options?.appMentions && options.appMentions.length > 0) {
     payload.appMentions = options.appMentions;
@@ -709,6 +758,38 @@ export async function getGitHubPullRequestComments(
   });
 }
 
+export async function getGitHubPullRequestReviewThreads(
+  workspace_id: string,
+  prNumber: number,
+): Promise<GitHubPullRequestReviewThread[]> {
+  return invoke("get_github_pull_request_review_threads", {
+    workspaceId: workspace_id,
+    prNumber,
+  });
+}
+
+export async function replyGitHubPullRequestReviewThread(
+  workspace_id: string,
+  threadId: string,
+  body: string,
+): Promise<GitHubPullRequestReviewThread> {
+  return invoke("reply_github_pull_request_review_thread", {
+    workspaceId: workspace_id,
+    threadId,
+    body,
+  });
+}
+
+export async function resolveGitHubPullRequestReviewThread(
+  workspace_id: string,
+  threadId: string,
+): Promise<GitHubPullRequestReviewThread> {
+  return invoke("resolve_github_pull_request_review_thread", {
+    workspaceId: workspace_id,
+    threadId,
+  });
+}
+
 export async function checkoutGitHubPullRequest(
   workspace_id: string,
   prNumber: number,
@@ -756,8 +837,11 @@ export async function generateRunMetadata(workspaceId: string, prompt: string) {
   });
 }
 
-export async function getCollaborationModes(workspaceId: string) {
-  return invoke<any>("collaboration_mode_list", { workspaceId });
+export async function getCollaborationModes(
+  workspaceId: string,
+  runtime: "codex" | "claude" = "codex",
+) {
+  return invoke<any>("collaboration_mode_list", { workspaceId, runtime });
 }
 
 export async function getAccountRateLimits(workspaceId: string) {

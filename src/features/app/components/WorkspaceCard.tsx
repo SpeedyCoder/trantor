@@ -8,6 +8,7 @@ type WorkspaceCardProps = {
   workspace: WorkspaceInfo;
   workspaceName?: React.ReactNode;
   isCollapsed: boolean;
+  hasActiveAgent?: boolean;
   onShowWorkspaceMenu: (event: MouseEvent, workspaceId: string) => void;
   onToggleWorkspaceCollapse: (workspaceId: string, collapsed: boolean) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
@@ -19,6 +20,7 @@ export function WorkspaceCard({
   workspace,
   workspaceName,
   isCollapsed,
+  hasActiveAgent = false,
   onShowWorkspaceMenu,
   onToggleWorkspaceCollapse,
   onConnectWorkspace,
@@ -48,6 +50,13 @@ export function WorkspaceCard({
         <div className="workspace-copy">
           <div className="workspace-name-row">
             <div className="workspace-title">
+              {hasActiveAgent ? (
+                <span
+                  className="workspace-activity-indicator is-active"
+                  aria-label="Agent running in project"
+                  role="status"
+                />
+              ) : null}
               <span className="workspace-folder-icon-frame" aria-hidden>
                 <FolderIcon
                   className={`workspace-folder-icon${isCollapsed ? "" : " is-open"}`}

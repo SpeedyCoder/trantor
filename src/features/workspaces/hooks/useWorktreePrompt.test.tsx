@@ -42,7 +42,31 @@ describe("useWorktreePrompt", () => {
     });
 
     expect(result.current.worktreePrompt?.branch).toMatch(
-      /^codex\/\d{4}-\d{2}-\d{2}-[a-z0-9]{4}$/,
+      /^trantor\/\d{4}-\d{2}-\d{2}-[a-z0-9]{4}$/,
+    );
+    expect(addWorktreeAgent).not.toHaveBeenCalled();
+  });
+
+  it("opens with the configured branch name format", () => {
+    const addWorktreeAgent = vi.fn().mockResolvedValue(null);
+    const connectWorkspace = vi.fn().mockResolvedValue(undefined);
+    const onSelectWorkspace = vi.fn();
+
+    const { result } = renderHook(() =>
+      useWorktreePrompt({
+        addWorktreeAgent,
+        connectWorkspace,
+        onSelectWorkspace,
+        defaultBranchFormat: "user/{project}-{date}-{random}",
+      }),
+    );
+
+    act(() => {
+      result.current.openPrompt(parentWorkspace);
+    });
+
+    expect(result.current.worktreePrompt?.branch).toMatch(
+      /^user\/parent-\d{4}-\d{2}-\d{2}-[a-z0-9]{4}$/,
     );
     expect(addWorktreeAgent).not.toHaveBeenCalled();
   });
@@ -82,6 +106,7 @@ describe("useWorktreePrompt", () => {
           branchName: "eng-123-fix-login",
           updatedAt: "2026-04-26T10:00:00.000Z",
           stateName: "Todo",
+          stateColor: "#1f80ff",
           teamKey: "ENG",
         },
       ],
@@ -207,8 +232,8 @@ describe("useWorktreePrompt", () => {
       result.current.openPrompt(parentWorkspace);
     });
 
-    await act(async () => {
-      await result.current.selectLinearIssue({
+    act(() => {
+      result.current.selectLinearIssue({
         id: "issue-1",
         identifier: "ENG-123",
         title: "Fix login",
@@ -217,6 +242,7 @@ describe("useWorktreePrompt", () => {
         branchName: null,
         updatedAt: "2026-04-26T10:00:00.000Z",
         stateName: "Todo",
+        stateColor: "#1f80ff",
         teamKey: "ENG",
       });
     });
@@ -227,7 +253,7 @@ describe("useWorktreePrompt", () => {
     );
   });
 
-  it("creates a worktree from a Linear issue and passes a prefill prompt", async () => {
+  it("selects a Linear issue and creates it after confirmation", async () => {
     const worktreeWorkspace: WorkspaceInfo = {
       id: "wt-1",
       name: "eng-123-fix-login",
@@ -257,8 +283,8 @@ describe("useWorktreePrompt", () => {
       result.current.openPrompt(parentWorkspace);
     });
 
-    await act(async () => {
-      await result.current.selectLinearIssue({
+    act(() => {
+      result.current.selectLinearIssue({
         id: "issue-1",
         identifier: "ENG-123",
         title: "Fix login",
@@ -267,8 +293,16 @@ describe("useWorktreePrompt", () => {
         branchName: "eng-123-fix-login",
         updatedAt: "2026-04-26T10:00:00.000Z",
         stateName: "Todo",
+        stateColor: "#1f80ff",
         teamKey: "ENG",
       });
+    });
+
+    expect(addWorktreeAgent).not.toHaveBeenCalled();
+    expect(result.current.worktreePrompt?.selectedLinearIssue?.identifier).toBe("ENG-123");
+
+    await act(async () => {
+      await result.current.confirmPrompt();
     });
 
     expect(addWorktreeAgent).toHaveBeenCalledWith(parentWorkspace, "eng-123-fix-login", {

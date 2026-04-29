@@ -101,13 +101,23 @@ async fn ensure_runtime_session(
         let app_settings = state.app_settings.lock().await.clone();
         crate::claude::spawn_workspace_session(entry.clone(), &app_settings, app.clone()).await?
     } else {
-        spawn_workspace_session(entry.clone(), default_bin, codex_args, app.clone(), codex_home)
-            .await?
+        spawn_workspace_session(
+            entry.clone(),
+            default_bin,
+            codex_args,
+            app.clone(),
+            codex_home,
+        )
+        .await?
     };
     session
         .register_workspace_with_path(workspace_id, Some(&entry.path))
         .await;
-    state.sessions.lock().await.insert(session_key, Arc::clone(&session));
+    state
+        .sessions
+        .lock()
+        .await
+        .insert(session_key, Arc::clone(&session));
     Ok(session)
 }
 
@@ -137,7 +147,10 @@ fn merge_model_lists(responses: Vec<(AgentRuntime, Value)>) -> Value {
             }
             record.insert("runtime".to_string(), json!(runtime));
             record.insert("providerModelId".to_string(), json!(raw_model.clone()));
-            record.insert("id".to_string(), json!(normalize_model_id(&runtime, &raw_model)));
+            record.insert(
+                "id".to_string(),
+                json!(normalize_model_id(&runtime, &raw_model)),
+            );
             if matches!(runtime, AgentRuntime::Claude) {
                 let display_name = record
                     .get("displayName")
@@ -200,7 +213,10 @@ pub(crate) async fn start_thread(
     app: AppHandle,
 ) -> Result<Value, String> {
     if remote_backend::is_remote_mode(&*state).await {
-        if matches!(runtime_for_model_id(model_id.as_deref()), AgentRuntime::Claude) {
+        if matches!(
+            runtime_for_model_id(model_id.as_deref()),
+            AgentRuntime::Claude
+        ) {
             return Err("Claude runtime is supported only in local desktop mode.".to_string());
         }
         let native_model_id = model_id.as_deref().map(codex_core::native_model_id);
@@ -402,9 +418,14 @@ pub(crate) async fn list_threads(
     }
 
     let mut responses = Vec::new();
-    let codex_response =
-        codex_core::list_threads_core(&state.sessions, workspace_id.clone(), cursor.clone(), limit, sort_key.clone())
-            .await?;
+    let codex_response = codex_core::list_threads_core(
+        &state.sessions,
+        workspace_id.clone(),
+        cursor.clone(),
+        limit,
+        sort_key.clone(),
+    )
+    .await?;
     responses.push(codex_response);
     if let Ok(claude_session) =
         ensure_runtime_session(&state, &app, &workspace_id, AgentRuntime::Claude).await
@@ -621,10 +642,15 @@ pub(crate) async fn turn_steer(
 #[tauri::command]
 pub(crate) async fn collaboration_mode_list(
     workspace_id: String,
+    runtime: Option<AgentRuntime>,
     state: State<'_, AppState>,
     app: AppHandle,
 ) -> Result<Value, String> {
+    let runtime = runtime.unwrap_or_default();
     if remote_backend::is_remote_mode(&*state).await {
+        if matches!(runtime, AgentRuntime::Claude) {
+            return Err("Claude runtime is supported only in local desktop mode.".to_string());
+        }
         return remote_backend::call_remote(
             &*state,
             app,
@@ -634,7 +660,10 @@ pub(crate) async fn collaboration_mode_list(
         .await;
     }
 
-    codex_core::collaboration_mode_list_core(&state.sessions, workspace_id).await
+    let session = ensure_runtime_session(&state, &app, &workspace_id, runtime).await?;
+    session
+        .send_request_for_workspace(&workspace_id, "collaborationMode/list", json!({}))
+        .await
 }
 
 #[tauri::command]
@@ -682,14 +711,7 @@ pub(crate) async fn start_review(
         .await;
     }
 
-    codex_core::start_review_core(
-        &state.sessions,
-        workspace_id,
-        thread_id,
-        target,
-        delivery,
-    )
-    .await
+    codex_core::start_review_core(&state.sessions, workspace_id, thread_id, target, delivery).await
 }
 
 #[tauri::command]

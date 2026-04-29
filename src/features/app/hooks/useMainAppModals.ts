@@ -58,6 +58,7 @@ type UseMainAppModalsArgs = {
     connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
     selectWorkspace: (workspaceId: string) => void;
     linearEnabled: boolean;
+    defaultWorktreeBranchFormat: string | null;
     handleWorktreeCreated: Parameters<typeof useWorktreePrompt>[0]["onWorktreeCreated"];
     onCompactActivate?: () => void;
     onWorkspacePromptError: (message: string, kind: "worktree") => void;
@@ -395,6 +396,7 @@ export function useMainAppModals({
     connectWorkspace: workspacePrompts.connectWorkspace,
     onSelectWorkspace: workspacePrompts.selectWorkspace,
     linearEnabled: workspacePrompts.linearEnabled,
+    defaultBranchFormat: workspacePrompts.defaultWorktreeBranchFormat,
     onWorktreeCreated: workspacePrompts.handleWorktreeCreated,
     onCompactActivate: workspacePrompts.onCompactActivate,
     onError: (message) => workspacePrompts.onWorkspacePromptError(message, "worktree"),

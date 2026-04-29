@@ -6,6 +6,8 @@ import { WorktreeCard } from "./WorktreeCard";
 type WorktreeSectionProps = {
   worktrees: WorkspaceInfo[];
   deletingWorktreeIds: Set<string>;
+  defaultWorktreeBranchFormat: string;
+  activeAgentWorkspaceIds: Set<string>;
   activeWorkspaceId: string | null;
   onSelectWorkspace: (id: string) => void;
   onConnectWorkspace: (workspace: WorkspaceInfo) => void;
@@ -16,6 +18,8 @@ type WorktreeSectionProps = {
 export function WorktreeSection({
   worktrees,
   deletingWorktreeIds,
+  defaultWorktreeBranchFormat,
+  activeAgentWorkspaceIds,
   activeWorkspaceId,
   onSelectWorkspace,
   onConnectWorkspace,
@@ -35,6 +39,8 @@ export function WorktreeSection({
             worktree={worktree}
             isActive={worktree.id === activeWorkspaceId}
             isDeleting={deletingWorktreeIds.has(worktree.id)}
+            defaultWorktreeBranchFormat={defaultWorktreeBranchFormat}
+            hasActiveAgent={activeAgentWorkspaceIds.has(worktree.id)}
             onSelectWorkspace={onSelectWorkspace}
             onShowWorktreeMenu={onShowWorktreeMenu}
             onConnectWorkspace={onConnectWorkspace}

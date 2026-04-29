@@ -110,7 +110,7 @@ export function SettingsProjectsSection({
     >
       <SettingsSubsection
         title="Worktrees"
-        subtitle="Configure the default root for new project worktrees."
+        subtitle="Configure defaults for new project worktrees."
       />
       <div className="settings-field">
         <label className="settings-field-label" htmlFor="settings-global-worktrees-folder">

@@ -43,6 +43,7 @@ type RunClaudeTurnArgs = {
   };
   prompt: string;
   model?: string;
+  systemPromptAppend?: string | null;
   abortController: AbortController;
   onSessionReady: (sessionId: string) => Promise<void> | void;
   onDelta: (delta: string) => void;
@@ -53,6 +54,7 @@ export async function runClaudeTurn({
   thread,
   prompt,
   model,
+  systemPromptAppend,
   abortController,
   onSessionReady,
   onDelta,
@@ -79,6 +81,15 @@ export async function runClaudeTurn({
           type: "preset",
           preset: "claude_code",
         },
+        ...(systemPromptAppend
+          ? {
+              systemPrompt: {
+                type: "preset" as const,
+                preset: "claude_code" as const,
+                append: systemPromptAppend,
+              },
+            }
+          : {}),
       },
     });
 

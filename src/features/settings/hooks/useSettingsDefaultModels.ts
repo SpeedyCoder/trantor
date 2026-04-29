@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ModelOption, WorkspaceInfo } from "@/types";
 import { connectWorkspace, getConfigModel, getModelList } from "@services/tauri";
-import { parseModelListResponse } from "@/features/models/utils/modelListResponse";
+import {
+  parseModelListResponse,
+  unavailableModelIdsFromResponse,
+} from "@/features/models/utils/modelListResponse";
+import { providerModelIdForModelId } from "@/features/models/utils/modelRuntime";
 
 type SettingsDefaultModelsState = {
   models: ModelOption[];
@@ -123,16 +127,27 @@ export function useSettingsDefaultModels(projects: WorkspaceInfo[]) {
       const modelsFromList = parseModelListResponse(
         modelListResult.status === "fulfilled" ? modelListResult.value : null,
       );
+      const unavailableModelIds = unavailableModelIdsFromResponse(
+        modelListResult.status === "fulfilled" ? modelListResult.value : null,
+      );
       const configModel =
-        configModelResult.status === "fulfilled" ? configModelResult.value : null;
+        configModelResult.status === "fulfilled"
+          ? providerModelIdForModelId(configModelResult.value)
+          : null;
       const hasConfigModel = Boolean(
         configModel &&
           modelsFromList.some(
-            (model) => model.model === configModel || model.id === configModel,
+            (model) =>
+              model.model === configModel ||
+              model.id === configModel ||
+              model.providerModelId === configModel,
           ),
       );
       const models = (
-        hasConfigModel || !configModel
+        hasConfigModel ||
+        !configModel ||
+        unavailableModelIds.has(configModel) ||
+        modelsFromList.length > 0
           ? modelsFromList
           : [
               {

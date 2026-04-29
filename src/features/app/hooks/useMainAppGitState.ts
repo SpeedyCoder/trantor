@@ -15,6 +15,10 @@ import { usePullRequestReviewActions } from "@/features/git/hooks/usePullRequest
 import { useGitActions } from "@/features/git/hooks/useGitActions";
 import { useGitBranches } from "@/features/git/hooks/useGitBranches";
 import { useSyncSelectedDiffPath } from "@app/hooks/useSyncSelectedDiffPath";
+import {
+  replyGitHubPullRequestReviewThread,
+  resolveGitHubPullRequestReviewThread,
+} from "@services/tauri";
 
 type UseMainAppGitStateOptions = {
   activeWorkspace: WorkspaceInfo | null;
@@ -223,10 +227,15 @@ export function useMainAppGitState({
     gitPullRequestComments,
     gitPullRequestCommentsLoading,
     gitPullRequestCommentsError,
+    gitPullRequestReviewThreads,
+    gitPullRequestReviewThreadsLoading,
+    gitPullRequestReviewThreadsError,
     handleGitIssuesChange,
     handleGitPullRequestsChange,
     handleGitPullRequestDiffsChange,
     handleGitPullRequestCommentsChange,
+    handleGitPullRequestReviewThreadsChange,
+    handleGitPullRequestReviewThreadChange,
     resetGitHubPanelState,
   } = useGitHubPanelController();
 
@@ -419,6 +428,43 @@ export function useMainAppGitState({
     sendUserMessageToThread,
   });
 
+  const handleReplyPullRequestReviewThread = useCallback(
+    async (threadId: string, body: string) => {
+      if (!activeWorkspace) {
+        return;
+      }
+      try {
+        const thread = await replyGitHubPullRequestReviewThread(
+          activeWorkspace.id,
+          threadId,
+          body,
+        );
+        handleGitPullRequestReviewThreadChange(thread);
+      } catch (error) {
+        alertError(error);
+      }
+    },
+    [activeWorkspace, alertError, handleGitPullRequestReviewThreadChange],
+  );
+
+  const handleResolvePullRequestReviewThread = useCallback(
+    async (threadId: string) => {
+      if (!activeWorkspace) {
+        return;
+      }
+      try {
+        const thread = await resolveGitHubPullRequestReviewThread(
+          activeWorkspace.id,
+          threadId,
+        );
+        handleGitPullRequestReviewThreadChange(thread);
+      } catch (error) {
+        alertError(error);
+      }
+    },
+    [activeWorkspace, alertError, handleGitPullRequestReviewThreadChange],
+  );
+
   return {
     activeWorkspaceRef,
     activeWorkspaceIdRef,
@@ -477,10 +523,17 @@ export function useMainAppGitState({
     gitPullRequestComments,
     gitPullRequestCommentsLoading,
     gitPullRequestCommentsError,
+    gitPullRequestReviewThreads,
+    gitPullRequestReviewThreadsLoading,
+    gitPullRequestReviewThreadsError,
+    handleReplyPullRequestReviewThread,
+    handleResolvePullRequestReviewThread,
     handleGitIssuesChange,
     handleGitPullRequestsChange,
     handleGitPullRequestDiffsChange,
     handleGitPullRequestCommentsChange,
+    handleGitPullRequestReviewThreadsChange,
+    handleGitPullRequestReviewThreadChange,
     gitRemoteUrl,
     refreshGitRemote,
     gitRootCandidates,

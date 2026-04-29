@@ -4,6 +4,7 @@ import type {
   GitHubPullRequest,
   GitHubPullRequestComment,
   GitHubPullRequestDiff,
+  GitHubPullRequestReviewThread,
 } from "../../../types";
 
 type GitHubIssuesState = {
@@ -32,6 +33,12 @@ type GitHubPullRequestCommentsState = {
   error: string | null;
 };
 
+type GitHubPullRequestReviewThreadsState = {
+  reviewThreads: GitHubPullRequestReviewThread[];
+  isLoading: boolean;
+  error: string | null;
+};
+
 export function useGitHubPanelController() {
   const [gitIssuesState, setGitIssuesState] = useState<GitHubIssuesState>({
     issues: [],
@@ -55,6 +62,12 @@ export function useGitHubPanelController() {
   const [gitPullRequestCommentsState, setGitPullRequestCommentsState] =
     useState<GitHubPullRequestCommentsState>({
       comments: [],
+      isLoading: false,
+      error: null,
+    });
+  const [gitPullRequestReviewThreadsState, setGitPullRequestReviewThreadsState] =
+    useState<GitHubPullRequestReviewThreadsState>({
+      reviewThreads: [],
       isLoading: false,
       error: null,
     });
@@ -122,6 +135,34 @@ export function useGitHubPanelController() {
     [],
   );
 
+  const handleGitPullRequestReviewThreadsChange = useCallback(
+    (next: GitHubPullRequestReviewThreadsState) => {
+      setGitPullRequestReviewThreadsState((prev) => {
+        if (
+          prev.reviewThreads === next.reviewThreads &&
+          prev.isLoading === next.isLoading &&
+          prev.error === next.error
+        ) {
+          return prev;
+        }
+        return next;
+      });
+    },
+    [],
+  );
+
+  const handleGitPullRequestReviewThreadChange = useCallback(
+    (thread: GitHubPullRequestReviewThread) => {
+      setGitPullRequestReviewThreadsState((prev) => ({
+        ...prev,
+        reviewThreads: prev.reviewThreads.map((entry) =>
+          entry.id === thread.id ? thread : entry,
+        ),
+      }));
+    },
+    [],
+  );
+
   const resetGitHubPanelState = useCallback(() => {
     setGitIssuesState({
       issues: [],
@@ -145,6 +186,11 @@ export function useGitHubPanelController() {
       isLoading: false,
       error: null,
     });
+    setGitPullRequestReviewThreadsState({
+      reviewThreads: [],
+      isLoading: false,
+      error: null,
+    });
   }, []);
 
   return {
@@ -162,10 +208,15 @@ export function useGitHubPanelController() {
     gitPullRequestComments: gitPullRequestCommentsState.comments,
     gitPullRequestCommentsLoading: gitPullRequestCommentsState.isLoading,
     gitPullRequestCommentsError: gitPullRequestCommentsState.error,
+    gitPullRequestReviewThreads: gitPullRequestReviewThreadsState.reviewThreads,
+    gitPullRequestReviewThreadsLoading: gitPullRequestReviewThreadsState.isLoading,
+    gitPullRequestReviewThreadsError: gitPullRequestReviewThreadsState.error,
     handleGitIssuesChange,
     handleGitPullRequestsChange,
     handleGitPullRequestDiffsChange,
     handleGitPullRequestCommentsChange,
+    handleGitPullRequestReviewThreadsChange,
+    handleGitPullRequestReviewThreadChange,
     resetGitHubPanelState,
   };
 }

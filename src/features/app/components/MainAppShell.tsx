@@ -31,6 +31,7 @@ type MainAppShellProps = {
     onPullRequestsChange: ComponentProps<typeof GitHubPanelData>["onPullRequestsChange"];
     onPullRequestDiffsChange: ComponentProps<typeof GitHubPanelData>["onPullRequestDiffsChange"];
     onPullRequestCommentsChange: ComponentProps<typeof GitHubPanelData>["onPullRequestCommentsChange"];
+    onPullRequestReviewThreadsChange: ComponentProps<typeof GitHubPanelData>["onPullRequestReviewThreadsChange"];
   };
   appLayoutProps: ComponentProps<typeof AppLayout>;
   appModalsProps: AppModalsProps;

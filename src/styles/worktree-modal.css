@@ -85,9 +85,20 @@
   color: var(--ds-text-strong);
   text-align: left;
   cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .worktree-linear-issue:hover {
+  border-color: color-mix(in srgb, var(--border-accent) 64%, var(--ds-border-strong));
+  background: var(--ds-surface-card);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border-accent) 24%, transparent);
+}
+
+.worktree-linear-issue.selected {
+  border-color: var(--border-accent);
   background: var(--ds-surface-card);
 }
 
@@ -109,6 +120,7 @@
 .worktree-linear-issue-id {
   flex: 0 0 auto;
   font-family: var(--code-font-family, Menlo, Monaco, "Courier New", monospace);
+  font-weight: 400;
   overflow-wrap: anywhere;
 }
 
@@ -117,6 +129,21 @@
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 13px;
+}
+
+.worktree-linear-issue-status {
+  --worktree-linear-status-color: var(--status-unknown);
+
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 7px;
+  border: 1px solid color-mix(in srgb, var(--worktree-linear-status-color) 48%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--worktree-linear-status-color) 14%, transparent);
+  color: var(--worktree-linear-status-color);
+  font-size: 11px;
+  line-height: 1.25;
 }
 
 .worktree-modal-branch-list {

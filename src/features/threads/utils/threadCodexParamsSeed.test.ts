@@ -80,7 +80,7 @@ describe("threadCodexParamsSeed", () => {
     expect(storedResolved).toEqual({
       scopeKey: "ws-1:thread-1",
       preferredHarness: "codex",
-      accessMode: "read-only",
+      accessMode: "full-access",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
       preferredServiceTier: null,
@@ -225,7 +225,7 @@ describe("threadCodexParamsSeed", () => {
     expect(resolved).toEqual({
       scopeKey: "ws-1:__no_thread__",
       preferredHarness: "codex",
-      accessMode: "read-only",
+      accessMode: "full-access",
       preferredModelId: "gpt-4.1",
       preferredEffort: "low",
       preferredServiceTier: null,

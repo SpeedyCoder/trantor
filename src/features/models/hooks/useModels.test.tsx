@@ -23,7 +23,7 @@ describe("useModels", () => {
     vi.clearAllMocks();
   });
 
-  it("adds the config model when it is missing from model/list", async () => {
+  it("uses model/list when the config model is missing from a non-empty response", async () => {
     vi.mocked(getModelList).mockResolvedValueOnce({
       result: {
         data: [
@@ -47,13 +47,31 @@ describe("useModels", () => {
     await waitFor(() => expect(result.current.models.length).toBeGreaterThan(0));
 
     expect(getConfigModel).toHaveBeenCalledWith("workspace-1");
+    expect(result.current.models.map((model) => model.model)).toEqual(["gpt-5.1"]);
+    expect(result.current.selectedModel?.model).toBe("gpt-5.1");
+    expect(result.current.reasoningSupported).toBe(false);
+  });
+
+  it("adds the config model when model/list has no usable models", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce("custom-model");
+
+    const { result } = renderHook(() =>
+      useModels({ activeWorkspace: workspace }),
+    );
+
+    await waitFor(() => expect(result.current.models.length).toBeGreaterThan(0));
+
     expect(result.current.models[0]).toMatchObject({
       id: "codex:custom-model",
       model: "custom-model",
       runtime: "codex",
     });
     expect(result.current.selectedModel?.model).toBe("custom-model");
-    expect(result.current.reasoningSupported).toBe(false);
   });
 
   it("prefers the provider entry when the config model matches by slug", async () => {
@@ -87,6 +105,38 @@ describe("useModels", () => {
     expect(result.current.reasoningSupported).toBe(true);
   });
 
+  it("does not select an upgrade-gated config model", async () => {
+    vi.mocked(getModelList).mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.5",
+            model: "gpt-5.5",
+            displayName: "GPT-5.5",
+            upgrade: "latest-codex",
+          },
+          {
+            id: "codex:gpt-5.4",
+            model: "gpt-5.4",
+            displayName: "GPT-5.4",
+            supportedReasoningEfforts: [],
+            defaultReasoningEffort: null,
+            isDefault: true,
+          },
+        ],
+      },
+    });
+    vi.mocked(getConfigModel).mockResolvedValueOnce("gpt-5.5");
+
+    const { result } = renderHook(() =>
+      useModels({ activeWorkspace: workspace }),
+    );
+
+    await waitFor(() => expect(result.current.selectedModel?.model).toBe("gpt-5.4"));
+
+    expect(result.current.models.map((model) => model.model)).toEqual(["gpt-5.4"]);
+  });
+
   it("keeps the selected reasoning effort when switching models", async () => {
     vi.mocked(getModelList).mockResolvedValueOnce({
       result: {
@@ -111,15 +161,15 @@ describe("useModels", () => {
       useModels({ activeWorkspace: workspace }),
     );
 
-    await waitFor(() => expect(result.current.models.length).toBeGreaterThan(1));
+    await waitFor(() => expect(result.current.models.length).toBe(1));
 
     act(() => {
       result.current.setSelectedEffort("high");
-      result.current.setSelectedModelId("codex:custom-model");
+      result.current.setSelectedModelId("remote-1");
     });
 
     await waitFor(() => {
-      expect(result.current.selectedModelId).toBe("codex:custom-model");
+      expect(result.current.selectedModelId).toBe("remote-1");
       expect(result.current.selectedEffort).toBe("high");
     });
   });

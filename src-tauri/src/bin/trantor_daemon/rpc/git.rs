@@ -167,6 +167,41 @@ pub(super) async fn try_handle(
                 .await,
             )
         }
+        git_rpc::METHOD_GET_GITHUB_PULL_REQUEST_REVIEW_THREADS => {
+            let request = parse_request_or_err!(params, git_rpc::GitHubPullRequestRequest);
+            Some(
+                serialize_result(
+                    state.get_github_pull_request_review_threads(
+                        request.workspace_id,
+                        request.pr_number,
+                    ),
+                )
+                .await,
+            )
+        }
+        git_rpc::METHOD_REPLY_GITHUB_PULL_REQUEST_REVIEW_THREAD => {
+            let request =
+                parse_request_or_err!(params, git_rpc::GitHubPullRequestReviewThreadReplyRequest);
+            Some(
+                serialize_result(state.reply_github_pull_request_review_thread(
+                    request.workspace_id,
+                    request.thread_id,
+                    request.body,
+                ))
+                .await,
+            )
+        }
+        git_rpc::METHOD_RESOLVE_GITHUB_PULL_REQUEST_REVIEW_THREAD => {
+            let request =
+                parse_request_or_err!(params, git_rpc::GitHubPullRequestReviewThreadRequest);
+            Some(
+                serialize_result(state.resolve_github_pull_request_review_thread(
+                    request.workspace_id,
+                    request.thread_id,
+                ))
+                .await,
+            )
+        }
         git_rpc::METHOD_CHECKOUT_GITHUB_PULL_REQUEST => {
             let request = parse_request_or_err!(params, git_rpc::GitHubPullRequestRequest);
             Some(

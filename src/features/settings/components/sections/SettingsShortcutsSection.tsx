@@ -107,19 +107,13 @@ export function SettingsShortcutsSection({
       },
       {
         title: "Composer",
-        subtitle: "Cycle between model, access, reasoning, and collaboration modes.",
+        subtitle: "Cycle between model, reasoning, and collaboration modes.",
         items: [
           {
             label: "Cycle model",
             draftKey: "model",
             settingKey: "composerModelShortcut",
             help: `Press a new shortcut while focused. Default: ${formatShortcut("cmd+shift+m")}`,
-          },
-          {
-            label: "Cycle access mode",
-            draftKey: "access",
-            settingKey: "composerAccessShortcut",
-            help: `Default: ${formatShortcut("cmd+shift+a")}`,
           },
           {
             label: "Cycle reasoning mode",

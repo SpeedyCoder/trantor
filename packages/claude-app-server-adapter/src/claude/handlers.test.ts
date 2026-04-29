@@ -550,4 +550,149 @@ describe("newHandlers", () => {
       ]),
     );
   });
+
+  it("lists Claude collaboration modes", async () => {
+    const handlers = newHandlers("/tmp/workspace", createRepository(), vi.fn());
+
+    const response = await handlers["collaborationMode/list"]?.handle({
+      id: 1,
+      method: "collaborationMode/list",
+      params: {},
+    });
+
+    expect(response).toEqual({
+      data: [
+        {
+          name: "default",
+          mode: "default",
+          model: null,
+          reasoning_effort: null,
+        },
+        {
+          name: "plan",
+          mode: "plan",
+          model: null,
+          reasoning_effort: null,
+        },
+      ],
+    });
+  });
+
+  it("emits plan events without duplicating Claude plan output as an agent message", async () => {
+    vi.mocked(runClaudeTurn).mockImplementation(async ({ onDelta, onMessage }) => {
+      onDelta("<proposed_plan>\n");
+      onDelta("Plan note\n\n");
+      onDelta("1. Read the code\n");
+      onDelta("2. Add tests\n");
+      onDelta("</proposed_plan>");
+      await onMessage?.({
+        type: "assistant",
+        message: {
+          content: [
+            {
+              type: "text",
+              text: "<proposed_plan>\nPlan note\n\n1. Read the code\n2. Add tests\n</proposed_plan>",
+              citations: [],
+            },
+          ],
+        } as never,
+        parent_tool_use_id: null,
+        uuid: "00000000-0000-0000-0000-000000000020",
+        session_id: "session-1",
+      });
+      return {
+        text: "<proposed_plan>\nPlan note\n\n1. Read the code\n2. Add tests\n</proposed_plan>",
+        aborted: false,
+      };
+    });
+    const repository = createRepository();
+    const send = vi.fn();
+    const handlers = newHandlers("/tmp/workspace", repository, send);
+
+    await handlers["turn/start"]?.handle({
+      id: 1,
+      method: "turn/start",
+      params: {
+        threadId: "thread-1",
+        input: [{ type: "text", text: "Plan this", text_elements: [] }],
+        cwd: "/tmp/workspace",
+        model: "sonnet",
+        collaborationMode: {
+          mode: "plan",
+          settings: {
+            model: "sonnet",
+            reasoning_effort: null,
+            developer_instructions: "Keep it short.",
+          },
+        },
+      },
+    });
+
+    expect(runClaudeTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPromptAppend: expect.stringContaining("You are in Trantor plan mode."),
+      }),
+    );
+    expect(runClaudeTurn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        systemPromptAppend: expect.stringContaining("Keep it short."),
+      }),
+    );
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "item/plan/delta",
+        params: expect.objectContaining({
+          threadId: "thread-1",
+          delta: expect.stringContaining("<proposed_plan>"),
+        }),
+      }),
+    );
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "item/completed",
+        params: expect.objectContaining({
+          threadId: "thread-1",
+          item: expect.objectContaining({
+            type: "plan",
+            text: expect.stringContaining("Read the code"),
+          }),
+        }),
+      }),
+    );
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "turn/plan/updated",
+        params: expect.objectContaining({
+          explanation: "Plan note",
+          plan: [
+            { step: "Read the code", status: "pending" },
+            { step: "Add tests", status: "pending" },
+          ],
+        }),
+      }),
+    );
+    expect(send).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "item/agentMessage/delta",
+      }),
+    );
+
+    const turns = await repository.getThreadTurns("thread-1");
+    expect(turns[0]?.data.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "plan",
+          text: expect.stringContaining("Add tests"),
+        }),
+      ]),
+    );
+    expect(turns[0]?.data.items).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "agentMessage",
+          text: expect.stringContaining("Read the code"),
+        }),
+      ]),
+    );
+  });
 });

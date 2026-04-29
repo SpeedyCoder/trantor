@@ -163,6 +163,7 @@ fn can_retry_after_disconnect(method: &str) -> bool {
             | "get_github_issues"
             | "get_github_pull_request_comments"
             | "get_github_pull_request_diff"
+            | "get_github_pull_request_review_threads"
             | "get_github_pull_requests"
             | "is_workspace_path_dir"
             | "list_git_branches"

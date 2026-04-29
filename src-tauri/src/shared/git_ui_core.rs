@@ -6,7 +6,8 @@ use tokio::sync::Mutex;
 
 use crate::types::{
     AppSettings, GitCommitDiff, GitFileDiff, GitHubIssuesResponse, GitHubPullRequestComment,
-    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, WorkspaceEntry,
+    GitHubPullRequestDiff, GitHubPullRequestReviewThread, GitHubPullRequestsResponse,
+    GitLogResponse, WorkspaceEntry,
 };
 
 #[path = "git_ui_core/commands.rs"]
@@ -203,6 +204,33 @@ pub(crate) async fn get_github_pull_request_comments_core(
     pr_number: u64,
 ) -> Result<Vec<GitHubPullRequestComment>, String> {
     github::get_github_pull_request_comments_inner(workspaces, workspace_id, pr_number).await
+}
+
+pub(crate) async fn get_github_pull_request_review_threads_core(
+    workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
+    workspace_id: String,
+    pr_number: u64,
+) -> Result<Vec<GitHubPullRequestReviewThread>, String> {
+    github::get_github_pull_request_review_threads_inner(workspaces, workspace_id, pr_number).await
+}
+
+pub(crate) async fn reply_github_pull_request_review_thread_core(
+    workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
+    workspace_id: String,
+    thread_id: String,
+    body: String,
+) -> Result<GitHubPullRequestReviewThread, String> {
+    github::reply_github_pull_request_review_thread_inner(workspaces, workspace_id, thread_id, body)
+        .await
+}
+
+pub(crate) async fn resolve_github_pull_request_review_thread_core(
+    workspaces: &Mutex<HashMap<String, WorkspaceEntry>>,
+    workspace_id: String,
+    thread_id: String,
+) -> Result<GitHubPullRequestReviewThread, String> {
+    github::resolve_github_pull_request_review_thread_inner(workspaces, workspace_id, thread_id)
+        .await
 }
 
 pub(crate) async fn checkout_github_pull_request_core(

@@ -136,6 +136,12 @@ export function GitDiffViewer({
   pullRequestComments,
   pullRequestCommentsLoading = false,
   pullRequestCommentsError = null,
+  pullRequestReviewThreads = [],
+  pullRequestReviewThreadsLoading = false,
+  pullRequestReviewThreadsError = null,
+  onReplyPullRequestReviewThread,
+  onResolvePullRequestReviewThread,
+  onAddPullRequestReviewThreadToChat,
   pullRequestReviewActions = [],
   onRunPullRequestReview,
   pullRequestReviewLaunching = false,
@@ -437,6 +443,19 @@ export function GitDiffViewer({
 
   const diffStats = useMemo(() => calculateDiffStats(diffs), [diffs]);
 
+  const reviewThreadsByPath = useMemo(() => {
+    const map = new Map<string, typeof pullRequestReviewThreads>();
+    pullRequestReviewThreads.forEach((thread) => {
+      const threads = map.get(thread.path) ?? [];
+      threads.push(thread);
+      map.set(thread.path, threads);
+    });
+    for (const threads of map.values()) {
+      threads.sort((a, b) => (a.line ?? a.startLine ?? 0) - (b.line ?? b.startLine ?? 0));
+    }
+    return map;
+  }, [pullRequestReviewThreads]);
+
   const handleScrollToFirstFile = useCallback(() => {
     if (!diffs.length) {
       return;
@@ -533,6 +552,14 @@ export function GitDiffViewer({
             Refreshing diff...
           </div>
         )}
+        {!error && pullRequestReviewThreadsLoading && (
+          <div className="diff-viewer-loading diff-viewer-loading-overlay">
+            Refreshing review comments...
+          </div>
+        )}
+        {!error && pullRequestReviewThreadsError && (
+          <div className="diff-viewer-empty">{pullRequestReviewThreadsError}</div>
+        )}
         {!error && !isLoading && !diffs.length && (
           <div className="diff-viewer-empty-state" role="status" aria-live="polite">
             <div className="diff-viewer-empty-glow" aria-hidden />
@@ -609,6 +636,10 @@ export function GitDiffViewer({
                       onClearSelection={clearSelection}
                       pullRequestReviewLaunching={pullRequestReviewLaunching}
                       pullRequestReviewThreadId={pullRequestReviewThreadId}
+                      reviewThreads={reviewThreadsByPath.get(entry.path) ?? []}
+                      onReplyReviewThread={onReplyPullRequestReviewThread}
+                      onResolveReviewThread={onResolvePullRequestReviewThread}
+                      onAddReviewThreadToChat={onAddPullRequestReviewThreadToChat}
                     />
                   )}
                 </div>

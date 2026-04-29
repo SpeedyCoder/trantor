@@ -78,8 +78,6 @@ type ComposerProps = {
   codexArgsOptions?: CodexArgsOption[];
   selectedCodexArgsOverride?: string | null;
   onSelectCodexArgsOverride?: (value: string | null) => void;
-  accessMode: "read-only" | "current" | "full-access";
-  onSelectAccessMode: (mode: "read-only" | "current" | "full-access") => void;
   skills: { name: string; description?: string }[];
   apps: AppOption[];
   prompts: CustomPromptOption[];
@@ -94,9 +92,12 @@ type ComposerProps = {
   onDraftChange?: (text: string) => void;
   historyKey?: string | null;
   attachedImages?: string[];
+  attachedFiles?: string[];
   onPickImages?: () => void;
   onAttachImages?: (paths: string[]) => void;
   onRemoveImage?: (path: string) => void;
+  onRemoveFileAttachment?: (path: string) => void;
+  onClearFileAttachments?: () => void;
   prefillDraft?: QueuedMessage | null;
   onPrefillHandled?: (id: string) => void;
   insertText?: QueuedMessage | null;
@@ -190,8 +191,6 @@ export const Composer = memo(function Composer({
   codexArgsOptions = [],
   selectedCodexArgsOverride = null,
   onSelectCodexArgsOverride,
-  accessMode,
-  onSelectAccessMode,
   skills,
   apps,
   prompts,
@@ -206,9 +205,12 @@ export const Composer = memo(function Composer({
   onDraftChange,
   historyKey = null,
   attachedImages = [],
+  attachedFiles = [],
   onPickImages,
   onAttachImages,
   onRemoveImage,
+  onRemoveFileAttachment,
+  onClearFileAttachments,
   prefillDraft = null,
   onPrefillHandled,
   insertText = null,
@@ -413,6 +415,7 @@ export const Composer = memo(function Composer({
     } else {
       onSend(trimmed, attachedImages, undefined, submitIntent);
     }
+    onClearFileAttachments?.();
     resetHistoryNavigation();
     setComposerText("");
     setAppMentionBindings([]);
@@ -420,6 +423,7 @@ export const Composer = memo(function Composer({
     appMentionBindings,
     attachedImages,
     disabled,
+    onClearFileAttachments,
     onSend,
     recordHistory,
     resetHistoryNavigation,
@@ -646,9 +650,11 @@ export const Composer = memo(function Composer({
         dictationHint={dictationHint}
         onDismissDictationHint={onDismissDictationHint}
         attachments={attachedImages}
+        fileAttachments={attachedFiles}
         onAddAttachment={onPickImages}
         onAttachImages={onAttachImages}
         onRemoveAttachment={onRemoveImage}
+        onRemoveFileAttachment={onRemoveFileAttachment}
         onTextChange={handleTextChangeWithHistory}
         onSelectionChange={handleSelectionChange}
         onTextPaste={handleTextPaste}
@@ -700,8 +706,6 @@ export const Composer = memo(function Composer({
         codexArgsOptions={codexArgsOptions}
         selectedCodexArgsOverride={selectedCodexArgsOverride}
         onSelectCodexArgsOverride={onSelectCodexArgsOverride}
-        accessMode={accessMode}
-        onSelectAccessMode={onSelectAccessMode}
         contextUsage={contextUsage}
       />
     </footer>

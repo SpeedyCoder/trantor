@@ -59,6 +59,12 @@ pub(crate) async fn update_app_settings_core(
     settings.global_worktrees_folder = settings
         .global_worktrees_folder
         .map(|path| normalize_windows_namespace_path(&path));
+    if settings.default_worktree_branch_format.trim().is_empty() {
+        settings.default_worktree_branch_format = "trantor/{date}-{random}".to_string();
+    } else {
+        settings.default_worktree_branch_format =
+            settings.default_worktree_branch_format.trim().to_string();
+    }
     let _ = codex_config::write_collaboration_modes_enabled(settings.collaboration_modes_enabled);
     let _ = codex_config::write_steer_enabled(settings.steer_enabled);
     let _ = codex_config::write_unified_exec_enabled(settings.unified_exec_enabled);

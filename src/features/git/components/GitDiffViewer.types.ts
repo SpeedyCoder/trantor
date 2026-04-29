@@ -1,6 +1,7 @@
 import type {
   GitHubPullRequest,
   GitHubPullRequestComment,
+  GitHubPullRequestReviewThread,
   PullRequestReviewAction,
   PullRequestReviewIntent,
   PullRequestSelectionRange,
@@ -37,6 +38,14 @@ export type GitDiffViewerProps = {
   pullRequestComments?: GitHubPullRequestComment[];
   pullRequestCommentsLoading?: boolean;
   pullRequestCommentsError?: string | null;
+  pullRequestReviewThreads?: GitHubPullRequestReviewThread[];
+  pullRequestReviewThreadsLoading?: boolean;
+  pullRequestReviewThreadsError?: string | null;
+  onReplyPullRequestReviewThread?: (threadId: string, body: string) => Promise<void> | void;
+  onResolvePullRequestReviewThread?: (threadId: string) => Promise<void> | void;
+  onAddPullRequestReviewThreadToChat?: (
+    thread: GitHubPullRequestReviewThread,
+  ) => Promise<void> | void;
   pullRequestReviewActions?: PullRequestReviewAction[];
   onRunPullRequestReview?: (options: {
     intent: PullRequestReviewIntent;

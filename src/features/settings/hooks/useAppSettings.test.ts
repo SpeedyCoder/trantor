@@ -55,6 +55,9 @@ describe("useAppSettings", () => {
     expect(result.current.settings.personality).toBe("friendly");
     expect(result.current.settings.backendMode).toBe("remote");
     expect(result.current.settings.remoteBackendHost).toBe("example:1234");
+    expect(result.current.settings.defaultWorktreeBranchFormat).toBe(
+      "trantor/{date}-{random}",
+    );
   });
 
   it("keeps defaults when getAppSettings fails", async () => {
@@ -88,6 +91,7 @@ describe("useAppSettings", () => {
       codeFontFamily: "  ",
       codeFontSize: 2,
       notificationSoundsEnabled: false,
+      defaultWorktreeBranchFormat: "  ",
     };
     const saved: AppSettings = {
       ...result.current.settings,
@@ -114,6 +118,7 @@ describe("useAppSettings", () => {
         codeFontFamily: expect.stringContaining("ui-monospace"),
         codeFontSize: 9,
         notificationSoundsEnabled: false,
+        defaultWorktreeBranchFormat: "trantor/{date}-{random}",
       }),
     );
     expect(returned).toEqual(saved);

@@ -15,6 +15,11 @@ import type { useMainAppPromptActions } from "@app/hooks/useMainAppPromptActions
 import type { useMainAppSidebarMenuOrchestration } from "@app/hooks/useMainAppSidebarMenuOrchestration";
 import type { useMainAppWorktreeState } from "@app/hooks/useMainAppWorktreeState";
 import type { LayoutNodesOptions } from "@/features/layout/hooks/layoutNodes/types";
+import { writeTextFile } from "@services/tauri";
+import {
+  buildPullRequestReviewThreadMarkdown,
+  pullRequestReviewThreadMarkdownPath,
+} from "@/features/git/utils/pullRequestReviewThreadMarkdown";
 
 type SidebarProps = LayoutNodesOptions["primary"]["sidebarProps"];
 type ComposerProps = NonNullable<LayoutNodesOptions["primary"]["composerProps"]>;
@@ -34,6 +39,7 @@ type UseMainAppLayoutSurfacesArgs = {
     | "dictationEnabled"
     | "splitChatDiffView"
     | "gitDiffIgnoreWhitespaceChanges"
+    | "defaultWorktreeBranchFormat"
   >;
   workspaces: WorkspaceInfo[];
   groupedWorkspaces: Array<{ id: string | null; name: string; workspaces: WorkspaceInfo[] }>;
@@ -148,8 +154,6 @@ type UseMainAppLayoutSurfacesArgs = {
   codexArgsOptions: ComposerProps["codexArgsOptions"];
   selectedCodexArgsOverride: ComposerProps["selectedCodexArgsOverride"];
   onSelectCodexArgsOverride: ComposerProps["onSelectCodexArgsOverride"];
-  accessMode: ComposerProps["accessMode"];
-  onSelectAccessMode: ComposerProps["onSelectAccessMode"];
   skills: ComposerProps["skills"];
   apps: ComposerProps["apps"];
   prompts: ComposerProps["prompts"];
@@ -292,8 +296,6 @@ function buildPrimarySurface({
   codexArgsOptions,
   selectedCodexArgsOverride,
   onSelectCodexArgsOverride,
-  accessMode,
-  onSelectAccessMode,
   skills,
   apps,
   prompts,
@@ -353,6 +355,7 @@ function buildPrimarySurface({
       workspaces,
       groupedWorkspaces,
       deletingWorktreeIds,
+      defaultWorktreeBranchFormat: appSettings.defaultWorktreeBranchFormat,
       newAgentDraftWorkspaceId,
       startingDraftThreadWorkspaceId,
       threadsByWorkspace,
@@ -449,9 +452,12 @@ function buildPrimarySurface({
           draftText: composerWorkspaceState.activeDraft,
           onDraftChange: composerWorkspaceState.handleDraftChange,
           attachedImages: composerWorkspaceState.activeImages,
+          attachedFiles: composerWorkspaceState.activeFileAttachments,
           onPickImages: composerWorkspaceState.pickImages,
           onAttachImages: composerWorkspaceState.attachImages,
           onRemoveImage: composerWorkspaceState.removeImage,
+          onRemoveFileAttachment: composerWorkspaceState.removeFileAttachment,
+          onClearFileAttachments: composerWorkspaceState.clearActiveFileAttachments,
           prefillDraft: composerWorkspaceState.prefillDraft,
           onPrefillHandled: (id) => {
             if (composerWorkspaceState.prefillDraft?.id === id) {
@@ -483,8 +489,6 @@ function buildPrimarySurface({
           codexArgsOptions,
           selectedCodexArgsOverride,
           onSelectCodexArgsOverride,
-          accessMode,
-          onSelectAccessMode,
           skills,
           appsEnabled: appSettings.experimentalAppsEnabled,
           apps,
@@ -803,6 +807,28 @@ function buildGitSurface({
         gitState.diffSource === "pr" ? gitState.gitPullRequestComments : [],
       pullRequestCommentsLoading: gitState.gitPullRequestCommentsLoading,
       pullRequestCommentsError: gitState.gitPullRequestCommentsError,
+      pullRequestReviewThreads:
+        gitState.diffSource === "pr" ? gitState.gitPullRequestReviewThreads : [],
+      pullRequestReviewThreadsLoading: gitState.gitPullRequestReviewThreadsLoading,
+      pullRequestReviewThreadsError: gitState.gitPullRequestReviewThreadsError,
+      onReplyPullRequestReviewThread: gitState.handleReplyPullRequestReviewThread,
+      onResolvePullRequestReviewThread: gitState.handleResolvePullRequestReviewThread,
+      onAddPullRequestReviewThreadToChat:
+        activeWorkspace && gitState.selectedPullRequest
+          ? async (thread) => {
+              const path = pullRequestReviewThreadMarkdownPath({
+                workspace: activeWorkspace,
+                pullRequest: gitState.selectedPullRequest!,
+                thread,
+              });
+              const content = buildPullRequestReviewThreadMarkdown({
+                pullRequest: gitState.selectedPullRequest!,
+                thread,
+              });
+              await writeTextFile(path, content);
+              composerWorkspaceState.attachFileAttachments([path]);
+            }
+          : undefined,
       pullRequestReviewActions: gitState.pullRequestReviewActions,
       onRunPullRequestReview: gitState.runPullRequestReview,
       pullRequestReviewLaunching: gitState.isLaunchingPullRequestReview,
@@ -973,8 +999,6 @@ export function useMainAppLayoutSurfaces({
   codexArgsOptions,
   selectedCodexArgsOverride,
   onSelectCodexArgsOverride,
-  accessMode,
-  onSelectAccessMode,
   skills,
   apps,
   prompts,
@@ -1120,8 +1144,6 @@ export function useMainAppLayoutSurfaces({
     codexArgsOptions,
     selectedCodexArgsOverride,
     onSelectCodexArgsOverride,
-    accessMode,
-    onSelectAccessMode,
     skills,
     apps,
     prompts,

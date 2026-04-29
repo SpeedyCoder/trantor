@@ -72,9 +72,35 @@ describe("useCollaborationModes", () => {
     rerender({ workspace: workspaceTwoConnected, enabled: true });
 
     await waitFor(() => {
-      expect(getCollaborationModes).toHaveBeenCalledWith("workspace-2");
+      expect(getCollaborationModes).toHaveBeenCalledWith("workspace-2", "codex");
       expect(result.current.selectedCollaborationModeId).toBe("plan");
     });
+  });
+
+  it("loads modes for the selected runtime", async () => {
+    vi.mocked(getCollaborationModes).mockResolvedValue(makeModesResponse());
+
+    const { rerender } = renderHook(
+      ({ runtime }: { runtime: "codex" | "claude" }) =>
+        useCollaborationModes({
+          activeWorkspace: workspaceOne,
+          enabled: true,
+          runtime,
+        }),
+      {
+        initialProps: { runtime: "codex" },
+      },
+    );
+
+    await waitFor(() =>
+      expect(getCollaborationModes).toHaveBeenCalledWith("workspace-1", "codex"),
+    );
+
+    rerender({ runtime: "claude" });
+
+    await waitFor(() =>
+      expect(getCollaborationModes).toHaveBeenCalledWith("workspace-1", "claude"),
+    );
   });
 
   it("resets the selection when the feature is disabled", async () => {

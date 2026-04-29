@@ -8,6 +8,7 @@ import {
 import {
   normalizeEffortValue,
   parseModelListResponse,
+  unavailableModelIdsFromResponse,
 } from "../utils/modelListResponse";
 
 type UseModelsOptions = {
@@ -296,6 +297,7 @@ export function useModels({
       }
       const response =
         modelListResult.status === "fulfilled" ? modelListResult.value : null;
+      const unavailableModelIds = unavailableModelIdsFromResponse(response);
       if (modelListResult.status === "rejected") {
         onDebug?.({
           id: `${Date.now()}-client-model-list-error`,
@@ -323,12 +325,18 @@ export function useModels({
         if (!configModelFromConfig) {
           return dataFromServer;
         }
+        if (unavailableModelIds.has(configModelFromConfig)) {
+          return dataFromServer;
+        }
         const hasConfigModel = dataFromServer.some(
           (model) =>
             model.model === configModelFromConfig ||
             model.providerModelId === configModelFromConfig,
         );
         if (hasConfigModel) {
+          return dataFromServer;
+        }
+        if (dataFromServer.length > 0) {
           return dataFromServer;
         }
         const configOption: ModelOption = {

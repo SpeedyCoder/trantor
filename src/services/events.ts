@@ -107,11 +107,9 @@ const menuPrevAgentHub = createEventHub<void>("menu-prev-agent");
 const menuNextWorkspaceHub = createEventHub<void>("menu-next-workspace");
 const menuPrevWorkspaceHub = createEventHub<void>("menu-prev-workspace");
 const menuCycleModelHub = createEventHub<void>("menu-composer-cycle-model");
-const menuCycleAccessHub = createEventHub<void>("menu-composer-cycle-access");
 const menuCycleReasoningHub = createEventHub<void>("menu-composer-cycle-reasoning");
 const menuCycleCollaborationHub = createEventHub<void>("menu-composer-cycle-collaboration");
 const menuComposerCycleModelHub = createEventHub<void>("menu-composer-cycle-model");
-const menuComposerCycleAccessHub = createEventHub<void>("menu-composer-cycle-access");
 const menuComposerCycleReasoningHub = createEventHub<void>("menu-composer-cycle-reasoning");
 const menuComposerCycleCollaborationHub = createEventHub<void>(
   "menu-composer-cycle-collaboration",
@@ -296,15 +294,6 @@ export function subscribeMenuCycleModel(
   }, options);
 }
 
-export function subscribeMenuCycleAccessMode(
-  onEvent: () => void,
-  options?: SubscriptionOptions,
-): Unsubscribe {
-  return menuCycleAccessHub.subscribe(() => {
-    onEvent();
-  }, options);
-}
-
 export function subscribeMenuCycleReasoning(
   onEvent: () => void,
   options?: SubscriptionOptions,
@@ -328,15 +317,6 @@ export function subscribeMenuComposerCycleModel(
   options?: SubscriptionOptions,
 ): Unsubscribe {
   return menuComposerCycleModelHub.subscribe(() => {
-    onEvent();
-  }, options);
-}
-
-export function subscribeMenuComposerCycleAccess(
-  onEvent: () => void,
-  options?: SubscriptionOptions,
-): Unsubscribe {
-  return menuComposerCycleAccessHub.subscribe(() => {
     onEvent();
   }, options);
 }

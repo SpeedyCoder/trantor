@@ -310,7 +310,8 @@ export default function MainApp() {
     setSelectedCollaborationModeId,
   } = useCollaborationModes({
     activeWorkspace,
-    enabled: appSettings.collaborationModesEnabled && !isClaudeRuntime,
+    enabled: appSettings.collaborationModesEnabled,
+    runtime: selectedHarness,
     preferredModeId: preferredCollabModeId,
     selectionKey: threadCodexSelectionKey,
     onDebug: addDebugEntry,
@@ -335,7 +336,6 @@ export default function MainApp() {
     handleSelectEffort,
     handleSelectServiceTier,
     handleSelectCollaborationMode,
-    handleSelectAccessMode,
     handleSelectCodexArgsOverride,
   } = useThreadSelectionHandlersOrchestration({
     appSettingsLoading,
@@ -358,7 +358,6 @@ export default function MainApp() {
 
   const composerShortcuts = {
     modelShortcut: appSettings.composerModelShortcut,
-    accessShortcut: appSettings.composerAccessShortcut,
     reasoningShortcut: appSettings.composerReasoningShortcut,
     collaborationShortcut: appSettings.collaborationModesEnabled
       ? appSettings.composerCollaborationShortcut
@@ -369,8 +368,6 @@ export default function MainApp() {
     onSelectModel: handleSelectModel,
     selectedCollaborationModeId,
     onSelectCollaborationMode: handleSelectCollaborationMode,
-    accessMode,
-    onSelectAccessMode: handleSelectAccessMode,
     reasoningOptions,
     selectedEffort,
     onSelectEffort: handleSelectEffort,
@@ -395,8 +392,6 @@ export default function MainApp() {
     collaborationModes,
     selectedCollaborationModeId,
     onSelectCollaborationMode: handleSelectCollaborationMode,
-    accessMode,
-    onSelectAccessMode: handleSelectAccessMode,
     reasoningOptions,
     selectedEffort,
     onSelectEffort: handleSelectEffort,
@@ -633,6 +628,7 @@ export default function MainApp() {
     handleGitPullRequestsChange,
     handleGitPullRequestDiffsChange,
     handleGitPullRequestCommentsChange,
+    handleGitPullRequestReviewThreadsChange,
     refreshGitRemote,
     branches,
     currentBranch,
@@ -1003,6 +999,7 @@ export default function MainApp() {
       connectWorkspace,
       selectWorkspace,
       linearEnabled: Boolean(appSettings.linearApiToken?.trim()),
+      defaultWorktreeBranchFormat: appSettings.defaultWorktreeBranchFormat,
       handleWorktreeCreated,
       onCompactActivate: isCompact ? () => setActiveTab("codex") : undefined,
       onWorkspacePromptError: (message, kind) => {
@@ -1595,6 +1592,7 @@ export default function MainApp() {
       splitChatDiffView: appSettings.splitChatDiffView,
       gitDiffIgnoreWhitespaceChanges:
         appSettings.gitDiffIgnoreWhitespaceChanges,
+      defaultWorktreeBranchFormat: appSettings.defaultWorktreeBranchFormat,
     },
     workspaces,
     groupedWorkspaces,
@@ -1701,8 +1699,6 @@ export default function MainApp() {
     codexArgsOptions,
     selectedCodexArgsOverride,
     onSelectCodexArgsOverride: handleSelectCodexArgsOverride,
-    accessMode,
-    onSelectAccessMode: handleSelectAccessMode,
     skills,
     apps,
     prompts,
@@ -1855,6 +1851,7 @@ export default function MainApp() {
       onPullRequestsChange: handleGitPullRequestsChange,
       onPullRequestDiffsChange: handleGitPullRequestDiffsChange,
       onPullRequestCommentsChange: handleGitPullRequestCommentsChange,
+      onPullRequestReviewThreadsChange: handleGitPullRequestReviewThreadsChange,
     },
     appLayout: {
       isPhone,

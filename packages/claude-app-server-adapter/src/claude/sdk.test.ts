@@ -77,6 +77,44 @@ describe("runClaudeTurn", () => {
         prompt: "Say hello",
         options: expect.not.objectContaining({
           maxTurns: expect.anything(),
+          systemPrompt: expect.anything(),
+        }),
+      }),
+    );
+  });
+
+  it("appends plan-mode instructions to the Claude Code system prompt", async () => {
+    queryMock.mockReturnValue(
+      createAsyncIterable([
+        {
+          type: "assistant",
+          message: {
+            content: [{ type: "text", text: "Plan" }],
+          },
+        },
+      ]),
+    );
+
+    await runClaudeTurn({
+      thread: {
+        cwd: "/tmp/workspace",
+        sdkSessionId: null,
+      },
+      prompt: "Plan the work",
+      systemPromptAppend: "Use plan mode.",
+      abortController: new AbortController(),
+      onSessionReady: vi.fn(),
+      onDelta: vi.fn(),
+    });
+
+    expect(queryMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        options: expect.objectContaining({
+          systemPrompt: {
+            type: "preset",
+            preset: "claude_code",
+            append: "Use plan mode.",
+          },
         }),
       }),
     );

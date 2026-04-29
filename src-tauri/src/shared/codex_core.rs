@@ -46,12 +46,27 @@ pub(crate) fn normalize_model_id(runtime: &AgentRuntime, model_id: &str) -> Stri
 }
 
 pub(crate) fn native_model_id(model_id: &str) -> String {
-    model_id
+    let trimmed = model_id.trim();
+    trimmed
         .strip_prefix(CODEX_MODEL_PREFIX)
-        .or_else(|| model_id.strip_prefix(CLAUDE_MODEL_PREFIX))
-        .unwrap_or(model_id)
+        .or_else(|| trimmed.strip_prefix(CLAUDE_MODEL_PREFIX))
+        .unwrap_or(trimmed)
         .trim()
         .to_string()
+}
+
+fn normalize_collaboration_mode_model(mut collaboration_mode: Value) -> Value {
+    let Some(settings) = collaboration_mode
+        .get_mut("settings")
+        .and_then(Value::as_object_mut)
+    else {
+        return collaboration_mode;
+    };
+    let Some(model) = settings.get("model").and_then(Value::as_str) else {
+        return collaboration_mode;
+    };
+    settings.insert("model".to_string(), json!(native_model_id(model)));
+    collaboration_mode
 }
 
 pub(crate) fn runtime_for_model_id(model_id: Option<&str>) -> AgentRuntime {
@@ -266,7 +281,12 @@ pub(crate) async fn find_thread_session(
         sessions_guard.values().cloned().collect::<Vec<_>>()
     };
     for session in all_sessions {
-        let mapped_workspace = session.thread_workspace.lock().await.get(thread_id).cloned();
+        let mapped_workspace = session
+            .thread_workspace
+            .lock()
+            .await
+            .get(thread_id)
+            .cloned();
         if mapped_workspace.as_deref() == Some(workspace_id) {
             return Ok(session);
         }
@@ -490,7 +510,10 @@ pub(crate) async fn archive_all_threads_for_workspace_core(
                 )
                 .await;
         }
-        let next_cursor = result.get("nextCursor").cloned().filter(|value| !value.is_null());
+        let next_cursor = result
+            .get("nextCursor")
+            .cloned()
+            .filter(|value| !value.is_null());
         if next_cursor.is_none() {
             break;
         }
@@ -614,7 +637,7 @@ pub(crate) async fn send_user_message_core(
 ) -> Result<Value, String> {
     let session = find_thread_session(sessions, &workspace_id, &thread_id).await?;
     let workspace_path = resolve_workspace_path_core(workspaces, &workspace_id).await?;
-    let access_mode = access_mode.unwrap_or_else(|| "current".to_string());
+    let access_mode = access_mode.unwrap_or_else(|| "full-access".to_string());
     let sandbox_policy = match access_mode.as_str() {
         "full-access" => json!({ "type": "dangerFullAccess" }),
         "read-only" => json!({ "type": "readOnly" }),
@@ -647,7 +670,10 @@ pub(crate) async fn send_user_message_core(
     insert_optional_nullable_string(&mut params, "serviceTier", service_tier);
     if let Some(mode) = collaboration_mode {
         if !mode.is_null() {
-            params.insert("collaborationMode".to_string(), mode);
+            params.insert(
+                "collaborationMode".to_string(),
+                normalize_collaboration_mode_model(mode),
+            );
         }
     }
     session
@@ -682,8 +708,9 @@ pub(crate) async fn turn_steer_core(
 pub(crate) async fn collaboration_mode_list_core(
     sessions: &Mutex<HashMap<String, Arc<WorkspaceSession>>>,
     workspace_id: String,
+    runtime: AgentRuntime,
 ) -> Result<Value, String> {
-    let session = get_session_clone(sessions, &workspace_id, AgentRuntime::Codex).await?;
+    let session = get_session_clone(sessions, &workspace_id, runtime).await?;
     session
         .send_request_for_workspace(&workspace_id, "collaborationMode/list", json!({}))
         .await
@@ -1074,6 +1101,7 @@ mod tests {
     fn native_model_id_strips_runtime_prefixes() {
         assert_eq!(native_model_id("codex:gpt-5.4"), "gpt-5.4");
         assert_eq!(native_model_id("claude:sonnet-4.5"), "sonnet-4.5");
+        assert_eq!(native_model_id(" codex:gpt-5.5 "), "gpt-5.5");
         assert_eq!(native_model_id(" gpt-5.4 "), "gpt-5.4");
     }
 
@@ -1160,6 +1188,21 @@ mod tests {
 
         insert_optional_nullable_string(&mut params, "serviceTier", Some(Some("fast".to_string())));
         assert_eq!(params.get("serviceTier"), Some(&json!("fast")));
+    }
+
+    #[test]
+    fn normalize_collaboration_mode_model_strips_runtime_prefix() {
+        let mode = json!({
+            "mode": "default",
+            "settings": {
+                "id": "default",
+                "model": "codex:gpt-5.5"
+            }
+        });
+
+        let normalized = normalize_collaboration_mode_model(mode);
+
+        assert_eq!(normalized["settings"]["model"], "gpt-5.5");
     }
 
     #[test]

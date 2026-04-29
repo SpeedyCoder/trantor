@@ -8,7 +8,8 @@ use crate::shared::{git_rpc, git_ui_core, linear_core};
 use crate::state::AppState;
 use crate::types::{
     GitCommitDiff, GitFileDiff, GitHubIssuesResponse, GitHubPullRequestComment,
-    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, LinearIssuesResponse,
+    GitHubPullRequestDiff, GitHubPullRequestReviewThread, GitHubPullRequestsResponse,
+    GitLogResponse, LinearIssuesResponse,
 };
 
 fn git_remote_params<T: Serialize>(request: &T) -> Result<Value, String> {
@@ -552,6 +553,87 @@ pub(crate) async fn get_github_pull_request_comments(
     );
     git_ui_core::get_github_pull_request_comments_core(&state.workspaces, workspace_id, pr_number)
         .await
+}
+
+#[tauri::command]
+pub(crate) async fn get_github_pull_request_review_threads(
+    workspace_id: String,
+    pr_number: u64,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<Vec<GitHubPullRequestReviewThread>, String> {
+    let request = git_rpc::GitHubPullRequestRequest {
+        workspace_id: workspace_id.clone(),
+        pr_number,
+    };
+    try_remote_typed!(
+        state,
+        app,
+        git_rpc::METHOD_GET_GITHUB_PULL_REQUEST_REVIEW_THREADS,
+        git_remote_params(&request)?,
+        Vec<GitHubPullRequestReviewThread>
+    );
+    git_ui_core::get_github_pull_request_review_threads_core(
+        &state.workspaces,
+        workspace_id,
+        pr_number,
+    )
+    .await
+}
+
+#[tauri::command]
+pub(crate) async fn reply_github_pull_request_review_thread(
+    workspace_id: String,
+    thread_id: String,
+    body: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<GitHubPullRequestReviewThread, String> {
+    let request = git_rpc::GitHubPullRequestReviewThreadReplyRequest {
+        workspace_id: workspace_id.clone(),
+        thread_id: thread_id.clone(),
+        body: body.clone(),
+    };
+    try_remote_typed!(
+        state,
+        app,
+        git_rpc::METHOD_REPLY_GITHUB_PULL_REQUEST_REVIEW_THREAD,
+        git_remote_params(&request)?,
+        GitHubPullRequestReviewThread
+    );
+    git_ui_core::reply_github_pull_request_review_thread_core(
+        &state.workspaces,
+        workspace_id,
+        thread_id,
+        body,
+    )
+    .await
+}
+
+#[tauri::command]
+pub(crate) async fn resolve_github_pull_request_review_thread(
+    workspace_id: String,
+    thread_id: String,
+    state: State<'_, AppState>,
+    app: AppHandle,
+) -> Result<GitHubPullRequestReviewThread, String> {
+    let request = git_rpc::GitHubPullRequestReviewThreadRequest {
+        workspace_id: workspace_id.clone(),
+        thread_id: thread_id.clone(),
+    };
+    try_remote_typed!(
+        state,
+        app,
+        git_rpc::METHOD_RESOLVE_GITHUB_PULL_REQUEST_REVIEW_THREAD,
+        git_remote_params(&request)?,
+        GitHubPullRequestReviewThread
+    );
+    git_ui_core::resolve_github_pull_request_review_thread_core(
+        &state.workspaces,
+        workspace_id,
+        thread_id,
+    )
+    .await
 }
 
 #[tauri::command]

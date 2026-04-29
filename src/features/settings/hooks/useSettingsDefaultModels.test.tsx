@@ -179,4 +179,76 @@ describe("useSettingsDefaultModels", () => {
       expect(getModelListMock).not.toHaveBeenCalled();
     });
   });
+
+  it("does not inject missing config models when model/list has usable models", async () => {
+    getConfigModelMock.mockResolvedValueOnce("gpt-5.5");
+    getModelListMock.mockResolvedValueOnce(modelListResponse("gpt-5.4"));
+
+    const { result } = renderHook(
+      ({ projects }: { projects: WorkspaceInfo[] }) => useSettingsDefaultModels(projects),
+      {
+        initialProps: {
+          projects: [workspace("w1", true)],
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.models.map((model) => model.model)).toEqual(["gpt-5.4"]);
+    });
+  });
+
+  it("strips runtime prefixes from config fallback models", async () => {
+    connectWorkspaceMock.mockRejectedValueOnce(new Error("connect failed"));
+    getConfigModelMock.mockResolvedValueOnce("codex:gpt-5.5");
+
+    const { result } = renderHook(
+      ({ projects }: { projects: WorkspaceInfo[] }) => useSettingsDefaultModels(projects),
+      {
+        initialProps: {
+          projects: [workspace("w1", false)],
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.models[0]?.id).toBe("gpt-5.5");
+      expect(result.current.models[0]?.model).toBe("gpt-5.5");
+      expect(result.current.models[0]?.displayName).toBe("gpt-5.5 (config)");
+    });
+  });
+
+  it("does not re-add upgrade-gated config models", async () => {
+    getConfigModelMock.mockResolvedValueOnce("gpt-5.5");
+    getModelListMock.mockResolvedValueOnce({
+      result: {
+        data: [
+          {
+            id: "codex:gpt-5.5",
+            model: "gpt-5.5",
+            displayName: "GPT-5.5",
+            upgrade: "latest-codex",
+          },
+          {
+            id: "codex:gpt-5.4",
+            model: "gpt-5.4",
+            displayName: "GPT-5.4",
+          },
+        ],
+      },
+    });
+
+    const { result } = renderHook(
+      ({ projects }: { projects: WorkspaceInfo[] }) => useSettingsDefaultModels(projects),
+      {
+        initialProps: {
+          projects: [workspace("w1", true)],
+        },
+      },
+    );
+
+    await waitFor(() => {
+      expect(result.current.models.map((model) => model.model)).toEqual(["gpt-5.4"]);
+    });
+  });
 });

@@ -15,6 +15,7 @@ import {
   ThreadResumeResponse,
   ThreadSetNameResponse,
   ThreadStartResponse,
+  CollaborationModeListResponse,
   ModelListResponse,
   TurnInterruptResponse,
   TurnStartResponse,
@@ -37,6 +38,7 @@ export type ResponsePayload =
   | ThreadArchiveResponse
   | ThreadCompactStartResponse
   | ThreadSetNameResponse
+  | CollaborationModeListResponse
   | ModelListResponse
   | TurnStartResponse
   | TurnSteerResponse

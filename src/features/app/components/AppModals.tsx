@@ -198,6 +198,7 @@ export const AppModals = memo(function AppModals({
             linearQuery={worktreePrompt.linearQuery}
             linearIssues={worktreePrompt.linearIssues}
             linearLoading={worktreePrompt.linearLoading}
+            selectedLinearIssueId={worktreePrompt.selectedLinearIssue?.id ?? null}
             branch={worktreePrompt.branch}
             branchWasEdited={worktreePrompt.branchWasEdited}
             branchSuggestions={worktreeBranches}

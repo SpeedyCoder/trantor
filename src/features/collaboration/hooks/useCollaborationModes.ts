@@ -4,11 +4,13 @@ import type {
   DebugEntry,
   WorkspaceInfo,
 } from "../../../types";
+import type { AgentHarness } from "../../models/utils/modelRuntime";
 import { getCollaborationModes } from "../../../services/tauri";
 
 type UseCollaborationModesOptions = {
   activeWorkspace: WorkspaceInfo | null;
   enabled: boolean;
+  runtime?: AgentHarness;
   preferredModeId?: string | null;
   selectionKey?: string | null;
   onDebug?: (entry: DebugEntry) => void;
@@ -34,14 +36,15 @@ function pickWorkspaceDefaultModeId(modes: CollaborationModeOption[]): string | 
 export function useCollaborationModes({
   activeWorkspace,
   enabled,
+  runtime = "codex",
   preferredModeId = null,
   selectionKey = null,
   onDebug,
 }: UseCollaborationModesOptions) {
   const [modes, setModes] = useState<CollaborationModeOption[]>([]);
   const [selectedModeId, setSelectedModeId] = useState<string | null>(null);
-  const lastFetchedWorkspaceId = useRef<string | null>(null);
-  const previousWorkspaceId = useRef<string | null>(null);
+  const lastFetchedKey = useRef<string | null>(null);
+  const previousFetchKey = useRef<string | null>(null);
   const inFlight = useRef(false);
   const selectedModeIdRef = useRef<string | null>(null);
   const lastSelectionKey = useRef<string | null>(null);
@@ -49,6 +52,7 @@ export function useCollaborationModes({
 
   const workspaceId = activeWorkspace?.id ?? null;
   const isConnected = Boolean(activeWorkspace?.connected);
+  const fetchKey = workspaceId ? `${workspaceId}:${runtime}` : null;
 
   const extractModeList = useCallback((response: any): any[] => {
     const candidates = [
@@ -97,10 +101,10 @@ export function useCollaborationModes({
       timestamp: Date.now(),
       source: "client",
       label: "collaborationMode/list",
-      payload: { workspaceId },
+      payload: { workspaceId, runtime },
     });
     try {
-      const response = await getCollaborationModes(workspaceId);
+      const response = await getCollaborationModes(workspaceId, runtime);
       onDebug?.({
         id: `${Date.now()}-server-collaboration-mode-list`,
         timestamp: Date.now(),
@@ -158,7 +162,7 @@ export function useCollaborationModes({
         })
         .filter((mode): mode is CollaborationModeOption => mode !== null);
       setModes(data);
-      lastFetchedWorkspaceId.current = workspaceId;
+      lastFetchedKey.current = fetchKey;
       const workspaceDefaultModeId = pickWorkspaceDefaultModeId(data);
       setSelectedModeId((currentSelection) => {
         const selection = currentSelection ?? selectedModeIdRef.current;
@@ -181,7 +185,7 @@ export function useCollaborationModes({
     } finally {
       inFlight.current = false;
     }
-  }, [enabled, extractModeList, isConnected, onDebug, workspaceId]);
+  }, [enabled, extractModeList, fetchKey, isConnected, onDebug, runtime, workspaceId]);
 
   useEffect(() => {
     selectedModeIdRef.current = selectedModeId;
@@ -215,31 +219,30 @@ export function useCollaborationModes({
   }, [enabled, modes, preferredModeId, selectionKey]);
 
   useEffect(() => {
-    if (previousWorkspaceId.current !== workspaceId) {
-      previousWorkspaceId.current = workspaceId;
+    if (previousFetchKey.current !== fetchKey) {
+      previousFetchKey.current = fetchKey;
       setModes([]);
-      lastFetchedWorkspaceId.current = null;
+      lastFetchedKey.current = null;
     }
-  }, [workspaceId]);
+  }, [fetchKey]);
 
   useEffect(() => {
     if (!enabled) {
       setModes([]);
       setSelectedModeId(null);
-      lastFetchedWorkspaceId.current = null;
+      lastFetchedKey.current = null;
       return;
     }
     if (!workspaceId || !isConnected) {
       setModes([]);
-      lastFetchedWorkspaceId.current = null;
+      lastFetchedKey.current = null;
       return;
     }
-    const alreadyFetchedForWorkspace = lastFetchedWorkspaceId.current === workspaceId;
-    if (alreadyFetchedForWorkspace) {
+    if (lastFetchedKey.current === fetchKey) {
       return;
     }
     refreshModes();
-  }, [enabled, isConnected, modes.length, refreshModes, workspaceId]);
+  }, [enabled, fetchKey, isConnected, modes.length, refreshModes, workspaceId]);
 
   return {
     collaborationModes: modes,

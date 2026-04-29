@@ -3,6 +3,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WorkspaceInfo } from "../../../types";
 import {
+  addWorktree,
   addWorkspace,
   addWorkspaceFromGitUrl,
   connectWorkspace as connectWorkspaceService,
@@ -253,6 +254,65 @@ describe("useWorkspaces.addWorkspaceFromPath", () => {
     expect(addWorkspaceMock).toHaveBeenCalledWith("/tmp/repo");
     expect(result.current.workspaces).toHaveLength(1);
     expect(result.current.activeWorkspaceId).toBe("workspace-1");
+  });
+});
+
+describe("useWorkspaces.addWorktreeAgent", () => {
+  it("expands the parent project after creating a worktree", async () => {
+    const parentWorkspace: WorkspaceInfo = {
+      ...workspaceOne,
+      settings: { ...workspaceOne.settings, sidebarCollapsed: true },
+    };
+    const newWorktree: WorkspaceInfo = {
+      id: "wt-new",
+      name: "feature/new",
+      path: "/tmp/wt-new",
+      connected: true,
+      kind: "worktree",
+      parentId: parentWorkspace.id,
+      worktree: { branch: "feature/new" },
+      settings: { sidebarCollapsed: false },
+    };
+    const listWorkspacesMock = vi.mocked(listWorkspaces);
+    const addWorktreeMock = vi.mocked(addWorktree);
+    const updateWorkspaceSettingsMock = vi.mocked(updateWorkspaceSettings);
+    listWorkspacesMock.mockResolvedValue([parentWorkspace]);
+    addWorktreeMock.mockResolvedValue(newWorktree);
+    updateWorkspaceSettingsMock.mockResolvedValue({
+      ...parentWorkspace,
+      settings: { ...parentWorkspace.settings, sidebarCollapsed: false },
+    });
+
+    const { result } = renderHook(() => useWorkspaces());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    await act(async () => {
+      await result.current.addWorktreeAgent(parentWorkspace, "feature/new", {
+        activate: false,
+      });
+    });
+
+    expect(addWorktreeMock).toHaveBeenCalledWith(
+      parentWorkspace.id,
+      "feature/new",
+      null,
+      true,
+    );
+    expect(updateWorkspaceSettingsMock).toHaveBeenCalledWith(parentWorkspace.id, {
+      ...parentWorkspace.settings,
+      sidebarCollapsed: false,
+    });
+    expect(
+      result.current.workspaces.find((entry) => entry.id === parentWorkspace.id)
+        ?.settings.sidebarCollapsed,
+    ).toBe(false);
+    expect(result.current.workspaces.find((entry) => entry.id === newWorktree.id)).toEqual(
+      newWorktree,
+    );
+    expect(result.current.activeWorkspaceId).toBeNull();
   });
 });
 

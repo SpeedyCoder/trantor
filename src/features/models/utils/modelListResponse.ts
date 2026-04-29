@@ -32,6 +32,63 @@ function extractModelItems(response: unknown): unknown[] {
   return [];
 }
 
+function stripRuntimePrefix(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.startsWith("codex:")) {
+    return trimmed.slice("codex:".length).trim();
+  }
+  if (trimmed.startsWith("claude:")) {
+    return trimmed.slice("claude:".length).trim();
+  }
+  return trimmed;
+}
+
+function stringCandidates(...values: unknown[]): string[] {
+  const candidates = new Set<string>();
+  values.forEach((value) => {
+    if (typeof value !== "string") {
+      return;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    candidates.add(trimmed);
+    candidates.add(stripRuntimePrefix(trimmed));
+  });
+  return Array.from(candidates);
+}
+
+function isUnavailableModelRecord(record: Record<string, unknown>): boolean {
+  if (record.hidden === true) {
+    return true;
+  }
+  if (typeof record.upgrade === "string" && record.upgrade.trim().length > 0) {
+    return true;
+  }
+  return record.upgradeInfo !== undefined && record.upgradeInfo !== null;
+}
+
+export function unavailableModelIdsFromResponse(response: unknown): Set<string> {
+  const unavailable = new Set<string>();
+  extractModelItems(response).forEach((item) => {
+    if (!item || typeof item !== "object") {
+      return;
+    }
+    const record = item as Record<string, unknown>;
+    if (!isUnavailableModelRecord(record)) {
+      return;
+    }
+    stringCandidates(
+      record.id,
+      record.model,
+      record.providerModelId,
+      record.provider_model_id,
+    ).forEach((candidate) => unavailable.add(candidate));
+  });
+  return unavailable;
+}
+
 function parseReasoningEfforts(item: Record<string, unknown>): ModelOption["supportedReasoningEfforts"] {
   const camel = item.supportedReasoningEfforts;
   if (Array.isArray(camel)) {
@@ -81,6 +138,9 @@ export function parseModelListResponse(response: unknown): ModelOption[] {
         return null;
       }
       const record = item as Record<string, unknown>;
+      if (isUnavailableModelRecord(record)) {
+        return null;
+      }
       const modelSlug = String(record.model ?? record.id ?? "");
       const rawDisplayName = String(record.displayName || record.display_name || "");
       const displayName = rawDisplayName.trim().length > 0 ? rawDisplayName : modelSlug;

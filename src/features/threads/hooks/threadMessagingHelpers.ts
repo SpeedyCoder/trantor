@@ -127,8 +127,7 @@ export function resolveSendMessageOptions({
     "settings" in resolvedCollaborationMode
       ? resolvedCollaborationMode
       : null;
-  const resolvedAccessMode =
-    options?.accessMode !== undefined ? options.accessMode : defaults.accessMode;
+  const resolvedAccessMode: AccessMode = "full-access";
   const appMentions = options?.appMentions ?? [];
   const sendIntent = options?.sendIntent ?? "default";
   const canSteerCurrentTurn =

@@ -1,3 +1,6 @@
+import Eye from "lucide-react/dist/esm/icons/eye";
+import EyeOff from "lucide-react/dist/esm/icons/eye-off";
+import { useState } from "react";
 import type { AppSettings, ModelOption } from "@/types";
 import {
   SettingsSection,
@@ -12,9 +15,15 @@ type SettingsGitSectionProps = {
   commitMessagePromptDraft: string;
   commitMessagePromptDirty: boolean;
   commitMessagePromptSaving: boolean;
+  defaultWorktreeBranchFormatDraft: string;
+  defaultWorktreeBranchFormatDirty: boolean;
+  defaultWorktreeBranchFormatSaving: boolean;
   onSetCommitMessagePromptDraft: (value: string) => void;
   onSaveCommitMessagePrompt: () => Promise<void>;
   onResetCommitMessagePrompt: () => Promise<void>;
+  onSetDefaultWorktreeBranchFormatDraft: (value: string) => void;
+  onSaveDefaultWorktreeBranchFormat: () => Promise<void>;
+  onResetDefaultWorktreeBranchFormat: () => void;
 };
 
 export function SettingsGitSection({
@@ -24,10 +33,21 @@ export function SettingsGitSection({
   commitMessagePromptDraft,
   commitMessagePromptDirty,
   commitMessagePromptSaving,
+  defaultWorktreeBranchFormatDraft,
+  defaultWorktreeBranchFormatDirty,
+  defaultWorktreeBranchFormatSaving,
   onSetCommitMessagePromptDraft,
   onSaveCommitMessagePrompt,
   onResetCommitMessagePrompt,
+  onSetDefaultWorktreeBranchFormatDraft,
+  onSaveDefaultWorktreeBranchFormat,
+  onResetDefaultWorktreeBranchFormat,
 }: SettingsGitSectionProps) {
+  const [showLinearApiToken, setShowLinearApiToken] = useState(false);
+  const linearApiTokenVisibilityLabel = showLinearApiToken
+    ? "Hide Linear API token"
+    : "Show Linear API token";
+
   return (
     <SettingsSection
       title="Git"
@@ -62,27 +82,83 @@ export function SettingsGitSection({
         />
       </SettingsToggleRow>
       <div className="settings-field">
+        <label className="settings-field-label" htmlFor="settings-default-worktree-branch-format">
+          Default worktree branch format
+        </label>
+        <div className="settings-help">
+          Used to prefill the new worktree agent modal. Available tokens: {"{date}"}, {"{random}"}, {"{project}"}.
+        </div>
+        <input
+          id="settings-default-worktree-branch-format"
+          type="text"
+          className="settings-input"
+          value={defaultWorktreeBranchFormatDraft}
+          onChange={(event) => onSetDefaultWorktreeBranchFormatDraft(event.target.value)}
+          placeholder="trantor/{date}-{random}"
+          disabled={defaultWorktreeBranchFormatSaving}
+        />
+        <div className="settings-field-actions">
+          <button
+            type="button"
+            className="ghost settings-button-compact"
+            onClick={onResetDefaultWorktreeBranchFormat}
+            disabled={
+              defaultWorktreeBranchFormatSaving || !defaultWorktreeBranchFormatDirty
+            }
+          >
+            Reset format
+          </button>
+          <button
+            type="button"
+            className="primary settings-button-compact"
+            onClick={() => {
+              void onSaveDefaultWorktreeBranchFormat();
+            }}
+            disabled={
+              defaultWorktreeBranchFormatSaving || !defaultWorktreeBranchFormatDirty
+            }
+          >
+            {defaultWorktreeBranchFormatSaving ? "Saving format..." : "Save format"}
+          </button>
+        </div>
+      </div>
+      <div className="settings-field">
         <label className="settings-field-label" htmlFor="linear-api-token">
           Linear API token
         </label>
         <div className="settings-help">
           Enables Linear issue search when creating worktree agents.
         </div>
-        <input
-          id="linear-api-token"
-          className="settings-input"
-          type="password"
-          value={appSettings.linearApiToken ?? ""}
-          placeholder="lin_api_..."
-          autoComplete="off"
-          onChange={(event) => {
-            const value = event.target.value.trim();
-            void onUpdateAppSettings({
-              ...appSettings,
-              linearApiToken: value.length > 0 ? value : null,
-            });
-          }}
-        />
+        <div className="settings-input-with-action">
+          <input
+            id="linear-api-token"
+            className="settings-input settings-input--with-action"
+            type={showLinearApiToken ? "text" : "password"}
+            value={appSettings.linearApiToken ?? ""}
+            placeholder="lin_api_..."
+            autoComplete="off"
+            onChange={(event) => {
+              const value = event.target.value.trim();
+              void onUpdateAppSettings({
+                ...appSettings,
+                linearApiToken: value.length > 0 ? value : null,
+              });
+            }}
+          />
+          <button
+            type="button"
+            className="ghost settings-icon-button settings-input-action"
+            onClick={() => setShowLinearApiToken((show) => !show)}
+            aria-label={linearApiTokenVisibilityLabel}
+            title={linearApiTokenVisibilityLabel}
+          >
+            {showLinearApiToken ? (
+              <EyeOff aria-hidden="true" />
+            ) : (
+              <Eye aria-hidden="true" />
+            )}
+          </button>
+        </div>
       </div>
       <div className="settings-field">
         <div className="settings-field-label">Commit message prompt</div>

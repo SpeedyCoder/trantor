@@ -25,6 +25,12 @@ pub(crate) const METHOD_SEARCH_LINEAR_ISSUES: &str = "search_linear_issues";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUESTS: &str = "get_github_pull_requests";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUEST_DIFF: &str = "get_github_pull_request_diff";
 pub(crate) const METHOD_GET_GITHUB_PULL_REQUEST_COMMENTS: &str = "get_github_pull_request_comments";
+pub(crate) const METHOD_GET_GITHUB_PULL_REQUEST_REVIEW_THREADS: &str =
+    "get_github_pull_request_review_threads";
+pub(crate) const METHOD_REPLY_GITHUB_PULL_REQUEST_REVIEW_THREAD: &str =
+    "reply_github_pull_request_review_thread";
+pub(crate) const METHOD_RESOLVE_GITHUB_PULL_REQUEST_REVIEW_THREAD: &str =
+    "resolve_github_pull_request_review_thread";
 pub(crate) const METHOD_CHECKOUT_GITHUB_PULL_REQUEST: &str = "checkout_github_pull_request";
 pub(crate) const METHOD_LIST_GIT_BRANCHES: &str = "list_git_branches";
 pub(crate) const METHOD_CHECKOUT_GIT_BRANCH: &str = "checkout_git_branch";
@@ -127,6 +133,21 @@ pub(crate) struct WorkspaceMessageRequest {
 pub(crate) struct GitHubPullRequestRequest {
     pub(crate) workspace_id: String,
     pub(crate) pr_number: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GitHubPullRequestReviewThreadReplyRequest {
+    pub(crate) workspace_id: String,
+    pub(crate) thread_id: String,
+    pub(crate) body: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct GitHubPullRequestReviewThreadRequest {
+    pub(crate) workspace_id: String,
+    pub(crate) thread_id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

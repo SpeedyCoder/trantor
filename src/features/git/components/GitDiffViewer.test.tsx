@@ -40,17 +40,37 @@ vi.mock("@pierre/diffs", () => ({
 vi.mock("@pierre/diffs/react", () => ({
   FileDiff: ({
     renderHoverUtility,
+    lineAnnotations,
+    renderAnnotation,
   }: {
     renderHoverUtility?: (
       getHoveredLine: () =>
         | { lineNumber: number; side?: "additions" | "deletions" }
         | undefined,
     ) => ReactNode;
+    lineAnnotations?: Array<{
+      side: "additions" | "deletions";
+      lineNumber: number;
+      metadata: { thread: { id: string } };
+    }>;
+    renderAnnotation?: (annotation: {
+      side: "additions" | "deletions";
+      lineNumber: number;
+      metadata: { thread: { id: string } };
+    }) => ReactNode;
   }) => (
     <div>
       {renderHoverUtility
         ? renderHoverUtility(() => ({ lineNumber: 2, side: "additions" }))
         : null}
+      {lineAnnotations?.map((annotation) => (
+        <div
+          key={annotation.metadata.thread.id}
+          data-testid={`annotation-${annotation.side}-${annotation.lineNumber}`}
+        >
+          {renderAnnotation?.(annotation)}
+        </div>
+      ))}
     </div>
   ),
   WorkerPoolContextProvider: ({ children }: { children: ReactNode }) => children,
@@ -128,5 +148,71 @@ describe("GitDiffViewer", () => {
     const rawLines = Array.from(document.querySelectorAll(".diff-viewer-raw-line"));
     expect(rawLines[1]?.className).toContain("diff-viewer-raw-line-add");
     expect(rawLines[2]?.className).toContain("diff-viewer-raw-line-del");
+  });
+
+  it("passes review threads as line annotations and collapses resolved threads", () => {
+    render(
+      <GitDiffViewer
+        diffs={[
+          {
+            path: "src/main.ts",
+            status: "M",
+            diff: "@@ -1,1 +1,2 @@\n line one\n+added line",
+          },
+        ]}
+        selectedPath="src/main.ts"
+        isLoading={false}
+        error={null}
+        diffStyle="unified"
+        pullRequestReviewThreads={[
+          {
+            id: "thread-open",
+            isResolved: false,
+            path: "src/main.ts",
+            line: 2,
+            startLine: null,
+            diffSide: "RIGHT",
+            url: "",
+            comments: [
+              {
+                id: "comment-open",
+                databaseId: 1,
+                body: "Please adjust this",
+                createdAt: "2026-04-29T10:00:00Z",
+                url: "",
+                author: { login: "reviewer" },
+              },
+            ],
+          },
+          {
+            id: "thread-resolved",
+            isResolved: true,
+            path: "src/main.ts",
+            line: 1,
+            startLine: null,
+            diffSide: "LEFT",
+            url: "",
+            comments: [
+              {
+                id: "comment-resolved",
+                databaseId: 2,
+                body: "Old issue",
+                createdAt: "2026-04-29T10:00:00Z",
+                url: "",
+                author: { login: "reviewer" },
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("annotation-additions-2")).toBeTruthy();
+    expect(screen.getByTestId("annotation-deletions-1")).toBeTruthy();
+    expect(screen.getByText("Please adjust this")).toBeTruthy();
+    expect(screen.queryByText("Old issue")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand" }));
+    expect(screen.getByText("Old issue")).toBeTruthy();
   });
 });

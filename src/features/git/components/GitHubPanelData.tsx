@@ -4,6 +4,7 @@ import type {
   GitHubPullRequest,
   GitHubPullRequestComment,
   GitHubPullRequestDiff,
+  GitHubPullRequestReviewThread,
   WorkspaceInfo,
 } from "../../../types";
 import type { GitDiffSource, GitPanelMode } from "../types";
@@ -11,6 +12,7 @@ import { useGitHubIssues } from "../hooks/useGitHubIssues";
 import { useGitHubPullRequests } from "../hooks/useGitHubPullRequests";
 import { useGitHubPullRequestDiffs } from "../hooks/useGitHubPullRequestDiffs";
 import { useGitHubPullRequestComments } from "../hooks/useGitHubPullRequestComments";
+import { useGitHubPullRequestReviewThreads } from "../hooks/useGitHubPullRequestReviewThreads";
 
 type IssuesState = {
   issues: GitHubIssue[];
@@ -38,6 +40,12 @@ type PullRequestCommentsState = {
   error: string | null;
 };
 
+type PullRequestReviewThreadsState = {
+  reviewThreads: GitHubPullRequestReviewThread[];
+  isLoading: boolean;
+  error: string | null;
+};
+
 type GitHubPanelDataProps = {
   activeWorkspace: WorkspaceInfo | null;
   gitPanelMode: GitPanelMode;
@@ -48,6 +56,7 @@ type GitHubPanelDataProps = {
   onPullRequestsChange: (state: PullRequestsState) => void;
   onPullRequestDiffsChange: (state: PullRequestDiffsState) => void;
   onPullRequestCommentsChange: (state: PullRequestCommentsState) => void;
+  onPullRequestReviewThreadsChange: (state: PullRequestReviewThreadsState) => void;
 };
 
 export function GitHubPanelData({
@@ -60,12 +69,14 @@ export function GitHubPanelData({
   onPullRequestsChange,
   onPullRequestDiffsChange,
   onPullRequestCommentsChange,
+  onPullRequestReviewThreadsChange,
 }: GitHubPanelDataProps) {
   const issuesEnabled = gitPanelMode === "issues";
   const pullRequestsEnabled = gitPanelMode === "prs" && Boolean(activeWorkspace);
   const pullRequestDiffsEnabled =
     shouldLoadDiffs && diffSource === "pr" && Boolean(activeWorkspace);
   const pullRequestCommentsEnabled = pullRequestDiffsEnabled;
+  const pullRequestReviewThreadsEnabled = pullRequestDiffsEnabled;
 
   const {
     issues,
@@ -99,6 +110,16 @@ export function GitHubPanelData({
     activeWorkspace,
     selectedPullRequestNumber ?? null,
     pullRequestCommentsEnabled,
+  );
+
+  const {
+    reviewThreads: pullRequestReviewThreads,
+    isLoading: pullRequestReviewThreadsLoading,
+    error: pullRequestReviewThreadsError,
+  } = useGitHubPullRequestReviewThreads(
+    activeWorkspace,
+    selectedPullRequestNumber ?? null,
+    pullRequestReviewThreadsEnabled,
   );
 
   useEffect(() => {
@@ -149,6 +170,19 @@ export function GitHubPanelData({
     pullRequestComments,
     pullRequestCommentsError,
     pullRequestCommentsLoading,
+  ]);
+
+  useEffect(() => {
+    onPullRequestReviewThreadsChange({
+      reviewThreads: pullRequestReviewThreads,
+      isLoading: pullRequestReviewThreadsLoading,
+      error: pullRequestReviewThreadsError,
+    });
+  }, [
+    onPullRequestReviewThreadsChange,
+    pullRequestReviewThreads,
+    pullRequestReviewThreadsError,
+    pullRequestReviewThreadsLoading,
   ]);
 
   return null;

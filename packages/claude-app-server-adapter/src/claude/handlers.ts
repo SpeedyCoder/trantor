@@ -19,8 +19,10 @@ import {
   ThreadSetNameResponse,
   Turn,
   TurnInterruptResponse,
+  type CollaborationModeListResponse,
   TurnStartResponse,
   TurnSteerResponse,
+  type TurnPlanStep,
   type ThreadItem,
 } from "../generated/v2/index.js";
 import { createThread, forkThread, now } from "../thread/threadRecord.js";
@@ -74,6 +76,14 @@ function buildAgentMessageItem(itemId: string, text: string) {
   };
 }
 
+function buildPlanItem(itemId: string, text: string) {
+  return {
+    type: "plan" as const,
+    id: itemId,
+    text,
+  };
+}
+
 function buildUserMessageItem(itemId: string, params: Record<string, unknown>) {
   const input = Array.isArray(params.input) ? params.input : [];
   if (input.length > 0) {
@@ -94,6 +104,95 @@ function buildUserMessageItem(itemId: string, params: Record<string, unknown>) {
     id: itemId,
     content: [{ type: "text" as const, text: prompt, text_elements: [] }],
   };
+}
+
+const CLAUDE_PLAN_MODE_INSTRUCTIONS = [
+  "You are in Trantor plan mode.",
+  "Plan mode is non-mutating: inspect and reason only when needed, and do not edit files, run formatters, apply patches, execute migrations, or make other side-effectful changes.",
+  "Ask concise clarifying questions only if the implementation plan would otherwise require a risky product decision.",
+  "When the plan is ready, finish with exactly one <proposed_plan> block.",
+  "The proposed plan must be decision-complete, concise, and include Summary, Key Changes, Test Plan, and Assumptions where relevant.",
+].join("\n");
+
+function collaborationMode(params: Record<string, unknown>) {
+  const value = params.collaborationMode;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+  return value as Record<string, unknown>;
+}
+
+function collaborationModeName(params: Record<string, unknown>) {
+  const mode = collaborationMode(params);
+  const rawMode = mode?.mode;
+  return typeof rawMode === "string" ? rawMode.trim().toLowerCase() : "";
+}
+
+function isPlanCollaborationMode(params: Record<string, unknown>) {
+  return collaborationModeName(params) === "plan";
+}
+
+function collaborationDeveloperInstructions(params: Record<string, unknown>) {
+  const mode = collaborationMode(params);
+  const settings = mode?.settings;
+  if (!settings || typeof settings !== "object" || Array.isArray(settings)) {
+    return "";
+  }
+  const value = (settings as Record<string, unknown>).developer_instructions;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function buildPlanModeSystemPromptAppend(params: Record<string, unknown>) {
+  const developerInstructions = collaborationDeveloperInstructions(params);
+  if (!developerInstructions) {
+    return CLAUDE_PLAN_MODE_INSTRUCTIONS;
+  }
+  return `${CLAUDE_PLAN_MODE_INSTRUCTIONS}\n\nAdditional developer instructions:\n${developerInstructions}`;
+}
+
+function stripProposedPlanTags(text: string) {
+  const match = text.match(/<proposed_plan>\s*([\s\S]*?)\s*<\/proposed_plan>/i);
+  return (match?.[1] ?? text).trim();
+}
+
+function parsePlanSteps(text: string): { explanation: string | null; plan: TurnPlanStep[] } {
+  const body = stripProposedPlanTags(text);
+  const lines = body.split(/\r?\n/);
+  const plan: TurnPlanStep[] = [];
+  let firstStepIndex = -1;
+
+  for (const [index, line] of lines.entries()) {
+    const checklist = line.match(/^\s*[-*]\s+\[( |x|X)\]\s+(.+?)\s*$/);
+    if (checklist) {
+      if (firstStepIndex < 0) {
+        firstStepIndex = index;
+      }
+      plan.push({
+        step: checklist[2].trim(),
+        status: checklist[1].toLowerCase() === "x" ? "completed" : "pending",
+      });
+      continue;
+    }
+
+    const bullet = line.match(/^\s*(?:[-*]|\d+[.)])\s+(.+?)\s*$/);
+    if (bullet) {
+      if (firstStepIndex < 0) {
+        firstStepIndex = index;
+      }
+      plan.push({ step: bullet[1].trim(), status: "pending" });
+    }
+  }
+
+  if (plan.length === 0) {
+    return { explanation: body || null, plan: [] };
+  }
+
+  const explanation = lines
+    .slice(0, firstStepIndex)
+    .join("\n")
+    .replace(/^#+\s*/gm, "")
+    .trim();
+  return { explanation: explanation || null, plan };
 }
 
 function buildCommandExecutionItem(
@@ -404,6 +503,9 @@ export function newHandlers(
       typeof params.model === "string" && params.model.trim().length > 0
         ? params.model.trim()
         : null;
+    const planMode = isPlanCollaborationMode(params);
+    const planItemId = planMode ? randomUUID() : null;
+    let planText = "";
 
     if (requestedModel) {
       thread.metadata.model = requestedModel;
@@ -606,6 +708,22 @@ export function newHandlers(
       });
     };
 
+    const appendPlanDelta = (delta: string) => {
+      if (!delta || !planItemId) {
+        return;
+      }
+      planText += delta;
+      send({
+        method: "item/plan/delta",
+        params: {
+          threadId,
+          turnId: turnRecord.data.id,
+          itemId: planItemId,
+          delta,
+        },
+      });
+    };
+
     const completeAgentMessage = (text: string) => {
       const normalizedText = text.trim() ? text : currentAgentMessageText;
       if (!normalizedText) {
@@ -631,6 +749,9 @@ export function newHandlers(
 
     const handleClaudeMessage = async (message: SDKMessage) => {
       if (message.type === "assistant") {
+        if (planMode) {
+          return;
+        }
         const assistantText = extractAssistantMessageText(message);
         if (assistantText) {
           completeAgentMessage(assistantText);
@@ -837,16 +958,42 @@ export function newHandlers(
         },
         prompt: parsePrompt(params),
         model: requestedModel ?? undefined,
+        systemPromptAppend: planMode
+          ? buildPlanModeSystemPromptAppend(params)
+          : null,
         abortController,
         onSessionReady: async (sessionId) => {
           thread.metadata.sessionId = sessionId;
           await repository.saveThread(thread);
         },
-        onDelta: appendAgentMessageDelta,
+        onDelta: planMode ? appendPlanDelta : appendAgentMessageDelta,
         onMessage: handleClaudeMessage,
       });
 
-      if (currentAgentMessageItemId || (!sawCompletedAgentMessage && result.text)) {
+      if (planMode && planItemId) {
+        const finalPlanText = planText.trim() ? planText : result.text;
+        planText = finalPlanText;
+        const item = buildPlanItem(planItemId, finalPlanText);
+        upsertPersistedItem(item);
+        const normalizedPlan = parsePlanSteps(finalPlanText);
+        send({
+          method: "item/completed",
+          params: {
+            threadId,
+            turnId: turnRecord.data.id,
+            item,
+          },
+        });
+        send({
+          method: "turn/plan/updated",
+          params: {
+            threadId,
+            turnId: turnRecord.data.id,
+            explanation: normalizedPlan.explanation,
+            plan: normalizedPlan.plan,
+          },
+        });
+      } else if (currentAgentMessageItemId || (!sawCompletedAgentMessage && result.text)) {
         completeAgentMessage(result.text);
       }
 
@@ -1024,6 +1171,27 @@ export function newHandlers(
     "model/list": {
       handle: async () => {
         const response = await listClaudeModels({ cwd: workspacePath });
+        return response;
+      },
+    },
+    "collaborationMode/list": {
+      handle: async () => {
+        const response: CollaborationModeListResponse = {
+          data: [
+            {
+              name: "default",
+              mode: "default",
+              model: null,
+              reasoning_effort: null,
+            },
+            {
+              name: "plan",
+              mode: "plan",
+              model: null,
+              reasoning_effort: null,
+            },
+          ],
+        };
         return response;
       },
     },

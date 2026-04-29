@@ -87,8 +87,9 @@ use shared::{
 use storage::{read_settings, read_workspaces};
 use types::{
     AppSettings, GitCommitDiff, GitFileDiff, GitHubIssuesResponse, GitHubPullRequestComment,
-    GitHubPullRequestDiff, GitHubPullRequestsResponse, GitLogResponse, LinearIssuesResponse,
-    LocalUsageSnapshot, WorkspaceEntry, WorkspaceInfo, WorkspaceSettings, WorktreeSetupStatus,
+    GitHubPullRequestDiff, GitHubPullRequestReviewThread, GitHubPullRequestsResponse,
+    GitLogResponse, LinearIssuesResponse, LocalUsageSnapshot, WorkspaceEntry, WorkspaceInfo,
+    WorkspaceSettings, WorktreeSetupStatus,
 };
 use workspace_settings::apply_workspace_settings_update;
 
@@ -888,8 +889,12 @@ impl DaemonState {
             .await
     }
 
-    async fn collaboration_mode_list(&self, workspace_id: String) -> Result<Value, String> {
-        codex_core::collaboration_mode_list_core(&self.sessions, workspace_id).await
+    async fn collaboration_mode_list(
+        &self,
+        workspace_id: String,
+        runtime: crate::types::AgentRuntime,
+    ) -> Result<Value, String> {
+        codex_core::collaboration_mode_list_core(&self.sessions, workspace_id, runtime).await
     }
 
     async fn account_rate_limits(&self, workspace_id: String) -> Result<Value, String> {
@@ -1130,6 +1135,47 @@ impl DaemonState {
             &self.workspaces,
             workspace_id,
             pr_number,
+        )
+        .await
+    }
+
+    async fn get_github_pull_request_review_threads(
+        &self,
+        workspace_id: String,
+        pr_number: u64,
+    ) -> Result<Vec<GitHubPullRequestReviewThread>, String> {
+        git_ui_core::get_github_pull_request_review_threads_core(
+            &self.workspaces,
+            workspace_id,
+            pr_number,
+        )
+        .await
+    }
+
+    async fn reply_github_pull_request_review_thread(
+        &self,
+        workspace_id: String,
+        thread_id: String,
+        body: String,
+    ) -> Result<GitHubPullRequestReviewThread, String> {
+        git_ui_core::reply_github_pull_request_review_thread_core(
+            &self.workspaces,
+            workspace_id,
+            thread_id,
+            body,
+        )
+        .await
+    }
+
+    async fn resolve_github_pull_request_review_thread(
+        &self,
+        workspace_id: String,
+        thread_id: String,
+    ) -> Result<GitHubPullRequestReviewThread, String> {
+        git_ui_core::resolve_github_pull_request_review_thread_core(
+            &self.workspaces,
+            workspace_id,
+            thread_id,
         )
         .await
     }

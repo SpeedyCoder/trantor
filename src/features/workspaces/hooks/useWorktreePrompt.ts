@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LinearIssue, WorkspaceInfo } from "../../../types";
 import { searchLinearIssues } from "../../../services/tauri";
+import { buildDefaultWorktreeBranch } from "../utils/worktreeBranchFormat";
 
 export type WorktreePromptTab = "linear" | "manual";
 
@@ -17,6 +18,7 @@ type WorktreePromptState = {
   linearIssues: LinearIssue[];
   linearTotal: number;
   linearLoading: boolean;
+  selectedLinearIssue: LinearIssue | null;
   branch: string;
   branchWasEdited: boolean;
   isSubmitting: boolean;
@@ -32,6 +34,7 @@ type UseWorktreePromptOptions = {
   connectWorkspace: (workspace: WorkspaceInfo) => Promise<void>;
   onSelectWorkspace: (workspaceId: string) => void;
   linearEnabled?: boolean;
+  defaultBranchFormat?: string | null;
   onWorktreeCreated?: (
     worktree: WorkspaceInfo,
     parent: WorkspaceInfo,
@@ -45,7 +48,7 @@ type UseWorktreePromptResult = {
   worktreePrompt: WorktreePromptState;
   openPrompt: (workspace: WorkspaceInfo) => void;
   confirmPrompt: () => Promise<void>;
-  selectLinearIssue: (issue: LinearIssue) => Promise<void>;
+  selectLinearIssue: (issue: LinearIssue) => void;
   cancelPrompt: () => void;
   updateBranch: (value: string) => void;
   updateLinearQuery: (value: string) => void;
@@ -67,6 +70,7 @@ export function useWorktreePrompt({
   connectWorkspace,
   onSelectWorkspace,
   linearEnabled = false,
+  defaultBranchFormat = null,
   onWorktreeCreated,
   onCompactActivate,
   onError,
@@ -80,9 +84,7 @@ export function useWorktreePrompt({
   }, [onError]);
 
   const openPrompt = useCallback((workspace: WorkspaceInfo) => {
-    const defaultBranch = `codex/${new Date().toISOString().slice(0, 10)}-${Math.random()
-      .toString(36)
-      .slice(2, 6)}`;
+    const defaultBranch = buildDefaultWorktreeBranch(defaultBranchFormat, workspace);
     const hasLinear = linearEnabled;
     setWorktreePrompt({
       workspace,
@@ -92,12 +94,13 @@ export function useWorktreePrompt({
       linearIssues: [],
       linearTotal: 0,
       linearLoading: false,
+      selectedLinearIssue: null,
       branch: defaultBranch,
       branchWasEdited: false,
       isSubmitting: false,
       error: null,
     });
-  }, [linearEnabled]);
+  }, [defaultBranchFormat, linearEnabled]);
 
   useEffect(() => {
     if (!worktreePrompt?.linearEnabled || worktreePrompt.activeTab !== "linear") {
@@ -164,7 +167,7 @@ export function useWorktreePrompt({
 
   const updateLinearQuery = useCallback((value: string) => {
     setWorktreePrompt((prev) =>
-      prev ? { ...prev, linearQuery: value, error: null } : prev,
+      prev ? { ...prev, linearQuery: value, selectedLinearIssue: null, error: null } : prev,
     );
   }, []);
 
@@ -230,11 +233,11 @@ export function useWorktreePrompt({
     if (!worktreePrompt) {
       return;
     }
-    await createWorktree(worktreePrompt.branch);
-  }, [createWorktree, worktreePrompt]);
-
-  const selectLinearIssue = useCallback(
-    async (issue: LinearIssue) => {
+    if (worktreePrompt.activeTab === "linear") {
+      const issue = worktreePrompt.selectedLinearIssue;
+      if (!issue) {
+        return;
+      }
       const branch = issue.branchName?.trim();
       if (!branch) {
         const message = "Linear did not return a branch name for this issue.";
@@ -246,8 +249,27 @@ export function useWorktreePrompt({
         linearIssue: issue,
         prefillPrompt: buildLinearIssuePrompt(issue),
       });
+      return;
+    }
+    await createWorktree(worktreePrompt.branch);
+  }, [createWorktree, onError, worktreePrompt]);
+
+  const selectLinearIssue = useCallback(
+    (issue: LinearIssue) => {
+      const branch = issue.branchName?.trim();
+      if (!branch) {
+        const message = "Linear did not return a branch name for this issue.";
+        setWorktreePrompt((prev) =>
+          prev ? { ...prev, selectedLinearIssue: null, error: message } : prev,
+        );
+        onError?.(message);
+        return;
+      }
+      setWorktreePrompt((prev) =>
+        prev ? { ...prev, selectedLinearIssue: issue, error: null } : prev,
+      );
     },
-    [createWorktree, onError],
+    [onError],
   );
 
   return {

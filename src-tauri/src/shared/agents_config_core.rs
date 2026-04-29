@@ -5,6 +5,7 @@ use std::path::{Component, Path, PathBuf};
 use toml_edit::{value, Document, Item, Table};
 
 use crate::codex::home as codex_home;
+use crate::shared::codex_core::native_model_id;
 use crate::shared::config_toml_core;
 
 pub(crate) const DEFAULT_AGENT_MAX_THREADS: u32 = 6;
@@ -806,7 +807,9 @@ fn build_template_content(
     developer_instructions: Option<&str>,
 ) -> String {
     let template = template.map(str::trim).unwrap_or(TEMPLATE_BLANK);
-    let model = normalize_optional_string(model).unwrap_or_else(|| DEFAULT_AGENT_MODEL.to_string());
+    let model = normalize_optional_string(model)
+        .map(|value| native_model_id(value.as_str()))
+        .unwrap_or_else(|| DEFAULT_AGENT_MODEL.to_string());
     let reasoning_effort = normalize_optional_string(reasoning_effort)
         .unwrap_or_else(|| DEFAULT_REASONING_EFFORT.to_string());
     let mut overrides = Document::new();
@@ -1011,6 +1014,14 @@ config_file = "agents/researcher.toml"
         let content = build_template_content(Some("blank"), Some("gpt-5.1"), Some("high"), None);
         assert!(content.contains("model = \"gpt-5.1\""));
         assert!(content.contains("model_reasoning_effort = \"high\""));
+    }
+
+    #[test]
+    fn build_template_content_strips_runtime_prefix_from_model() {
+        let content =
+            build_template_content(Some("blank"), Some("codex:gpt-5.5"), Some("medium"), None);
+        assert!(content.contains("model = \"gpt-5.5\""));
+        assert!(!content.contains("model = \"codex:gpt-5.5\""));
     }
 
     #[test]

@@ -682,6 +682,23 @@
               box-shadow var(--ds-dur-normal) var(--ds-ease-out-soft);
 }
 
+.settings-input-with-action {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.settings-input--with-action {
+  padding-right: 42px;
+}
+
+.settings-input-action {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
 .settings-input--compact {
   padding: 8px 10px;
   font-size: 11px;

@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import * as Sentry from "@sentry/react";
-import type { DebugEntry, WorkspaceInfo } from "../../../types";
+import type { DebugEntry, WorkspaceInfo, WorkspaceSettings } from "../../../types";
 import {
   addWorktree as addWorktreeService,
   removeWorktree as removeWorktreeService,
@@ -13,12 +13,17 @@ type UseWorktreeOpsOptions = {
   onDebug?: (entry: DebugEntry) => void;
   setWorkspaces: Dispatch<SetStateAction<WorkspaceInfo[]>>;
   setActiveWorkspaceId: Dispatch<SetStateAction<string | null>>;
+  updateWorkspaceSettings: (
+    workspaceId: string,
+    patch: Partial<WorkspaceSettings>,
+  ) => Promise<WorkspaceInfo>;
 };
 
 export function useWorktreeOps({
   onDebug,
   setWorkspaces,
   setActiveWorkspaceId,
+  updateWorkspaceSettings,
 }: UseWorktreeOpsOptions) {
   const [deletingWorktreeIds, setDeletingWorktreeIds] = useState<Set<string>>(
     () => new Set(),
@@ -59,7 +64,33 @@ export function useWorktreeOps({
           trimmedName,
           copyAgentsMd,
         );
-        setWorkspaces((prev) => [...prev, workspace]);
+        setWorkspaces((prev) => [
+          ...prev.map((entry) =>
+            entry.id === parent.id && entry.settings.sidebarCollapsed
+              ? {
+                  ...entry,
+                  settings: {
+                    ...entry.settings,
+                    sidebarCollapsed: false,
+                  },
+                }
+              : entry,
+          ),
+          workspace,
+        ]);
+        if (parent.settings.sidebarCollapsed) {
+          void updateWorkspaceSettings(parent.id, {
+            sidebarCollapsed: false,
+          }).catch((error) => {
+            onDebug?.({
+              id: `${Date.now()}-client-expand-worktree-parent-error`,
+              timestamp: Date.now(),
+              source: "error",
+              label: "worktree/expand parent error",
+              payload: error instanceof Error ? error.message : String(error),
+            });
+          });
+        }
         if (options?.activate !== false) {
           setActiveWorkspaceId(workspace.id);
         }
@@ -81,7 +112,7 @@ export function useWorktreeOps({
         throw error;
       }
     },
-    [onDebug, setActiveWorkspaceId, setWorkspaces],
+    [onDebug, setActiveWorkspaceId, setWorkspaces, updateWorkspaceSettings],
   );
 
   const removeWorktree = useCallback(

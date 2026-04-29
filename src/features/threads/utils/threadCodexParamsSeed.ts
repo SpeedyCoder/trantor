@@ -141,7 +141,6 @@ export function resolveThreadCodexState(
   const {
     workspaceId,
     threadId,
-    defaultAccessMode,
     lastComposerModelId,
     lastComposerReasoningEffort,
     stored,
@@ -157,7 +156,7 @@ export function resolveThreadCodexState(
     return {
       scopeKey: `${workspaceId}:${NO_THREAD_SCOPE_SUFFIX}`,
       preferredHarness,
-      accessMode: stored?.accessMode ?? defaultAccessMode,
+      accessMode: "full-access",
       preferredModelId: providerModelIdForModelId(stored?.modelId ?? lastComposerModelId),
       preferredEffort: stored?.effort ?? lastComposerReasoningEffort ?? null,
       preferredServiceTier: stored?.serviceTier,
@@ -177,7 +176,7 @@ export function resolveThreadCodexState(
   return {
     scopeKey: makeThreadCodexParamsKey(workspaceId, threadId),
     preferredHarness,
-    accessMode: stored?.accessMode ?? pendingForWorkspace?.accessMode ?? defaultAccessMode,
+    accessMode: "full-access",
     preferredModelId:
       providerModelIdForModelId(
         stored?.modelId ?? noThreadStored?.modelId ?? lastComposerModelId,

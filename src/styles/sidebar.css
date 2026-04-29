@@ -701,6 +701,16 @@
   min-width: 0;
 }
 
+.workspace-activity-indicator {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--status-warning);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--status-warning) 16%, transparent);
+  flex-shrink: 0;
+  animation: pulse 1.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 .workspace-folder-icon-frame {
   width: 13px;
   height: 13px;
@@ -1192,8 +1202,8 @@
 }
 
 .worktree-section {
+  --worktree-row-indent: 17px;
   margin-top: 0;
-  margin-left: 17px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -1254,6 +1264,7 @@
   align-items: center;
   gap: 4px;
   padding: 5px 4px;
+  padding-left: calc(var(--worktree-row-indent) + 4px);
   border-radius: 6px;
   border: none;
   background: transparent;
@@ -1266,7 +1277,7 @@
 }
 
 .worktree-row.active {
-  background: transparent;
+  background: color-mix(in srgb, var(--border-accent) 18%, transparent);
 }
 
 .worktree-row.deleting {
@@ -1274,7 +1285,7 @@
 }
 
 .worktree-row:hover {
-  background: transparent;
+  background: color-mix(in srgb, var(--border-accent) 12%, transparent);
 }
 
 .worktree-row.deleting:hover {
@@ -1282,7 +1293,7 @@
 }
 
 .worktree-row.active:hover {
-  background: transparent;
+  background: color-mix(in srgb, var(--border-accent) 22%, transparent);
 }
 
 .worktree-copy {
@@ -1298,6 +1309,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.worktree-label-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
 }
 
 .worktree-row:hover .worktree-label,

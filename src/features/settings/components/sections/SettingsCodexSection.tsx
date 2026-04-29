@@ -465,7 +465,7 @@ export function SettingsCodexSection({
       <div className="settings-divider" />
       <SettingsSubsection
         title="Defaults"
-        subtitle="Choose the default model, access, and review behavior when a thread does not override them."
+        subtitle="Choose the default model and review behavior when a thread does not override them."
       />
 
       <SettingsToggleRow
@@ -538,27 +538,6 @@ export function SettingsCodexSection({
               {effort}
             </option>
           ))}
-        </select>
-      </SettingsToggleRow>
-
-      <SettingsToggleRow
-        title={<label htmlFor="default-access">Access mode</label>}
-        subtitle="Used when there is no thread-specific override."
-      >
-        <select
-          id="default-access"
-          className="settings-select"
-          value={appSettings.defaultAccessMode}
-          onChange={(event) =>
-            void onUpdateAppSettings({
-              ...appSettings,
-              defaultAccessMode: event.target.value as AppSettings["defaultAccessMode"],
-            })
-          }
-        >
-          <option value="read-only">Read only</option>
-          <option value="current">On-request</option>
-          <option value="full-access">Full access</option>
         </select>
       </SettingsToggleRow>
 

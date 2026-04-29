@@ -309,6 +309,7 @@ export type AppSettings = {
   composerCodeBlockCopyUseModifier: boolean;
   workspaceGroups: WorkspaceGroup[];
   globalWorktreesFolder: string | null;
+  defaultWorktreeBranchFormat: string;
   openAppTargets: OpenAppTarget[];
   selectedOpenAppId: string;
 };
@@ -507,6 +508,7 @@ export type LinearIssue = {
   branchName: string | null;
   updatedAt: string;
   stateName: string | null;
+  stateColor: string | null;
   teamKey: string | null;
 };
 
@@ -549,6 +551,26 @@ export type GitHubPullRequestComment = {
   createdAt: string;
   url: string;
   author: GitHubUser | null;
+};
+
+export type GitHubPullRequestReviewComment = {
+  id: string;
+  databaseId: number | null;
+  body: string;
+  createdAt: string;
+  url: string;
+  author: GitHubUser | null;
+};
+
+export type GitHubPullRequestReviewThread = {
+  id: string;
+  isResolved: boolean;
+  path: string;
+  line: number | null;
+  startLine: number | null;
+  diffSide: string | null;
+  url: string;
+  comments: GitHubPullRequestReviewComment[];
 };
 
 export type TokenUsageBreakdown = {

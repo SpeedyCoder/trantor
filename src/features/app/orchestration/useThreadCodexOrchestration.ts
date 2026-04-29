@@ -53,7 +53,7 @@ export function useThreadCodexOrchestration({
     getThreadCodexParams,
     patchThreadCodexParams,
   } = useThreadCodexParams();
-  const [accessMode, setAccessMode] = useState<AccessMode>("current");
+  const [accessMode, setAccessMode] = useState<AccessMode>("full-access");
   const [preferredHarness, setPreferredHarness] = useState<AgentHarness>("codex");
   const [preferredModelId, setPreferredModelId] = useState<string | null>(null);
   const [preferredEffort, setPreferredEffort] = useState<string | null>(null);
