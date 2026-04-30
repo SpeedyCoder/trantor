@@ -1,6 +1,7 @@
 export type TerminalTabsItem = {
   id: string;
   title: string;
+  isProcessing?: boolean;
 };
 
 type TerminalTabsProps = {
@@ -40,6 +41,16 @@ export function TerminalTabs({
               aria-selected={isActive}
               onClick={() => onSelectTab(tab.id)}
             >
+              {typeof tab.isProcessing === "boolean" ? (
+                <span
+                  className={`terminal-tab-status workspace-activity-indicator${
+                    tab.isProcessing ? " is-active" : ""
+                  }`}
+                  aria-label={tab.isProcessing ? `${tab.title} is running` : undefined}
+                  aria-hidden={tab.isProcessing ? undefined : true}
+                  role={tab.isProcessing ? "status" : undefined}
+                />
+              ) : null}
               <span className="terminal-tab-label">{tab.title}</span>
               {onCloseTab ? (
                 <span

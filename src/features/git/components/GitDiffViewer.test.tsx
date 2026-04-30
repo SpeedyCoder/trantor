@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { GitDiffViewer } from "./GitDiffViewer";
@@ -204,15 +204,73 @@ describe("GitDiffViewer", () => {
             ],
           },
         ]}
+        onReplyPullRequestReviewThread={vi.fn()}
+        onResolvePullRequestReviewThread={vi.fn()}
+        onAddPullRequestReviewThreadToChat={vi.fn()}
       />,
     );
 
     expect(screen.getByTestId("annotation-additions-2")).toBeTruthy();
     expect(screen.getByTestId("annotation-deletions-1")).toBeTruthy();
     expect(screen.getByText("Please adjust this")).toBeTruthy();
+    expect(screen.queryByText("Unresolved")).toBeNull();
+    const replyButton = screen.getByRole("button", { name: "Reply" });
+    const actions = replyButton.closest(".diff-viewer-inline-thread-actions");
+    expect(actions?.textContent).toContain("Add to chat");
+    expect(actions?.textContent).toContain("Resolve");
     expect(screen.queryByText("Old issue")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Expand" }));
     expect(screen.getByText("Old issue")).toBeTruthy();
+  });
+
+  it("shows an added state after the review thread is attached", async () => {
+    const onAddPullRequestReviewThreadToChat = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <GitDiffViewer
+        diffs={[
+          {
+            path: "src/main.ts",
+            status: "M",
+            diff: "@@ -1,1 +1,2 @@\n line one\n+added line",
+          },
+        ]}
+        selectedPath="src/main.ts"
+        isLoading={false}
+        error={null}
+        diffStyle="unified"
+        pullRequestReviewThreads={[
+          {
+            id: "thread-open",
+            isResolved: false,
+            path: "src/main.ts",
+            line: 2,
+            startLine: null,
+            diffSide: "RIGHT",
+            url: "",
+            comments: [
+              {
+                id: "comment-open",
+                databaseId: 1,
+                body: "Please adjust this",
+                createdAt: "2026-04-29T10:00:00Z",
+                url: "",
+                author: { login: "reviewer" },
+              },
+            ],
+          },
+        ]}
+        onAddPullRequestReviewThreadToChat={onAddPullRequestReviewThreadToChat}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add to chat" }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Add to chat" })).toBeNull();
+    });
+    expect(screen.getByText("Added to chat")).toBeTruthy();
+    expect(onAddPullRequestReviewThreadToChat).toHaveBeenCalledTimes(1);
   });
 });

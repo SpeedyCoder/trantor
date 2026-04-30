@@ -1801,6 +1801,7 @@ export default function MainApp() {
     <WorktreeThreadTabs
       workspace={activeWorkspace}
       threads={activeWorkspaceThreads}
+      threadStatusById={threadStatusById}
       activeThreadId={activeThreadId}
       onSelectThread={sidebarMenuOrchestration.onSelectThread}
       onStartThread={(workspaceId) => {

@@ -48,7 +48,6 @@ function SidebarWorkspaceEntry({
       workspace={workspace}
       workspaceName={workspace.name}
       isCollapsed={isCollapsed}
-      hasActiveAgent={activeAgentWorkspaceIds.has(workspace.id)}
       onShowWorkspaceMenu={onShowWorkspaceMenu}
       onToggleWorkspaceCollapse={onToggleWorkspaceCollapse}
       onConnectWorkspace={onConnectWorkspace}

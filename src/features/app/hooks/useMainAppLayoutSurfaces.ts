@@ -826,6 +826,7 @@ function buildGitSurface({
                 thread,
               });
               await writeTextFile(path, content);
+              composerWorkspaceState.handleDraftChange("");
               composerWorkspaceState.attachFileAttachments([path]);
             }
           : undefined,

@@ -336,7 +336,7 @@ describe("Sidebar", () => {
     expect(container.querySelectorAll(".worktree-row")).toHaveLength(1);
   });
 
-  it("shows an activity indicator on projects with a processing thread", () => {
+  it("does not show an activity indicator on projects with a processing thread", () => {
     const { container } = render(
       <Sidebar
         {...baseProps}
@@ -374,8 +374,45 @@ describe("Sidebar", () => {
     );
 
     const indicator = container.querySelector(".workspace-row .workspace-activity-indicator");
-    expect(indicator).toBeTruthy();
-    expect(indicator?.getAttribute("aria-label")).toBe("Agent running in project");
+    expect(indicator).toBeNull();
+  });
+
+  it("renders only the folder icon on idle projects", () => {
+    const { container } = render(
+      <Sidebar
+        {...baseProps}
+        workspaces={[
+          {
+            id: "ws-1",
+            name: "Main Project",
+            path: "/tmp/main",
+            connected: true,
+            kind: "main",
+            settings: { sidebarCollapsed: false },
+          },
+        ]}
+        groupedWorkspaces={[
+          {
+            id: null,
+            name: "Workspaces",
+            workspaces: [
+              {
+                id: "ws-1",
+                name: "Main Project",
+                path: "/tmp/main",
+                connected: true,
+                kind: "main",
+                settings: { sidebarCollapsed: false },
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+
+    const indicator = container.querySelector(".workspace-row .workspace-activity-indicator");
+    expect(indicator).toBeNull();
+    expect(container.querySelector(".workspace-row .workspace-folder-icon")).toBeTruthy();
   });
 
   it("shows an activity indicator on worktrees with a processing thread", () => {

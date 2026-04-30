@@ -22,6 +22,11 @@
   bottom: 0;
 }
 
+.worktree-thread-tabs .terminal-tab-status {
+  width: 7px;
+  height: 7px;
+}
+
 .worktree-thread-empty {
   display: grid;
   place-items: center;

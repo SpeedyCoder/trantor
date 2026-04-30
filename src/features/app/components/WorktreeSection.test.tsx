@@ -85,4 +85,28 @@ describe("WorktreeSection", () => {
     expect(screen.getByText("fix sidebar activity")).toBeTruthy();
     expect(screen.queryByText("user/fix-sidebar-activity")).toBeNull();
   });
+
+  it("trims sanitized custom prefixes from workspace names", () => {
+    render(
+      <WorktreeSection
+        worktrees={[
+          {
+            ...worktree,
+            name: "user-fix-sidebar-activity",
+            worktree: { branch: "user/fix-sidebar-activity" },
+          },
+        ]}
+        deletingWorktreeIds={new Set()}
+        defaultWorktreeBranchFormat="user/{project}-{date}-{random}"
+        activeAgentWorkspaceIds={new Set()}
+        activeWorkspaceId={null}
+        onSelectWorkspace={vi.fn()}
+        onConnectWorkspace={vi.fn()}
+        onShowWorktreeMenu={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("fix sidebar activity")).toBeTruthy();
+    expect(screen.queryByText("user-fix-sidebar-activity")).toBeNull();
+  });
 });

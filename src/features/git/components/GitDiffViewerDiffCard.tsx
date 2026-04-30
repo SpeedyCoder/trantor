@@ -7,6 +7,7 @@ import {
   type SelectedLineRange,
 } from "@pierre/diffs";
 import { FileDiff } from "@pierre/diffs/react";
+import Check from "lucide-react/dist/esm/icons/check";
 import RotateCcw from "lucide-react/dist/esm/icons/rotate-ccw";
 import type {
   GitHubPullRequestReviewThread,
@@ -127,13 +128,9 @@ function ReviewThreadCard({
   const [isReplying, setIsReplying] = useState(false);
   const [isResolving, setIsResolving] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isAddedToChat, setIsAddedToChat] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(thread.isResolved);
   const trimmedReply = reply.trim();
-  const lineLabel = thread.startLine && thread.line && thread.startLine !== thread.line
-    ? `L${thread.startLine}-L${thread.line}`
-    : thread.line || thread.startLine
-      ? `L${thread.line ?? thread.startLine}`
-      : "File";
 
   useEffect(() => {
     if (thread.isResolved) {
@@ -144,10 +141,9 @@ function ReviewThreadCard({
   return (
     <div className="diff-viewer-inline-thread">
       <div className="diff-viewer-inline-thread-header">
-        <span className="diff-viewer-inline-thread-location">{lineLabel}</span>
-        <span className="diff-viewer-inline-thread-status">
-          {thread.isResolved ? "Resolved" : "Unresolved"}
-        </span>
+        {thread.isResolved ? (
+          <span className="diff-viewer-inline-thread-status">Resolved</span>
+        ) : null}
         {thread.isResolved ? (
           <button
             type="button"
@@ -155,37 +151,6 @@ function ReviewThreadCard({
             onClick={() => setIsCollapsed((value) => !value)}
           >
             {isCollapsed ? "Expand" : "Collapse"}
-          </button>
-        ) : null}
-        <button
-          type="button"
-          className="ghost diff-viewer-inline-thread-action"
-          disabled={isAdding}
-          onClick={() => {
-            if (!onAddReviewThreadToChat) {
-              return;
-            }
-            setIsAdding(true);
-            Promise.resolve(onAddReviewThreadToChat(thread)).finally(() => {
-              setIsAdding(false);
-            });
-          }}
-        >
-          {isAdding ? "Adding..." : "Add to chat"}
-        </button>
-        {!thread.isResolved && onResolveReviewThread ? (
-          <button
-            type="button"
-            className="ghost diff-viewer-inline-thread-action"
-            disabled={isResolving}
-            onClick={() => {
-              setIsResolving(true);
-              Promise.resolve(onResolveReviewThread(thread.id)).finally(() => {
-                setIsResolving(false);
-              });
-            }}
-          >
-            {isResolving ? "Resolving..." : "Resolve"}
           </button>
         ) : null}
       </div>
@@ -211,33 +176,82 @@ function ReviewThreadCard({
           })}
         </div>
       )}
-      {!isCollapsed && onReplyReviewThread ? (
+      {!isCollapsed && (onReplyReviewThread || onAddReviewThreadToChat || onResolveReviewThread) ? (
         <div className="diff-viewer-inline-thread-reply">
-          <textarea
-            value={reply}
-            onChange={(event) => setReply(event.target.value)}
-            placeholder="Reply to thread"
-            rows={3}
-            disabled={isReplying}
-          />
-          <button
-            type="button"
-            className="ghost diff-viewer-inline-thread-action"
-            disabled={!trimmedReply || isReplying}
-            onClick={() => {
-              if (!trimmedReply) {
-                return;
-              }
-              setIsReplying(true);
-              Promise.resolve(onReplyReviewThread(thread.id, trimmedReply))
-                .then(() => setReply(""))
-                .finally(() => {
-                  setIsReplying(false);
-                });
-            }}
-          >
-            {isReplying ? "Replying..." : "Reply"}
-          </button>
+          {onReplyReviewThread ? (
+            <textarea
+              value={reply}
+              onChange={(event) => setReply(event.target.value)}
+              placeholder="Reply to thread"
+              rows={3}
+              disabled={isReplying}
+            />
+          ) : null}
+          <div className="diff-viewer-inline-thread-actions">
+            {onAddReviewThreadToChat ? (
+              isAddedToChat ? (
+                <span
+                  className="diff-viewer-inline-thread-added"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <Check size={13} aria-hidden />
+                  Added to chat
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="ghost diff-viewer-inline-thread-action"
+                  disabled={isAdding}
+                  onClick={() => {
+                    setIsAdding(true);
+                    Promise.resolve(onAddReviewThreadToChat(thread))
+                      .then(() => setIsAddedToChat(true))
+                      .finally(() => {
+                        setIsAdding(false);
+                      });
+                  }}
+                >
+                  {isAdding ? "Adding..." : "Add to chat"}
+                </button>
+              )
+            ) : null}
+            {!thread.isResolved && onResolveReviewThread ? (
+              <button
+                type="button"
+                className="ghost diff-viewer-inline-thread-action"
+                disabled={isResolving}
+                onClick={() => {
+                  setIsResolving(true);
+                  Promise.resolve(onResolveReviewThread(thread.id)).finally(() => {
+                    setIsResolving(false);
+                  });
+                }}
+              >
+                {isResolving ? "Resolving..." : "Resolve"}
+              </button>
+            ) : null}
+            {onReplyReviewThread ? (
+              <button
+                type="button"
+                className="ghost diff-viewer-inline-thread-action"
+                disabled={!trimmedReply || isReplying}
+                onClick={() => {
+                  if (!trimmedReply) {
+                    return;
+                  }
+                  setIsReplying(true);
+                  Promise.resolve(onReplyReviewThread(thread.id, trimmedReply))
+                    .then(() => setReply(""))
+                    .finally(() => {
+                      setIsReplying(false);
+                    });
+                }}
+              >
+                {isReplying ? "Replying..." : "Reply"}
+              </button>
+            ) : null}
+          </div>
         </div>
       ) : null}
     </div>

@@ -12,6 +12,10 @@ function getWorktreeBranchPrefix(format: string | null | undefined): string {
   return firstPlaceholderIndex >= 0 ? normalized.slice(0, firstPlaceholderIndex) : "";
 }
 
+function sanitizeWorktreePrefix(prefix: string): string {
+  return prefix.replace(/[^a-zA-Z0-9_.-]+/g, "-").replace(/-+$/g, "-");
+}
+
 function formatSidebarWorktreeLabel(
   value: string,
   defaultWorktreeBranchFormat: string | null | undefined,
@@ -20,11 +24,18 @@ function formatSidebarWorktreeLabel(
   const defaultWorktreeBranchPrefix =
     getWorktreeBranchPrefix(defaultWorktreeBranchFormat) ||
     getWorktreeBranchPrefix(DEFAULT_WORKTREE_BRANCH_FORMAT);
+  const prefixCandidates = Array.from(
+    new Set([
+      defaultWorktreeBranchPrefix,
+      sanitizeWorktreePrefix(defaultWorktreeBranchPrefix),
+    ]),
+  ).filter(Boolean);
   const withoutDefaultPrefix =
-    defaultWorktreeBranchPrefix && trimmed.startsWith(defaultWorktreeBranchPrefix)
-      ? trimmed.slice(defaultWorktreeBranchPrefix.length)
-      : trimmed;
-  return withoutDefaultPrefix.split("-").filter(Boolean).join(" ").trim() || trimmed;
+    prefixCandidates.find((prefix) => trimmed.startsWith(prefix)) ?? null;
+  const labelBase = withoutDefaultPrefix
+    ? trimmed.slice(withoutDefaultPrefix.length)
+    : trimmed;
+  return labelBase.split("-").filter(Boolean).join(" ").trim() || trimmed;
 }
 
 type WorktreeCardProps = {
@@ -86,13 +97,12 @@ export function WorktreeCard({
       >
         <div className="worktree-copy">
           <div className="worktree-label-row">
-            {hasActiveAgent ? (
-              <span
-                className="workspace-activity-indicator is-active"
-                aria-label="Agent running in worktree"
-                role="status"
-              />
-            ) : null}
+            <span
+              className={`workspace-activity-indicator${hasActiveAgent ? " is-active" : ""}`}
+              aria-label={hasActiveAgent ? "Agent running in worktree" : undefined}
+              aria-hidden={hasActiveAgent ? undefined : true}
+              role={hasActiveAgent ? "status" : undefined}
+            />
             <div className="worktree-label">{worktreeLabel}</div>
           </div>
           {worktreeMeta ? <div className="worktree-meta">{worktreeMeta}</div> : null}
